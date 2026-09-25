@@ -49,9 +49,16 @@ public sealed class LaunchPageViewModelTests
 
         public AppSettings? LastBuildSettings { get; private set; }
 
-        public LaunchPlan BuildLaunchPlan(MinecraftVersion version, AppSettings settings, string javaExecutable)
+        public Account? LastAccount { get; private set; }
+
+        public LaunchPlan BuildLaunchPlan(
+            MinecraftVersion version,
+            AppSettings settings,
+            string javaExecutable,
+            Account? account = null)
         {
             LastBuildSettings = settings;
+            LastAccount = account;
             return new()
             {
                 JavaExecutable = javaExecutable,
@@ -69,6 +76,74 @@ public sealed class LaunchPageViewModelTests
             LaunchCount++;
             return LaunchResult;
         }
+    }
+
+    private sealed class FakeMicrosoftAuthenticationService : IMicrosoftAuthenticationService
+    {
+        public Func<Account, MicrosoftAccountSession?>? RefreshHandler { get; set; }
+
+        public int RefreshCount { get; private set; }
+
+        public Task<MicrosoftAccountSession> LoginAsync(
+            IProgress<string>? progress = null,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(new MicrosoftAccountSession
+            {
+                Name = "Alex",
+                Uuid = "11111111-2222-3333-4444-555555555555",
+                AccessToken = "ms-token",
+                RefreshToken = "ms-refresh",
+                AccessTokenExpiresAt = DateTimeOffset.UtcNow.AddHours(1),
+            });
+
+        public Task<MicrosoftAccountSession?> RefreshAsync(
+            Account account,
+            IProgress<string>? progress = null,
+            CancellationToken cancellationToken = default)
+        {
+            RefreshCount++;
+            return Task.FromResult(RefreshHandler?.Invoke(account));
+        }
+    }
+
+    private sealed class FakeAccountService : IAccountService
+    {
+        public List<Account> Accounts { get; } = [];
+
+        public IReadOnlyList<Account> Load() => Accounts.ToList();
+
+        public Account AddOfflineAccount(string name)
+        {
+            var account = new Account { Id = Guid.NewGuid(), Name = name, Type = "offline" };
+            Accounts.Add(account);
+            return account;
+        }
+
+        public Account AddMicrosoftAccount(MicrosoftAccountSession session)
+        {
+            var account = new Account
+            {
+                Id = Guid.NewGuid(),
+                Name = session.Name,
+                Type = "microsoft",
+                Uuid = session.Uuid,
+                AccessToken = session.AccessToken,
+                RefreshToken = session.RefreshToken,
+                AccessTokenExpiresAt = session.AccessTokenExpiresAt,
+            };
+            Accounts.Add(account);
+            return account;
+        }
+
+        public void RemoveAccount(Guid id)
+        {
+        }
+
+        public void SetDefaultAccount(Guid id)
+        {
+        }
+
+        public Account? GetDefaultAccount() => null;
     }
 
     private sealed class SyncDispatcher : IUiDispatcher
@@ -93,8 +168,17 @@ public sealed class LaunchPageViewModelTests
     private static LaunchPageViewModel CreateViewModel(
         FakeLauncher launcher,
         SessionState session,
-        SyncDispatcher dispatcher)
-        => new(new FakeSettingsService(), new FakeJavaService(), launcher, session, dispatcher);
+        SyncDispatcher dispatcher,
+        FakeMicrosoftAuthenticationService? microsoft = null,
+        FakeAccountService? accounts = null)
+        => new(
+            new FakeSettingsService(),
+            new FakeJavaService(),
+            launcher,
+            session,
+            dispatcher,
+            microsoft ?? new FakeMicrosoftAuthenticationService(),
+            accounts ?? new FakeAccountService());
 
     [Fact]
     public async Task LaunchAsync_StartsGameAndTracksExit()
@@ -147,6 +231,81 @@ public sealed class LaunchPageViewModelTests
 
         Assert.NotNull(launcher.LastBuildSettings);
         Assert.Equal("SteveAccount", launcher.LastBuildSettings!.UserName);
+    }
+
+    [Fact]
+    public async Task LaunchAsync_RefreshesExpiredMicrosoftToken_AndPassesUpdatedAccount()
+    {
+        var launch = new FakeGameLaunch();
+        var launcher = new FakeLauncher { LaunchResult = launch };
+        var microsoft = new FakeMicrosoftAuthenticationService
+        {
+            RefreshHandler = _ => new MicrosoftAccountSession
+            {
+                Name = "Alex",
+                Uuid = "11111111-2222-3333-4444-555555555555",
+                AccessToken = "refreshed-token",
+                RefreshToken = "refreshed-refresh",
+                AccessTokenExpiresAt = DateTimeOffset.UtcNow.AddHours(1),
+            },
+        };
+        var session = new SessionState
+        {
+            SelectedVersion = SelectedVersion(),
+            SelectedAccount = new Account
+            {
+                Id = Guid.NewGuid(),
+                Name = "Alex",
+                Type = "microsoft",
+                Uuid = "11111111-2222-3333-4444-555555555555",
+                AccessToken = "old-token",
+                RefreshToken = "old-refresh",
+                AccessTokenExpiresAt = DateTimeOffset.UtcNow.AddMinutes(-1),
+            },
+        };
+        var viewModel = CreateViewModel(
+            launcher,
+            session,
+            new SyncDispatcher(),
+            microsoft,
+            new FakeAccountService());
+
+        await viewModel.LaunchCommand.ExecuteAsync(null);
+
+        Assert.Equal(1, microsoft.RefreshCount);
+        Assert.NotNull(launcher.LastAccount);
+        Assert.Equal("refreshed-token", launcher.LastAccount!.AccessToken);
+        Assert.Equal("refreshed-token", session.SelectedAccount?.AccessToken);
+    }
+
+    [Fact]
+    public async Task LaunchAsync_WhenTokenRefreshFails_DoesNotLaunch()
+    {
+        var launcher = new FakeLauncher();
+        var microsoft = new FakeMicrosoftAuthenticationService
+        {
+            RefreshHandler = _ => null,
+        };
+        var session = new SessionState
+        {
+            SelectedVersion = SelectedVersion(),
+            SelectedAccount = new Account
+            {
+                Id = Guid.NewGuid(),
+                Name = "Alex",
+                Type = "microsoft",
+                Uuid = "11111111-2222-3333-4444-555555555555",
+                AccessToken = "old-token",
+                RefreshToken = "old-refresh",
+                AccessTokenExpiresAt = DateTimeOffset.UtcNow.AddMinutes(-1),
+            },
+        };
+        var viewModel = CreateViewModel(launcher, session, new SyncDispatcher(), microsoft);
+
+        await viewModel.LaunchCommand.ExecuteAsync(null);
+
+        Assert.Equal(0, launcher.LaunchCount);
+        Assert.Contains("重新登录", viewModel.StatusMessage);
     }
 
     private static async Task WaitUntilAsync(Func<bool> condition, int timeoutMilliseconds = 5000)

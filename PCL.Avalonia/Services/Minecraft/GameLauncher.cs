@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using PCL.Avalonia.Services.Accounts;
 
 namespace PCL.Avalonia.Services.Minecraft;
 
@@ -19,7 +20,11 @@ public sealed class GameLauncher : IGameLauncher
         _launcherVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0";
     }
 
-    public LaunchPlan BuildLaunchPlan(MinecraftVersion version, AppSettings settings, string javaExecutable)
+    public LaunchPlan BuildLaunchPlan(
+        MinecraftVersion version,
+        AppSettings settings,
+        string javaExecutable,
+        Account? account = null)
     {
         ArgumentNullException.ThrowIfNull(version);
         ArgumentNullException.ThrowIfNull(settings);
@@ -72,10 +77,31 @@ public sealed class GameLauncher : IGameLauncher
 
         ExtractNatives(libraries.Where(library => library.IsNatives), nativesDirectory);
 
-        var userName = string.IsNullOrWhiteSpace(settings.UserName) ? "Player" : settings.UserName.Trim();
+        var isMicrosoft = account?.Type == "microsoft";
+        if (isMicrosoft)
+        {
+            if (string.IsNullOrWhiteSpace(account!.Uuid))
+            {
+                throw new InvalidOperationException("微软账号缺少 UUID，请重新登录");
+            }
+
+            if (string.IsNullOrWhiteSpace(account!.AccessToken))
+            {
+                throw new InvalidOperationException("微软账号缺少访问令牌，请重新登录");
+            }
+        }
+
+        var userName = isMicrosoft
+            ? string.IsNullOrWhiteSpace(account!.Name)
+                ? throw new InvalidOperationException("微软账号缺少玩家名，请重新登录")
+                : account.Name.Trim()
+            : string.IsNullOrWhiteSpace(settings.UserName) ? "Player" : settings.UserName.Trim();
         var offlineUuid = CreateOfflineUuid(userName);
+        var authUuid = isMicrosoft ? account!.Uuid!.Trim() : offlineUuid;
+        var accessToken = isMicrosoft ? account!.AccessToken!.Trim() : "0";
+        var userType = isMicrosoft ? "msa" : "legacy";
         var jvmArgs = BuildJvmArguments(chain, settings);
-        var gameArgs = BuildGameArguments(chain, version, userName, offlineUuid, assetsIndexName);
+        var gameArgs = BuildGameArguments(chain, version, userName, authUuid, accessToken, userType, assetsIndexName);
         var classPath = string.Join(Path.PathSeparator, classPathEntries);
         var replacements = BuildReplacements(
             version,
@@ -85,7 +111,9 @@ public sealed class GameLauncher : IGameLauncher
             nativesDirectory,
             assetsRoot,
             assetsIndexName,
-            offlineUuid,
+            authUuid,
+            accessToken,
+            userType,
             userName,
             mainJar,
             version.Type,
@@ -393,7 +421,9 @@ public sealed class GameLauncher : IGameLauncher
         IReadOnlyList<MinecraftVersionJson> chain,
         MinecraftVersion version,
         string userName,
-        string offlineUuid,
+        string authUuid,
+        string accessToken,
+        string userType,
         string assetsIndexName)
     {
         var result = new List<string>();
@@ -427,11 +457,11 @@ public sealed class GameLauncher : IGameLauncher
         result.Add("--assetIndex");
         result.Add(assetsIndexName);
         result.Add("--uuid");
-        result.Add(offlineUuid);
+        result.Add(authUuid);
         result.Add("--accessToken");
-        result.Add("0");
+        result.Add(accessToken);
         result.Add("--userType");
-        result.Add("legacy");
+        result.Add(userType);
         result.Add("--versionType");
         result.Add(string.IsNullOrWhiteSpace(version.Type) ? "release" : version.Type);
         result.Add("--userProperties");
@@ -498,7 +528,9 @@ public sealed class GameLauncher : IGameLauncher
         string nativesDirectory,
         string assetsRoot,
         string assetsIndexName,
-        string offlineUuid,
+        string authUuid,
+        string accessToken,
+        string userType,
         string userName,
         string mainJar,
         string versionType,
@@ -520,11 +552,11 @@ public sealed class GameLauncher : IGameLauncher
             ["${assets_index_name}"] = assetsIndexName,
             ["${user_properties}"] = "{}",
             ["${auth_player_name}"] = userName,
-            ["${auth_uuid}"] = offlineUuid,
-            ["${auth_access_token}"] = "0",
-            ["${access_token}"] = "0",
-            ["${auth_session}"] = "0",
-            ["${user_type}"] = "legacy",
+            ["${auth_uuid}"] = authUuid,
+            ["${auth_access_token}"] = accessToken,
+            ["${access_token}"] = accessToken,
+            ["${auth_session}"] = accessToken,
+            ["${user_type}"] = userType,
             ["${primary_jar}"] = mainJar,
             ["${game_assets}"] = Path.Combine(assetsRoot, "virtual", "legacy"),
             ["${resolution_width}"] = "854",

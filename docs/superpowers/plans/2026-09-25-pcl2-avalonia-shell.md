@@ -459,3 +459,43 @@
 - 本地 `dotnet test` 全绿，构建 0 警告。
 - 整合包下载后可一键安装：原版版本、必需 Mod、覆盖配置文件均落到游戏目录。
 - GitHub Actions 三平台测试与 7 RID 打包通过。
+
+## Phase 12：微软正版账号登录
+
+### 目标
+
+- 账号页新增“登录微软账号”，使用与开源 PCL2 一致的设备码 OAuth 流程，浏览器打开微软验证页。
+- ClientId 从环境变量 `PCL_MS_CLIENT_ID` 读取，未配置时登录页给出中文提示。
+- 登录后保存正版账号（UUID、访问令牌、刷新令牌、过期时间、皮肤/披风地址），启动时用真实 UUID / Token / `userType=msa` 替换 `${auth_uuid}`、`${auth_access_token}`、`${access_token}`、`${auth_session}`、`${user_type}`。
+- 令牌过期后启动页先自动刷新，刷新失败提示重新登录。
+- 保持单元测试可验证，不依赖真实网络；原 WPF 工程零改动。
+
+### 修改文件
+
+- Create: `PCL.Avalonia/Services/Accounts/MicrosoftAccountSession.cs`
+- Create: `PCL.Avalonia/Services/Accounts/IMicrosoftAuthenticationService.cs` / `MicrosoftAuthenticationService.cs`
+- Create: `PCL.Avalonia/Services/Platform/IBrowserLauncher.cs` / `DefaultBrowserLauncher.cs`
+- Modify: `PCL.Avalonia/Services/Accounts/Account.cs` / `IAccountService.cs` / `JsonAccountService.cs`
+- Modify: `PCL.Avalonia/Services/Minecraft/IGameLauncher.cs` / `GameLauncher.cs`（`BuildLaunchPlan` 接受账号）
+- Modify: `PCL.Avalonia/ViewModels/Pages/AccountsPageViewModel.cs` / `LaunchPageViewModel.cs`
+- Modify: `PCL.Avalonia/ViewModels/MainWindowViewModel.cs` / `Views/MainWindow.axaml.cs`
+- Modify: `PCL.Avalonia/Views/Pages/AccountsPageView.axaml`
+- Create: `PCL.Avalonia.Tests/MicrosoftAuthenticationServiceTests.cs`
+- Modify: `PCL.Avalonia.Tests/AccountServiceTests.cs` / `GameLauncherTests.cs` / `LaunchPageViewModelTests.cs` / `AccountsPageViewModelTests.cs` / `MainWindowViewModelTests.cs`
+
+### 任务
+
+- [x] `MicrosoftAuthenticationService` 实现设备码申请、轮询、刷新、XBL/XSTS/Minecraft 登录、资格验证与玩家档案获取，错误映射为中文提示。
+- [x] `JsonAccountService.AddMicrosoftAccount` 按 UUID 更新已有正版账号，离线账号继续写标准 `OfflinePlayer` UUID。
+- [x] `GameLauncher.BuildLaunchPlan` 对微软账号写入真实 UUID / Token / `msa`。
+- [x] `LaunchPageViewModel` 启动前刷新过期令牌并传入启动器。
+- [x] 账号页 AXAML 增加“登录微软账号”按钮与登录状态。
+- [x] 新增 `MicrosoftAuthenticationServiceTests`，用假 `HttpMessageHandler` 与假浏览器覆盖登录序列、错误映射、刷新与未配置 ClientId。
+- [x] 运行 `~/.dotnet/dotnet test PCL.Avalonia.sln`，确认全绿。
+
+### 验收
+
+- 本地 `dotnet test` 全绿，构建 0 警告。
+- 账号页可用设备码登录微软账号，登录后账号持久化并可设默认。
+- 启动正版账号时使用真实 UUID / Token / `msa`，令牌过期自动刷新。
+- GitHub Actions 三平台测试与 7 RID 打包通过。

@@ -47,7 +47,11 @@ public sealed class MainWindowViewModelTests
 
     private sealed class FakeGameLauncher : IGameLauncher
     {
-        public LaunchPlan BuildLaunchPlan(MinecraftVersion version, AppSettings settings, string javaExecutable)
+        public LaunchPlan BuildLaunchPlan(
+            MinecraftVersion version,
+            AppSettings settings,
+            string javaExecutable,
+            Account? account = null)
             => throw new NotSupportedException();
 
         public IGameLaunch Launch(LaunchPlan plan, IProgress<string>? output = null)
@@ -101,6 +105,15 @@ public sealed class MainWindowViewModelTests
 
         public Account AddOfflineAccount(string name) => new() { Id = Guid.NewGuid(), Name = name };
 
+        public Account AddMicrosoftAccount(MicrosoftAccountSession session)
+            => new()
+            {
+                Id = Guid.NewGuid(),
+                Name = session.Name,
+                Type = "microsoft",
+                Uuid = session.Uuid,
+            };
+
         public void RemoveAccount(Guid id)
         {
         }
@@ -110,6 +123,26 @@ public sealed class MainWindowViewModelTests
         }
 
         public Account? GetDefaultAccount() => null;
+    }
+
+    private sealed class FakeMicrosoftAuthenticationService : IMicrosoftAuthenticationService
+    {
+        public Task<MicrosoftAccountSession> LoginAsync(
+            IProgress<string>? progress = null,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(new MicrosoftAccountSession
+            {
+                Name = "Alex",
+                Uuid = "11111111-2222-3333-4444-555555555555",
+                AccessToken = "token",
+                AccessTokenExpiresAt = DateTimeOffset.UtcNow.AddHours(1),
+            });
+
+        public Task<MicrosoftAccountSession?> RefreshAsync(
+            Account account,
+            IProgress<string>? progress = null,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<MicrosoftAccountSession?>(null);
     }
 
     private sealed class FakeModrinthApi : IModrinthApi
@@ -222,6 +255,7 @@ public sealed class MainWindowViewModelTests
             new FakeInstaller(),
             new FakeModsService(),
             new FakeAccountService(),
+            new FakeMicrosoftAuthenticationService(),
             new FakeModrinthApi(),
             new FakeModsDownloadService(),
             new FakeCurseForgeApi(),
@@ -297,6 +331,7 @@ public sealed class MainWindowViewModelTests
             new FakeInstaller(),
             new FakeModsService(),
             new FakeAccountService(),
+            new FakeMicrosoftAuthenticationService(),
             new FakeModrinthApi(),
             new FakeModsDownloadService(),
             new FakeCurseForgeApi(),

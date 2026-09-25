@@ -4,6 +4,7 @@ using PCL.Avalonia.Services.Accounts;
 using PCL.Avalonia.Services.Downloads;
 using PCL.Avalonia.Services.Minecraft;
 using PCL.Avalonia.Services.Mods;
+using PCL.Avalonia.Services.Platform;
 using PCL.Avalonia.ViewModels;
 
 namespace PCL.Avalonia.Views;
@@ -30,6 +31,7 @@ public partial class MainWindow : Window
         var catalog = new VersionCatalogService();
         var downloadClient = new HttpDownloadClient();
         var accountService = new JsonAccountService(Path.Combine(platform.GetConfigDirectory(), "accounts.json"));
+        var microsoftAuthentication = new MicrosoftAuthenticationService(new DefaultBrowserLauncher());
         var modrinthApi = new ModrinthApi(downloadClient);
         var modsDownloadService = new ModsDownloadService(downloadClient);
         var curseForgeApi = new CurseForgeApi(downloadClient);
@@ -50,6 +52,7 @@ public partial class MainWindow : Window
             versionInstaller,
             new ModsService(),
             accountService,
+            microsoftAuthentication,
             modrinthApi,
             modsDownloadService,
             curseForgeApi,

@@ -6,6 +6,8 @@ public interface IAccountService
 
     Account AddOfflineAccount(string name);
 
+    Account AddMicrosoftAccount(MicrosoftAccountSession session);
+
     void RemoveAccount(Guid id);
 
     void SetDefaultAccount(Guid id);

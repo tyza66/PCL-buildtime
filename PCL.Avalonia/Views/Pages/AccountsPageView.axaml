@@ -7,7 +7,7 @@
     <DockPanel Margin="32">
         <Grid
             DockPanel.Dock="Top"
-            ColumnDefinitions="*,240,Auto"
+            ColumnDefinitions="*,240,Auto,Auto"
             ColumnSpacing="8"
             Margin="0,0,0,14">
             <StackPanel Spacing="2">
@@ -35,6 +35,13 @@
                 Command="{Binding AddCommand}"
                 Background="{DynamicResource ButtonBackgroundBrush}"
                 Foreground="{DynamicResource TextPrimaryBrush}" />
+            <Button
+                Grid.Column="3"
+                Content="登录微软账号"
+                VerticalAlignment="Top"
+                Command="{Binding MicrosoftLoginCommand}"
+                Background="{DynamicResource AccentBrush}"
+                Foreground="White" />
         </Grid>
         <Border
             Background="{DynamicResource CardBackgroundBrush}"

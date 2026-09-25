@@ -28,6 +28,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         IVersionInstaller versionInstaller,
         IModsService modsService,
         IAccountService accountService,
+        IMicrosoftAuthenticationService microsoftAuthentication,
         IModrinthApi modrinthApi,
         IModsDownloadService modsDownloadService,
         ICurseForgeApi curseForgeApi,
@@ -44,8 +45,15 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
         Items =
         [
-            new NavItemViewModel("启动", new LaunchPageViewModel(settingsService, javaService, gameLauncher, session, dispatcher)),
-            new NavItemViewModel("账号", new AccountsPageViewModel(accountService, session)),
+            new NavItemViewModel("启动", new LaunchPageViewModel(
+                settingsService,
+                javaService,
+                gameLauncher,
+                session,
+                dispatcher,
+                microsoftAuthentication,
+                accountService)),
+            new NavItemViewModel("账号", new AccountsPageViewModel(accountService, microsoftAuthentication, session)),
             new NavItemViewModel("下载", new DownloadPageViewModel(settingsService, versionManifestService, versionInstaller, versionCatalogService, platformService, session)),
             new NavItemViewModel("Mod下载", new ModsDownloadPageViewModel(settingsService, modrinthApi, modsDownloadService, platformService, curseForgeApi, curseForgeDownloadService)),
             new NavItemViewModel("整合包", new IntegrationPacksPageViewModel(settingsService, curseForgeModpackService, modpackInstaller, platformService)),

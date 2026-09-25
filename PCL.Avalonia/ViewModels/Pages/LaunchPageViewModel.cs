@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PCL.Avalonia.Services;
+using PCL.Avalonia.Services.Accounts;
 using PCL.Avalonia.Services.Minecraft;
 
 namespace PCL.Avalonia.ViewModels.Pages;
@@ -10,6 +11,8 @@ public sealed partial class LaunchPageViewModel : ObservableObject
     private readonly ISettingsService _settingsService;
     private readonly IJavaService _javaService;
     private readonly IGameLauncher _launcher;
+    private readonly IMicrosoftAuthenticationService _microsoftAuthentication;
+    private readonly IAccountService _accountService;
     private readonly SessionState _session;
     private readonly IUiDispatcher _dispatcher;
     private IGameLaunch? _activeLaunch;
@@ -19,11 +22,15 @@ public sealed partial class LaunchPageViewModel : ObservableObject
         IJavaService javaService,
         IGameLauncher launcher,
         SessionState session,
-        IUiDispatcher dispatcher)
+        IUiDispatcher dispatcher,
+        IMicrosoftAuthenticationService microsoftAuthentication,
+        IAccountService accountService)
     {
         _settingsService = settingsService;
         _javaService = javaService;
         _launcher = launcher;
+        _microsoftAuthentication = microsoftAuthentication;
+        _accountService = accountService;
         _session = session;
         _dispatcher = dispatcher;
         _session.PropertyChanged += OnSessionPropertyChanged;
@@ -69,10 +76,30 @@ public sealed partial class LaunchPageViewModel : ObservableObject
         {
             IsLaunching = true;
             StatusMessage = $"正在启动 {version.Id}";
+            var account = _session.SelectedAccount;
+            if (account?.Type == "microsoft"
+                && account.AccessTokenExpiresAt is { } expiresAt
+                && expiresAt <= DateTimeOffset.UtcNow)
+            {
+                StatusMessage = "正版登录已过期，正在刷新令牌…";
+                var refreshed = await _microsoftAuthentication.RefreshAsync(
+                    account,
+                    new Progress<string>(message => _dispatcher.Post(() => StatusMessage = message)));
+                if (refreshed is null)
+                {
+                    LogLine("正版登录令牌已失效，需要重新登录");
+                    StatusMessage = "正版登录已失效，请到账号页重新登录";
+                    return;
+                }
+
+                account = await Task.Run(() => _accountService.AddMicrosoftAccount(refreshed));
+                _session.SelectedAccount = account;
+            }
+
             var settings = _settingsService.Load();
             settings = settings with
             {
-                UserName = _session.SelectedAccount?.Name is { Length: > 0 } accountName
+                UserName = account?.Name is { Length: > 0 } accountName
                     ? accountName
                     : settings.UserName,
             };
@@ -84,7 +111,8 @@ public sealed partial class LaunchPageViewModel : ObservableObject
                 return;
             }
 
-            var plan = await Task.Run(() => _launcher.BuildLaunchPlan(version, settings, java));
+            var launchAccount = account;
+            var plan = await Task.Run(() => _launcher.BuildLaunchPlan(version, settings, java, launchAccount));
             LogLine("启动命令：" + plan.CommandLine);
             var launch = _launcher.Launch(plan, new Progress<string>(LogLine));
             _activeLaunch = launch;

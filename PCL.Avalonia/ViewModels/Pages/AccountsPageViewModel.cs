@@ -9,11 +9,16 @@ namespace PCL.Avalonia.ViewModels.Pages;
 public sealed partial class AccountsPageViewModel : ObservableObject
 {
     private readonly IAccountService _accountService;
+    private readonly IMicrosoftAuthenticationService _microsoftAuthentication;
     private readonly SessionState _session;
 
-    public AccountsPageViewModel(IAccountService accountService, SessionState session)
+    public AccountsPageViewModel(
+        IAccountService accountService,
+        IMicrosoftAuthenticationService microsoftAuthentication,
+        SessionState session)
     {
         _accountService = accountService;
+        _microsoftAuthentication = microsoftAuthentication;
         _session = session;
         foreach (var account in accountService.Load())
         {
@@ -31,6 +36,10 @@ public sealed partial class AccountsPageViewModel : ObservableObject
     [ObservableProperty]
     private string _statusMessage = "";
 
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(MicrosoftLoginCommand))]
+    private bool _isLoggingIn;
+
     [RelayCommand]
     private async Task AddAsync()
     {
@@ -47,6 +56,35 @@ public sealed partial class AccountsPageViewModel : ObservableObject
         SyncDefault();
         StatusMessage = $"已添加账号 {account.Name}";
     }
+
+    [RelayCommand(CanExecute = nameof(CanLoginMicrosoft))]
+    private async Task MicrosoftLoginAsync()
+    {
+        IsLoggingIn = true;
+        try
+        {
+            StatusMessage = "正在登录微软账号…";
+            var session = await _microsoftAuthentication.LoginAsync(
+                new Progress<string>(message => StatusMessage = message));
+            var account = await Task.Run(() => _accountService.AddMicrosoftAccount(session));
+            ReloadAccounts();
+            StatusMessage = $"已登录微软账号 {account.Name}";
+        }
+        catch (OperationCanceledException)
+        {
+            StatusMessage = "微软登录已取消";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"微软登录失败：{ex.Message}";
+        }
+        finally
+        {
+            IsLoggingIn = false;
+        }
+    }
+
+    private bool CanLoginMicrosoft => !IsLoggingIn;
 
     private async Task SetDefaultAsync(AccountItemViewModel item)
     {
@@ -72,6 +110,17 @@ public sealed partial class AccountsPageViewModel : ObservableObject
             item.IsDefault = item.Account.Id == defaultAccount?.Id;
         }
     }
+
+    private void ReloadAccounts()
+    {
+        Accounts.Clear();
+        foreach (var account in _accountService.Load())
+        {
+            Accounts.Add(new AccountItemViewModel(account, SetDefaultAsync, RemoveAsync));
+        }
+
+        SyncDefault();
+    }
 }
 
 public sealed partial class AccountItemViewModel : ObservableObject
@@ -86,7 +135,12 @@ public sealed partial class AccountItemViewModel : ObservableObject
     {
         Account = account;
         Name = account.Name;
-        TypeText = account.Type == "offline" ? "离线账号" : account.Type;
+        TypeText = account.Type switch
+        {
+            "offline" => "离线账号",
+            "microsoft" => "微软账号",
+            _ => account.Type,
+        };
         CreatedAtText = account.CreatedAt.LocalDateTime.ToString("yyyy-MM-dd HH:mm");
         _setDefault = setDefault;
         _remove = remove;

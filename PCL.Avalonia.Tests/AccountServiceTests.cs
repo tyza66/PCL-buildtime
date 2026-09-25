@@ -70,4 +70,59 @@ public sealed class AccountServiceTests : IDisposable
         var reloaded = new JsonAccountService(_path);
         Assert.Equal(second.Id, reloaded.GetDefaultAccount()?.Id);
     }
+
+    [Fact]
+    public void AddMicrosoftAccount_CreatesPersists_AndBecomesDefault()
+    {
+        var service = new JsonAccountService(_path);
+        var session = new MicrosoftAccountSession
+        {
+            Name = "Alex",
+            Uuid = "11111111-2222-3333-4444-555555555555",
+            AccessToken = "ms-token",
+            RefreshToken = "ms-refresh",
+            AccessTokenExpiresAt = DateTimeOffset.UtcNow.AddHours(1),
+        };
+
+        var account = service.AddMicrosoftAccount(session);
+
+        Assert.Equal("Alex", account.Name);
+        Assert.Equal("microsoft", account.Type);
+        Assert.Equal(session.Uuid, account.Uuid);
+        Assert.Equal(session.AccessToken, account.AccessToken);
+        Assert.Equal(account.Id, service.GetDefaultAccount()?.Id);
+
+        var reloaded = new JsonAccountService(_path);
+        var loaded = Assert.Single(reloaded.Load());
+        Assert.Equal(account.Id, loaded.Id);
+        Assert.Equal("ms-refresh", loaded.RefreshToken);
+    }
+
+    [Fact]
+    public void AddMicrosoftAccount_UpdatesExistingAccountByUuid()
+    {
+        var service = new JsonAccountService(_path);
+        var first = service.AddMicrosoftAccount(new MicrosoftAccountSession
+        {
+            Name = "Alex",
+            Uuid = "11111111-2222-3333-4444-555555555555",
+            AccessToken = "token-1",
+            RefreshToken = "refresh-1",
+            AccessTokenExpiresAt = DateTimeOffset.UtcNow.AddHours(1),
+        });
+
+        var updated = service.AddMicrosoftAccount(new MicrosoftAccountSession
+        {
+            Name = "Alex",
+            Uuid = "11111111-2222-3333-4444-555555555555",
+            AccessToken = "token-2",
+            RefreshToken = "refresh-2",
+            AccessTokenExpiresAt = DateTimeOffset.UtcNow.AddHours(2),
+        });
+
+        Assert.Equal(first.Id, updated.Id);
+        var loaded = Assert.Single(service.Load());
+        Assert.Equal("token-2", loaded.AccessToken);
+        Assert.Equal("refresh-2", loaded.RefreshToken);
+    }
 }

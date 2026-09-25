@@ -2,6 +2,7 @@ using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
 using PCL.Avalonia.Services;
+using PCL.Avalonia.Services.Accounts;
 using PCL.Avalonia.Services.Minecraft;
 
 namespace PCL.Avalonia.Tests;
@@ -283,5 +284,77 @@ public sealed class GameLauncherTests : IDisposable
                 version,
                 new AppSettings { MinecraftFolder = _minecraftFolder },
                 _javaPath));
+    }
+
+    [Fact]
+    public void BuildLaunchPlan_UsesMicrosoftAccountUuidTokenAndUserType()
+    {
+        var version = FindForgeVersion();
+        var settings = new AppSettings
+        {
+            MinecraftFolder = _minecraftFolder,
+            UserName = "OfflineSteve",
+            MaxMemoryMb = 1024,
+        };
+        var account = new Account
+        {
+            Id = Guid.NewGuid(),
+            Name = "Alex",
+            Type = "microsoft",
+            Uuid = "11111111-2222-3333-4444-555555555555",
+            AccessToken = "ms-access-token",
+        };
+
+        var plan = new GameLauncher(_catalog).BuildLaunchPlan(version, settings, _javaPath, account);
+
+        Assert.Contains("11111111-2222-3333-4444-555555555555", plan.Arguments);
+        Assert.Contains("ms-access-token", plan.Arguments);
+        Assert.Contains("msa", plan.Arguments);
+        Assert.Contains("--username", plan.Arguments);
+        Assert.Contains("Alex", plan.Arguments);
+    }
+
+    [Fact]
+    public void BuildLaunchPlan_ThrowsWhenMicrosoftAccountMissingAccessToken()
+    {
+        var version = FindForgeVersion();
+        var account = new Account
+        {
+            Id = Guid.NewGuid(),
+            Name = "Alex",
+            Type = "microsoft",
+            Uuid = "11111111-2222-3333-4444-555555555555",
+        };
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            new GameLauncher(_catalog).BuildLaunchPlan(
+                version,
+                new AppSettings { MinecraftFolder = _minecraftFolder },
+                _javaPath,
+                account));
+
+        Assert.Contains("访问令牌", exception.Message);
+    }
+
+    [Fact]
+    public void BuildLaunchPlan_ThrowsWhenMicrosoftAccountMissingUuid()
+    {
+        var version = FindForgeVersion();
+        var account = new Account
+        {
+            Id = Guid.NewGuid(),
+            Name = "Alex",
+            Type = "microsoft",
+            AccessToken = "token",
+        };
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            new GameLauncher(_catalog).BuildLaunchPlan(
+                version,
+                new AppSettings { MinecraftFolder = _minecraftFolder },
+                _javaPath,
+                account));
+
+        Assert.Contains("UUID", exception.Message);
     }
 }
