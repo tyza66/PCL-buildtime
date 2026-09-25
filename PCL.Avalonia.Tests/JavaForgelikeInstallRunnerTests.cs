@@ -94,7 +94,8 @@ public sealed class JavaForgelikeInstallRunnerTests
 
         Assert.Equal("--add-exports", args[0]);
         Assert.Equal("cpw.mods.bootstraplauncher/cpw.mods.bootstraplauncher=ALL-UNNAMED", args[1]);
-        Assert.Equal("-Doolloo.jlw.tmpdir=/games/mc/tmp", args[2]);
+        var tmp = Path.Combine("/games/mc", "tmp").TrimEnd(Path.DirectorySeparatorChar);
+        Assert.Equal($"-Doolloo.jlw.tmpdir={tmp}", args[2]);
         Assert.Equal("-cp", args[3]);
         Assert.Equal(
             "/games/mc/tmp/Cache/forge_installer.jar:/games/mc/tmp/forge_installer.jar",
