@@ -21,7 +21,7 @@ RequestExecutionLevel admin
 
 Section "Install"
   SetOutPath "$INSTDIR"
-  File /r "publish\*.*"
+  File /r "@PUBLISH_DIR@\*.*"
   WriteUninstaller "$INSTDIR\uninstall.exe"
   CreateDirectory "$SMPROGRAMS\PCL2 Avalonia"
   CreateShortcut "$SMPROGRAMS\PCL2 Avalonia\PCL2 Avalonia.lnk" "$INSTDIR\PCL2.Avalonia.exe"
