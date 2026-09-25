@@ -111,7 +111,7 @@ public sealed class ModsDownloadPageViewModelTests
         await viewModel.Projects[0].InstallCommand.ExecuteAsync(null);
 
         Assert.NotNull(installer.LastVersion);
-        Assert.Equal("/games/mc/mods", installer.LastFolder);
+        Assert.Equal(Path.Combine("/games/mc", "mods"), installer.LastFolder);
         Assert.True(viewModel.Projects[0].IsInstalled);
         Assert.Contains("已安装", viewModel.StatusMessage);
     }
