@@ -30,6 +30,8 @@ public partial class MainWindow : Window
         var catalog = new VersionCatalogService();
         var downloadClient = new HttpDownloadClient();
         var accountService = new JsonAccountService(Path.Combine(platform.GetConfigDirectory(), "accounts.json"));
+        var modrinthApi = new ModrinthApi(downloadClient);
+        var modsDownloadService = new ModsDownloadService(downloadClient);
         return new MainWindowViewModel(
             settings,
             new AvaloniaThemeService(),
@@ -42,6 +44,8 @@ public partial class MainWindow : Window
             new VersionManifestService(downloadClient),
             new VersionInstaller(downloadClient, catalog),
             new ModsService(),
-            accountService);
+            accountService,
+            modrinthApi,
+            modsDownloadService);
     }
 }

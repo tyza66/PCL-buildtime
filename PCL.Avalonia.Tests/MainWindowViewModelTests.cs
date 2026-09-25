@@ -112,6 +112,33 @@ public sealed class MainWindowViewModelTests
         public Account? GetDefaultAccount() => null;
     }
 
+    private sealed class FakeModrinthApi : IModrinthApi
+    {
+        public Task<IReadOnlyList<ModrinthProject>> SearchProjectsAsync(
+            string query,
+            string gameVersion,
+            string loader,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<ModrinthProject>>([]);
+
+        public Task<IReadOnlyList<ModrinthProjectVersion>> GetVersionsAsync(
+            string projectId,
+            string gameVersion,
+            string loader,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<ModrinthProjectVersion>>([]);
+    }
+
+    private sealed class FakeModsDownloadService : IModsDownloadService
+    {
+        public Task<string> InstallAsync(
+            ModrinthProjectVersion version,
+            string modsFolder,
+            IProgress<DownloadProgress>? progress = null,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult("");
+    }
+
     private static (FakeSettingsService Settings, FakeThemeService Theme, MainWindowViewModel ViewModel) CreateViewModel(
         bool useDarkTheme)
     {
@@ -129,7 +156,9 @@ public sealed class MainWindowViewModelTests
             new FakeManifestService(),
             new FakeInstaller(),
             new FakeModsService(),
-            new FakeAccountService());
+            new FakeAccountService(),
+            new FakeModrinthApi(),
+            new FakeModsDownloadService());
         return (settings, theme, viewModel);
     }
 
@@ -168,6 +197,10 @@ public sealed class MainWindowViewModelTests
         viewModel.SelectedItem = viewModel.Items.Single(item => item.Title == "账号");
 
         Assert.IsType<AccountsPageViewModel>(viewModel.CurrentPage);
+
+        viewModel.SelectedItem = viewModel.Items.Single(item => item.Title == "Mod下载");
+
+        Assert.IsType<ModsDownloadPageViewModel>(viewModel.CurrentPage);
     }
 
     [Fact]
@@ -190,7 +223,9 @@ public sealed class MainWindowViewModelTests
             new FakeManifestService(),
             new FakeInstaller(),
             new FakeModsService(),
-            new FakeAccountService());
+            new FakeAccountService(),
+            new FakeModrinthApi(),
+            new FakeModsDownloadService());
 
         viewModel.ToggleThemeCommand.Execute(null);
 

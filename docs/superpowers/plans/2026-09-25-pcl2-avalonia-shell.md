@@ -288,3 +288,45 @@
 
 - 本地 `dotnet test` 全绿，构建 0 警告。
 - 账号页可添加、删除、切换默认离线账号；启动页使用默认账号名离线启动。
+
+## Phase 8：Modrinth Mod 在线下载
+
+### 目标
+
+- 新增“Mod下载”导航页，通过 Modrinth API 搜索 Mod，按游戏版本与加载器过滤，并安装到当前游戏目录的 `mods` 文件夹。
+- 复用现有 `IDownloadClient` 流式下载与校验能力，支持进度显示、取消与已存在跳过。
+- 保持单元测试可验证，不依赖真实网络；原 WPF 工程零改动。
+
+### 修改文件
+
+- Create: `PCL.Avalonia/Services/Mods/ModrinthProject.cs` / `ModrinthProjectVersion.cs` / `ModrinthFile.cs`
+- Create: `PCL.Avalonia/Services/Mods/IModrinthApi.cs` / `ModrinthApi.cs`
+- Create: `PCL.Avalonia/Services/Mods/IModsDownloadService.cs` / `ModsDownloadService.cs`
+- Create: `PCL.Avalonia/ViewModels/Pages/ModsDownloadPageViewModel.cs`
+- Create: `PCL.Avalonia/Views/Pages/ModsDownloadPageView.axaml` / `.axaml.cs`
+- Modify: `PCL.Avalonia/ViewModels/MainWindowViewModel.cs`
+- Modify: `PCL.Avalonia/Views/MainWindow.axaml` / `.axaml.cs`
+- Create: `PCL.Avalonia.Tests/ModrinthApiTests.cs` / `ModsDownloadServiceTests.cs` / `ModsDownloadPageViewModelTests.cs`
+- Modify: `PCL.Avalonia.Tests/MainWindowViewModelTests.cs`
+
+### 任务 1：先写失败测试
+
+- [x] 新建 `ModrinthApiTests`：用假 `IDownloadClient` 验证搜索 JSON 解析与 facets 查询参数；验证版本 JSON 解析、文件字段与按项目/版本筛选参数。
+- [x] 新建 `ModsDownloadServiceTests`：安装主文件到 `mods` 目录并带期望大小/SHA-1 校验；文件已存在时跳过下载；过滤路径穿越文件名。
+- [x] 新建 `ModsDownloadPageViewModelTests`：搜索命令加载结果；安装命令调用服务、展示进度并标记已安装；无适配版本时给出中文提示。
+- [x] 修改 `MainWindowViewModelTests`：注入假 `IModrinthApi` / `IModsDownloadService`，导航用例断言“Mod下载”页。
+- [x] 运行 `~/.dotnet/dotnet test PCL.Avalonia.sln --filter "FullyQualifiedName~ModrinthApiTests|FullyQualifiedName~ModsDownloadServiceTests|FullyQualifiedName~ModsDownloadPageViewModelTests|FullyQualifiedName~MainWindowViewModelTests"`，确认先红。
+
+### 任务 2：实现 API 客户端与下载服务
+
+- [x] `ModrinthApi`：用 `IDownloadClient.GetStringAsync` 请求搜索与版本接口，按游戏版本/加载器构造 facets。
+- [x] `ModsDownloadService`：选主文件（无主文件取第一个），下载到 `<mc>/mods`，已存在跳过，文件名经 `Path.GetFileName` 清理。
+- [x] `ModsDownloadPageViewModel`：搜索、选择版本、下载安装、进度与取消，中文状态消息。
+- [x] `MainWindowViewModel` 注入 `IModrinthApi` / `IModsDownloadService` 并新增“Mod下载”导航项；`MainWindow.axaml` 注册页面模板。
+- [x] 运行 `~/.dotnet/dotnet test PCL.Avalonia.sln`，确认全绿。
+
+### 验收
+
+- 本地 `dotnet test` 全绿，构建 0 警告。
+- Mod 下载页可按版本/加载器搜索并安装 Mod；安装后 Mod 管理页可见。
+- GitHub Actions 三平台测试与 7 RID 打包通过。

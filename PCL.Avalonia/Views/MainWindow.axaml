@@ -20,6 +20,9 @@
         <DataTemplate DataType="{x:Type pages:DownloadPageViewModel}">
             <views:DownloadPageView />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type pages:ModsDownloadPageViewModel}">
+            <views:ModsDownloadPageView />
+        </DataTemplate>
         <DataTemplate DataType="{x:Type pages:VersionPageViewModel}">
             <views:VersionPageView />
         </DataTemplate>
