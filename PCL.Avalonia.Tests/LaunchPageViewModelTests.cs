@@ -60,7 +60,8 @@ public sealed class LaunchPageViewModelTests
             MinecraftVersion version,
             AppSettings settings,
             string javaExecutable,
-            Account? account = null)
+            Account? account = null,
+            VersionSettings? versionSettings = null)
         {
             LastBuildSettings = settings;
             LastAccount = account;
@@ -151,6 +152,43 @@ public sealed class LaunchPageViewModelTests
         public Account? GetDefaultAccount() => null;
     }
 
+    private sealed class FakeVersionManager : IVersionManagerService
+    {
+        public VersionSettings LoadSettings(string minecraftFolder, string versionId) => new();
+
+        public void SetFavorite(string minecraftFolder, string versionId, bool isFavorite)
+        {
+        }
+
+        public void SetHidden(string minecraftFolder, string versionId, bool isHidden)
+        {
+        }
+
+        public void SetDisplayType(string minecraftFolder, string versionId, InstanceDisplayType displayType)
+        {
+        }
+
+        public void SetInstanceLaunchSettings(
+            string minecraftFolder,
+            string versionId,
+            int? maxMemoryMb,
+            string? javaPath,
+            string? jvmArguments,
+            string? gameArguments)
+        {
+        }
+
+        public void SetDescription(string minecraftFolder, string versionId, string description)
+        {
+        }
+
+        public string Rename(string minecraftFolder, string versionId, string newName) => newName;
+
+        public void Delete(string minecraftFolder, string versionId)
+        {
+        }
+    }
+
     private sealed class SyncDispatcher : IUiDispatcher
     {
         public int PostCount { get; private set; }
@@ -183,7 +221,8 @@ public sealed class LaunchPageViewModelTests
             session,
             dispatcher,
             microsoft ?? new FakeMicrosoftAuthenticationService(),
-            accounts ?? new FakeAccountService());
+            accounts ?? new FakeAccountService(),
+            new FakeVersionManager());
 
     [Fact]
     public async Task LaunchAsync_StartsGameAndTracksExit()

@@ -2,6 +2,7 @@ using PCL.Avalonia.Services;
 using PCL.Avalonia.Services.Accounts;
 using PCL.Avalonia.Services.Game;
 using PCL.Avalonia.Services.Minecraft;
+using PCL.Avalonia.Services.Mods;
 using PCL.Avalonia.Services.Platform;
 using PCL.Avalonia.ViewModels.Pages;
 
@@ -63,6 +64,24 @@ public sealed class VersionPageViewModelTests
         public void SetHidden(string minecraftFolder, string versionId, bool isHidden)
             => SettingsByVersion[versionId] = LoadSettings(minecraftFolder, versionId) with { IsHidden = isHidden };
 
+        public void SetDisplayType(string minecraftFolder, string versionId, InstanceDisplayType displayType)
+            => SettingsByVersion[versionId] = LoadSettings(minecraftFolder, versionId) with { DisplayType = displayType };
+
+        public void SetInstanceLaunchSettings(
+            string minecraftFolder,
+            string versionId,
+            int? maxMemoryMb,
+            string? javaPath,
+            string? jvmArguments,
+            string? gameArguments)
+            => SettingsByVersion[versionId] = LoadSettings(minecraftFolder, versionId) with
+            {
+                MaxMemoryMb = maxMemoryMb,
+                JavaPath = javaPath,
+                JvmArguments = jvmArguments,
+                GameArguments = gameArguments,
+            };
+
         public void SetDescription(string minecraftFolder, string versionId, string description)
             => SettingsByVersion[versionId] = LoadSettings(minecraftFolder, versionId) with { Description = description };
 
@@ -104,7 +123,8 @@ public sealed class VersionPageViewModelTests
             MinecraftVersion version,
             AppSettings settings,
             string javaExecutable,
-            Account? account = null)
+            Account? account = null,
+            VersionSettings? versionSettings = null)
         {
             LastPlan = new LaunchPlan
             {
@@ -134,6 +154,17 @@ public sealed class VersionPageViewModelTests
         }
     }
 
+    private sealed class FakeModsService : IModsService
+    {
+        public IReadOnlyList<ModInfo> Scan(string minecraftFolder) => [];
+
+        public ModInfo SetEnabled(ModInfo mod, bool enabled) => mod;
+
+        public void Delete(ModInfo mod)
+        {
+        }
+    }
+
     private static MinecraftVersion Version(string id)
         => new()
         {
@@ -154,13 +185,16 @@ public sealed class VersionPageViewModelTests
         var viewModel = new VersionPageViewModel(
             settings ?? new FakeSettingsService(),
             catalog,
+            new InstanceClassifier(),
             session,
             new FakePlatformService(),
             manager ?? new FakeVersionManager(),
             folderOpener ?? new FakeFolderOpener(),
             new FakeJavaService(),
             launcher ?? new FakeGameLauncher(),
-            exporter ?? new FakeScriptExporter());
+            exporter ?? new FakeScriptExporter(),
+            new InstancePackExporter(),
+            new FakeModsService());
         return (catalog, session, viewModel);
     }
 

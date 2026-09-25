@@ -7,6 +7,7 @@ using PCL.Avalonia.Services.Downloads;
 using PCL.Avalonia.Services.Game;
 using PCL.Avalonia.Services.Minecraft;
 using PCL.Avalonia.Services.Mods;
+using PCL.Avalonia.Services.Link;
 using PCL.Avalonia.Services.Platform;
 using PCL.Avalonia.ViewModels.Pages;
 
@@ -29,6 +30,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         IVersionManifestService versionManifestService,
         IVersionInstaller versionInstaller,
         IModsService modsService,
+        IInstanceClassifier instanceClassifier,
+        IInstancePackExporter instancePackExporter,
         IAccountService accountService,
         IMicrosoftAuthenticationService microsoftAuthentication,
         IModrinthApi modrinthApi,
@@ -37,12 +40,15 @@ public sealed partial class MainWindowViewModel : ObservableObject
         ICurseForgeDownloadService curseForgeDownloadService,
         ICurseForgeModpackService curseForgeModpackService,
         IModpackInstallerService modpackInstaller,
+        IResourceSearchService resourceSearchService,
+        IResourceDownloadService resourceDownloadService,
         IFabricLoaderService fabricLoaderService,
         IForgelikeLoaderService forgelikeLoaderService,
         IVersionManagerService versionManager,
         IFolderOpener folderOpener,
         ILaunchScriptExporter scriptExporter,
-        IOtherToolsService otherToolsService)
+        IOtherToolsService otherToolsService,
+        ILinkService linkService)
     {
         _settingsService = settingsService;
         _themeService = themeService;
@@ -60,25 +66,37 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 session,
                 dispatcher,
                 microsoftAuthentication,
-                accountService)),
+                accountService,
+                versionManager)),
             new NavItemViewModel("账号", new AccountsPageViewModel(accountService, microsoftAuthentication, session)),
             new NavItemViewModel("下载", new DownloadPageViewModel(settingsService, versionManifestService, versionInstaller, versionCatalogService, platformService, session)),
             new NavItemViewModel("Fabric", new FabricLoaderPageViewModel(settingsService, fabricLoaderService, platformService, session)),
             new NavItemViewModel("Forge", new ForgelikeLoaderPageViewModel(settingsService, forgelikeLoaderService, platformService, session)),
             new NavItemViewModel("Mod下载", new ModsDownloadPageViewModel(settingsService, modrinthApi, modsDownloadService, platformService, curseForgeApi, curseForgeDownloadService)),
+            new NavItemViewModel("资源下载", new ResourceDownloadPageViewModel(
+                settingsService,
+                resourceSearchService,
+                resourceDownloadService,
+                platformService,
+                modrinthApi,
+                curseForgeApi)),
             new NavItemViewModel("整合包", new IntegrationPacksPageViewModel(settingsService, curseForgeModpackService, modpackInstaller, platformService)),
             new NavItemViewModel("版本", new VersionPageViewModel(
                 settingsService,
                 versionCatalogService,
+                instanceClassifier,
                 session,
                 platformService,
                 versionManager,
                 folderOpener,
                 javaService,
                 gameLauncher,
-                scriptExporter)),
+                scriptExporter,
+                instancePackExporter,
+                modsService)),
             new NavItemViewModel("Mod管理", new ModsPageViewModel(settingsService, modsService, platformService)),
-            new NavItemViewModel("设置", new SettingsPageViewModel(settingsService, platformService, _themeService)),
+            new NavItemViewModel("联机", new LinkPageViewModel(linkService, settingsService, dispatcher)),
+            new NavItemViewModel("设置", new SettingsPageViewModel(settingsService, platformService, _themeService, new JavaListService())),
             new NavItemViewModel("其他", new OtherPageViewModel(
                 settingsService,
                 platformService,

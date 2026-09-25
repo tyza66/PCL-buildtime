@@ -40,6 +40,53 @@
                             Watermark="java 或 java.exe 的完整路径"
                             Foreground="{DynamicResource TextPrimaryBrush}" />
                         <TextBlock
+                            Text="已检测到的 Java"
+                            FontSize="13"
+                            FontWeight="SemiBold"
+                            Margin="0,14,0,0"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
+                            <ListBox
+                                Grid.Column="0"
+                                ItemsSource="{Binding JavaEntries}"
+                                SelectedItem="{Binding SelectedJava}"
+                                MaxHeight="140"
+                                Background="{DynamicResource CardBackgroundBrush}"
+                                Foreground="{DynamicResource TextPrimaryBrush}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="pages:JavaInfo">
+                                        <StackPanel Spacing="2">
+                                            <TextBlock
+                                                Text="{Binding Version}"
+                                                FontSize="13"
+                                                FontWeight="SemiBold" />
+                                            <TextBlock
+                                                Text="{Binding Path}"
+                                                FontSize="11"
+                                                Opacity="0.7" />
+                                            <TextBlock
+                                                Text="{Binding Architecture}"
+                                                FontSize="10"
+                                                Opacity="0.5" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            <StackPanel Grid.Column="1" Margin="8,0,0,0" Spacing="6">
+                                <Button
+                                    Content="刷新"
+                                    Command="{Binding RefreshJavaListCommand}"
+                                    IsEnabled="{Binding !IsScanningJava}"
+                                    Background="{DynamicResource ButtonBackgroundBrush}"
+                                    Foreground="{DynamicResource TextPrimaryBrush}" />
+                                <Button
+                                    Content="选择"
+                                    Command="{Binding SelectJavaCommand}"
+                                    Background="{DynamicResource ButtonBackgroundBrush}"
+                                    Foreground="{DynamicResource TextPrimaryBrush}" />
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock
                             Text="用户名"
                             FontSize="13"
                             FontWeight="SemiBold"

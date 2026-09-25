@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PCL.Avalonia.Services;
+using System.Collections.ObjectModel;
 
 namespace PCL.Avalonia.ViewModels.Pages;
 
@@ -8,14 +9,17 @@ public sealed partial class SettingsPageViewModel : ObservableObject
 {
     private readonly ISettingsService _settingsService;
     private readonly IThemeService _themeService;
+    private readonly IJavaListService _javaListService;
 
     public SettingsPageViewModel(
         ISettingsService settingsService,
         IPlatformService platformService,
-        IThemeService themeService)
+        IThemeService themeService,
+        IJavaListService javaListService)
     {
         _settingsService = settingsService;
         _themeService = themeService;
+        _javaListService = javaListService;
         var settings = settingsService.Load();
         MinecraftFolder = string.IsNullOrWhiteSpace(settings.MinecraftFolder)
             ? platformService.GetDefaultMinecraftFolder()
@@ -32,6 +36,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
         OptimizeMemoryBeforeLaunch = settings.OptimizeMemoryBeforeLaunch;
         LinkLatencyMode = LinkLatencyModes.First(option => option.Mode == settings.LinkLatencyMode);
         LinkCustomPeer = settings.LinkCustomPeer;
+        RefreshJavaList();
     }
 
     public IReadOnlyList<SettingsSectionOption> Sections { get; } =
@@ -99,6 +104,52 @@ public sealed partial class SettingsPageViewModel : ObservableObject
 
     [ObservableProperty]
     private string _linkCustomPeer = "";
+
+    public ObservableCollection<JavaInfo> JavaEntries { get; } = new();
+
+    [ObservableProperty]
+    private JavaInfo? _selectedJava;
+
+    [ObservableProperty]
+    private bool _isScanningJava;
+
+    [RelayCommand]
+    private void RefreshJavaList()
+    {
+        IsScanningJava = true;
+        try
+        {
+            var java = _javaListService.Scan();
+            JavaEntries.Clear();
+            foreach (var entry in java.OrderByDescending(j => j.Version))
+            {
+                JavaEntries.Add(entry);
+            }
+
+            SelectedJava = JavaEntries.FirstOrDefault(j =>
+                j.Path.Equals(JavaPath, StringComparison.OrdinalIgnoreCase));
+            StatusMessage = JavaEntries.Count == 0
+                ? "未检测到 Java，请手动指定路径"
+                : $"检测到 {JavaEntries.Count} 个 Java";
+        }
+        finally
+        {
+            IsScanningJava = false;
+        }
+    }
+
+    [RelayCommand]
+    private void SelectJava()
+    {
+        var java = SelectedJava;
+        if (java is null)
+        {
+            return;
+        }
+
+        JavaPath = java.Path;
+        StatusMessage = $"已选择 Java {java.Version} ({java.Architecture})";
+    }
 
     [RelayCommand]
     private void Save()

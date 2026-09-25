@@ -33,11 +33,22 @@ public sealed class SettingsPageViewModelTests
         public void Apply(bool useDarkTheme) => LastAppliedTheme = useDarkTheme;
     }
 
+    private sealed class FakeJavaListService : IJavaListService
+    {
+        public IReadOnlyList<JavaInfo> Scan() => [];
+
+        public JavaInfo? GetJava(string path) => null;
+
+        public void Refresh()
+        {
+        }
+    }
+
     private static SettingsPageViewModel CreateViewModel(
         FakeSettingsService settings,
         FakeThemeService? theme = null)
     {
-        return new SettingsPageViewModel(settings, new FakePlatformService(), theme ?? new FakeThemeService());
+        return new SettingsPageViewModel(settings, new FakePlatformService(), theme ?? new FakeThemeService(), new FakeJavaListService());
     }
 
     [Fact]

@@ -2,9 +2,14 @@ namespace PCL.Avalonia.Services.Mods;
 
 public interface ICurseForgeApi
 {
-    Task<IReadOnlyList<CurseForgeProject>> SearchProjectsAsync(
+    Task<CurseForgeSearchPage> SearchProjectsAsync(
         string query,
         int classId = 6,
+        string gameVersion = "",
+        string loader = "",
+        string categoryId = "",
+        int index = 0,
+        int pageSize = 40,
         CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<CurseForgeModFile>> GetFilesAsync(

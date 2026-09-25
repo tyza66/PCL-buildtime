@@ -70,8 +70,25 @@ public sealed class ModrinthApiTests
         var url = Assert.Single(client.Urls);
         Assert.Contains("query=jei", url);
         var decoded = Uri.UnescapeDataString(url);
+        Assert.Contains("project_type:mod", decoded);
         Assert.Contains("versions:1.20.1", decoded);
         Assert.Contains("categories:fabric", decoded);
+    }
+
+    [Fact]
+    public async Task SearchProjectsAsync_UsesRequestedType_AndOmitsEmptyFacets()
+    {
+        var client = new FakeDownloadClient { Response = """{ "hits": [] }""" };
+        var api = new ModrinthApi(client);
+
+        await api.SearchProjectsAsync("pack", "", "", "resourcepack");
+
+        var url = Assert.Single(client.Urls);
+        var decoded = Uri.UnescapeDataString(url);
+        Assert.Contains("query=pack", url);
+        Assert.Contains("project_type:resourcepack", decoded);
+        Assert.DoesNotContain("versions:", decoded);
+        Assert.DoesNotContain("categories:", decoded);
     }
 
     [Fact]

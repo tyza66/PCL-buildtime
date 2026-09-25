@@ -8,7 +8,8 @@ public interface IGameLauncher
         MinecraftVersion version,
         AppSettings settings,
         string javaExecutable,
-        Account? account = null);
+        Account? account = null,
+        VersionSettings? versionSettings = null);
 
     IGameLaunch Launch(LaunchPlan plan, IProgress<string>? output = null);
 }

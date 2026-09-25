@@ -26,11 +26,13 @@ public sealed class GameLauncher : IGameLauncher
         MinecraftVersion version,
         AppSettings settings,
         string javaExecutable,
-        Account? account = null)
+        Account? account = null,
+        VersionSettings? versionSettings = null)
     {
         ArgumentNullException.ThrowIfNull(version);
         ArgumentNullException.ThrowIfNull(settings);
         ArgumentException.ThrowIfNullOrWhiteSpace(javaExecutable);
+        settings = PCL.Avalonia.Services.LaunchSettingsMerger.Merge(settings, versionSettings);
         if (string.IsNullOrWhiteSpace(settings.MinecraftFolder))
         {
             throw new InvalidOperationException("未设置游戏目录");

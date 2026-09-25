@@ -30,9 +30,14 @@ public sealed class CurseForgeApi : ICurseForgeApi
         _downloadClient = downloadClient;
     }
 
-    public async Task<IReadOnlyList<CurseForgeProject>> SearchProjectsAsync(
+    public async Task<CurseForgeSearchPage> SearchProjectsAsync(
         string query,
         int classId = 6,
+        string gameVersion = "",
+        string loader = "",
+        string categoryId = "",
+        int index = 0,
+        int pageSize = 40,
         CancellationToken cancellationToken = default)
     {
         var search = new SearchRequest
@@ -40,15 +45,22 @@ public sealed class CurseForgeApi : ICurseForgeApi
             GameId = MinecraftGameId,
             ClassId = classId,
             SearchFilter = query.Trim(),
-            PageSize = 30,
-            SortField = 6,
+            GameVersion = string.IsNullOrWhiteSpace(gameVersion) ? null : gameVersion.Trim(),
+            ModLoaderType = MapLoaderType(loader),
+            CategoryId = string.IsNullOrWhiteSpace(categoryId) ? null : categoryId,
+            Index = Math.Max(0, index),
+            PageSize = Math.Clamp(pageSize, 1, 50),
+            SortField = 2,
+            SortOrder = "desc",
         };
         var body = JsonSerializer.Serialize(search, JsonOptions);
         var json = await _downloadClient
             .PostJsonAsync([$"{BaseUrl}/v1/mods/search"], body, cancellationToken)
             .ConfigureAwait(false);
         var envelope = JsonSerializer.Deserialize<Envelope<List<CurseForgeProject>>>(json, JsonOptions);
-        return envelope?.Data ?? [];
+        return new CurseForgeSearchPage(
+            envelope?.Data ?? [],
+            envelope?.Pagination?.TotalCount ?? 0);
     }
 
     public async Task<IReadOnlyList<CurseForgeModFile>> GetFilesAsync(
@@ -109,6 +121,13 @@ public sealed class CurseForgeApi : ICurseForgeApi
     private sealed record Envelope<T>
     {
         public T Data { get; init; } = default!;
+
+        public Pagination? Pagination { get; init; }
+    }
+
+    private sealed record Pagination
+    {
+        public int TotalCount { get; init; }
     }
 
     private sealed class SearchRequest
@@ -117,10 +136,20 @@ public sealed class CurseForgeApi : ICurseForgeApi
 
         public int ClassId { get; init; }
 
+        public string? CategoryId { get; init; }
+
+        public string? GameVersion { get; init; }
+
+        public int? ModLoaderType { get; init; }
+
         public string SearchFilter { get; init; } = "";
+
+        public int Index { get; init; }
 
         public int PageSize { get; init; }
 
         public int SortField { get; init; }
+
+        public string SortOrder { get; init; } = "desc";
     }
 }

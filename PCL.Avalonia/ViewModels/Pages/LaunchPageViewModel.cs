@@ -13,6 +13,7 @@ public sealed partial class LaunchPageViewModel : ObservableObject
     private readonly IGameLauncher _launcher;
     private readonly IMicrosoftAuthenticationService _microsoftAuthentication;
     private readonly IAccountService _accountService;
+    private readonly IVersionManagerService _versionManager;
     private readonly SessionState _session;
     private readonly IUiDispatcher _dispatcher;
     private IGameLaunch? _activeLaunch;
@@ -24,13 +25,15 @@ public sealed partial class LaunchPageViewModel : ObservableObject
         SessionState session,
         IUiDispatcher dispatcher,
         IMicrosoftAuthenticationService microsoftAuthentication,
-        IAccountService accountService)
+        IAccountService accountService,
+        IVersionManagerService versionManager)
     {
         _settingsService = settingsService;
         _javaService = javaService;
         _launcher = launcher;
         _microsoftAuthentication = microsoftAuthentication;
         _accountService = accountService;
+        _versionManager = versionManager;
         _session = session;
         _dispatcher = dispatcher;
         _session.PropertyChanged += OnSessionPropertyChanged;
@@ -97,13 +100,17 @@ public sealed partial class LaunchPageViewModel : ObservableObject
             }
 
             var settings = _settingsService.Load();
+            var versionSettings = _versionManager.LoadSettings(
+                GetMinecraftFolder(settings),
+                version.Id);
             settings = settings with
             {
                 UserName = account?.Name is { Length: > 0 } accountName
                     ? accountName
                     : settings.UserName,
             };
-            var java = _javaService.ResolveJavaExecutable(settings);
+            var launchSettings = LaunchSettingsMerger.Merge(settings, versionSettings);
+            var java = _javaService.ResolveJavaExecutable(launchSettings);
             if (java is null)
             {
                 LogLine("未找到 Java，请先在设置页配置 Java 路径");
@@ -112,7 +119,12 @@ public sealed partial class LaunchPageViewModel : ObservableObject
             }
 
             var launchAccount = account;
-            var plan = await Task.Run(() => _launcher.BuildLaunchPlan(version, settings, java, launchAccount));
+            var plan = await Task.Run(() => _launcher.BuildLaunchPlan(
+                version,
+                launchSettings,
+                java,
+                launchAccount,
+                versionSettings));
             LogLine("启动命令：" + plan.CommandLine);
             var launch = _launcher.Launch(plan, new Progress<string>(LogLine));
             _activeLaunch = launch;
@@ -193,5 +205,12 @@ public sealed partial class LaunchPageViewModel : ObservableObject
         {
             LogText = LogText.Length == 0 ? line : LogText + "\n" + line;
         });
+    }
+
+    private string GetMinecraftFolder(AppSettings settings)
+    {
+        return string.IsNullOrWhiteSpace(settings.MinecraftFolder)
+            ? throw new InvalidOperationException("未设置游戏目录")
+            : settings.MinecraftFolder;
     }
 }

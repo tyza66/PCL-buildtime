@@ -29,6 +29,9 @@
         <DataTemplate DataType="{x:Type pages:ModsDownloadPageViewModel}">
             <views:ModsDownloadPageView />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type pages:ResourceDownloadPageViewModel}">
+            <views:ResourceDownloadPageView />
+        </DataTemplate>
         <DataTemplate DataType="{x:Type pages:IntegrationPacksPageViewModel}">
             <views:IntegrationPacksPageView />
         </DataTemplate>
@@ -37,6 +40,9 @@
         </DataTemplate>
         <DataTemplate DataType="{x:Type pages:ModsPageViewModel}">
             <views:ModsPageView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type pages:LinkPageViewModel}">
+            <views:LinkPageView />
         </DataTemplate>
         <DataTemplate DataType="{x:Type pages:AccountsPageViewModel}">
             <views:AccountsPageView />

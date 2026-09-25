@@ -19,17 +19,30 @@ public sealed class ModrinthApi : IModrinthApi
         _downloadClient = downloadClient;
     }
 
-    public async Task<IReadOnlyList<ModrinthProject>> SearchProjectsAsync(
+    public async Task<ModrinthSearchPage> SearchProjectsAsync(
         string query,
         string gameVersion,
         string loader,
+        string projectType = "mod",
+        int offset = 0,
+        int limit = 40,
+        string tag = "",
         CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(gameVersion);
         var facets = new List<string[]>
         {
-            new[] { $"versions:{gameVersion}" },
+            new[] { $"project_type:{projectType}" },
         };
+        if (!string.IsNullOrWhiteSpace(tag) && !tag.EndsWith("/", StringComparison.Ordinal))
+        {
+            facets.Add(new[] { $"categories:'{tag.Split('/')[^1].Trim('\'')}'" });
+        }
+
+        if (!string.IsNullOrWhiteSpace(gameVersion))
+        {
+            facets.Add(new[] { $"versions:{gameVersion}" });
+        }
+
         if (!string.IsNullOrWhiteSpace(loader))
         {
             facets.Add(new[] { $"categories:{loader}" });
@@ -37,10 +50,13 @@ public sealed class ModrinthApi : IModrinthApi
 
         var queryPart = Uri.EscapeDataString(query.Trim());
         var facetsPart = Uri.EscapeDataString(JsonSerializer.Serialize(facets));
-        var url = $"{BaseUrl}/search?query={queryPart}&limit=30&facets={facetsPart}";
+        var url = $"{BaseUrl}/search?query={queryPart}&limit={Math.Clamp(limit, 1, 100)}" +
+                  $"&offset={Math.Max(0, offset)}&index=relevance&facets={facetsPart}";
         var json = await _downloadClient.GetStringAsync([url], cancellationToken).ConfigureAwait(false);
         var response = JsonSerializer.Deserialize<SearchResponse>(json, JsonOptions);
-        return response?.Hits ?? [];
+        return new ModrinthSearchPage(
+            response?.Hits ?? [],
+            response?.TotalHits ?? 0);
     }
 
     public async Task<IReadOnlyList<ModrinthProjectVersion>> GetVersionsAsync(
@@ -63,5 +79,7 @@ public sealed class ModrinthApi : IModrinthApi
     private sealed record SearchResponse
     {
         public List<ModrinthProject> Hits { get; init; } = [];
+
+        public int TotalHits { get; init; }
     }
 }

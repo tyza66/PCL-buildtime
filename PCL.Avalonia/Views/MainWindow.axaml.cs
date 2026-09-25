@@ -5,6 +5,7 @@ using PCL.Avalonia.Services.Downloads;
 using PCL.Avalonia.Services.Game;
 using PCL.Avalonia.Services.Minecraft;
 using PCL.Avalonia.Services.Mods;
+using PCL.Avalonia.Services.Link;
 using PCL.Avalonia.Services.Platform;
 using PCL.Avalonia.ViewModels;
 
@@ -37,12 +38,17 @@ public partial class MainWindow : Window
         var modsDownloadService = new ModsDownloadService(downloadClient);
         var curseForgeApi = new CurseForgeApi(downloadClient);
         var curseForgeDownloadService = new CurseForgeDownloadService(downloadClient);
+        var resourceDownloadService = new ResourceDownloadService(downloadClient);
         var versionInstaller = new VersionInstaller(downloadClient, catalog);
+        var modsService = new ModsService();
         var fabricLoaderService = new FabricLoaderService(downloadClient, versionInstaller);
         var forgelikeInstallRunner = new JavaForgelikeInstallRunner(settings, new JavaService());
         var forgelikeLoaderService = new ForgelikeLoaderService(downloadClient, versionInstaller, forgelikeInstallRunner);
         var curseForgeModpackService = new CurseForgeModpackService(curseForgeApi, downloadClient);
         var modpackInstaller = new ModpackInstallerService(curseForgeApi, downloadClient, versionInstaller);
+        var linkService = LinkService.Create(
+            Path.Combine(platform.GetConfigDirectory(), "EasyTier"),
+            downloadClient);
         return new MainWindowViewModel(
             settings,
             new AvaloniaThemeService(),
@@ -54,7 +60,9 @@ public partial class MainWindow : Window
             platform,
             new VersionManifestService(downloadClient),
             versionInstaller,
-            new ModsService(),
+            modsService,
+            new InstanceClassifier(),
+            new InstancePackExporter(),
             accountService,
             microsoftAuthentication,
             modrinthApi,
@@ -63,11 +71,14 @@ public partial class MainWindow : Window
             curseForgeDownloadService,
             curseForgeModpackService,
             modpackInstaller,
+            new ResourceSearcherService(modrinthApi, curseForgeApi),
+            resourceDownloadService,
             fabricLoaderService,
             forgelikeLoaderService,
             new VersionManagerService(),
             new DefaultFolderOpener(),
             new LaunchScriptExporter(),
-            new OtherToolsService());
+            new OtherToolsService(),
+            linkService);
     }
 }

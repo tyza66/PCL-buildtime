@@ -29,10 +29,11 @@ public sealed class VersionCatalogService : IVersionCatalogService
                 continue;
             }
 
-            var json = TryParseJson(jsonPath);
+            var json = TryParseJsonPath(jsonPath);
             if (json?.Id is { Length: > 0 })
             {
-                result.Add(new MinecraftVersion
+                var rawJson = TryReadText(jsonPath) ?? "";
+                result.Add(VersionMetadataBuilder.WithMetadata(new MinecraftVersion
                 {
                     Id = json.Id,
                     Folder = folder,
@@ -44,7 +45,7 @@ public sealed class VersionCatalogService : IVersionCatalogService
                     Assets = json.Assets,
                     AssetIndexId = json.AssetIndex?.Id,
                     Jar = json.Jar,
-                });
+                }, json, rawJson));
             }
         }
 
@@ -63,13 +64,13 @@ public sealed class VersionCatalogService : IVersionCatalogService
 
         var folder = Path.Combine(minecraftFolder, "versions", id);
         var jsonPath = FindJsonPath(folder, id);
-        return jsonPath is null ? null : TryParseJson(jsonPath);
+        return jsonPath is null ? null : TryParseJsonPath(jsonPath);
     }
 
     private static string? FindJsonPath(string versionFolder, string expectedId)
     {
         var direct = Path.Combine(versionFolder, expectedId + ".json");
-        if (File.Exists(direct) && TryParseJson(direct) is not null)
+        if (File.Exists(direct) && TryParseJsonPath(direct) is not null)
         {
             return direct;
         }
@@ -86,7 +87,7 @@ public sealed class VersionCatalogService : IVersionCatalogService
                 continue;
             }
 
-            var parsed = TryParseJson(candidate);
+            var parsed = TryParseJsonPath(candidate);
             if (parsed is not null && parsed.Id is { Length: > 0 })
             {
                 return candidate;
@@ -96,13 +97,38 @@ public sealed class VersionCatalogService : IVersionCatalogService
         return null;
     }
 
-    private static MinecraftVersionJson? TryParseJson(string path)
+    private static MinecraftVersionJson? TryParseJsonPath(string path)
     {
         try
         {
-            return JsonSerializer.Deserialize<MinecraftVersionJson>(File.ReadAllText(path), JsonOptions);
+            var text = File.ReadAllText(path);
+            return TryParseJsonText(text);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
+    private static MinecraftVersionJson? TryParseJsonText(string text)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<MinecraftVersionJson>(text, JsonOptions);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static string? TryReadText(string path)
+    {
+        try
+        {
+            return File.ReadAllText(path);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             return null;
         }

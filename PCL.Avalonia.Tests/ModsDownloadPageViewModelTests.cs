@@ -35,6 +35,7 @@ public sealed class ModsDownloadPageViewModelTests
             string query,
             string gameVersion,
             string loader,
+            string projectType = "mod",
             CancellationToken cancellationToken = default)
         {
             SearchQueries.Add($"{query}|{gameVersion}|{loader}");

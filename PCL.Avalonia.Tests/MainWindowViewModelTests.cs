@@ -4,6 +4,7 @@ using PCL.Avalonia.Services.Downloads;
 using PCL.Avalonia.Services.Game;
 using PCL.Avalonia.Services.Minecraft;
 using PCL.Avalonia.Services.Mods;
+using PCL.Avalonia.Services.Link;
 using PCL.Avalonia.Services.Platform;
 using PCL.Avalonia.ViewModels;
 using PCL.Avalonia.ViewModels.Pages;
@@ -53,7 +54,8 @@ public sealed class MainWindowViewModelTests
             MinecraftVersion version,
             AppSettings settings,
             string javaExecutable,
-            Account? account = null)
+            Account? account = null,
+            VersionSettings? versionSettings = null)
             => throw new NotSupportedException();
 
         public IGameLaunch Launch(LaunchPlan plan, IProgress<string>? output = null)
@@ -153,6 +155,7 @@ public sealed class MainWindowViewModelTests
             string query,
             string gameVersion,
             string loader,
+            string projectType = "mod",
             CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<ModrinthProject>>([]);
 
@@ -162,6 +165,29 @@ public sealed class MainWindowViewModelTests
             string loader,
             CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<ModrinthProjectVersion>>([]);
+    }
+
+    private sealed class FakeResourceSearchService : IResourceSearchService
+    {
+        public Task<IReadOnlyList<ResourceProjectItem>> SearchAsync(
+            ResourceType type,
+            string query,
+            string gameVersion,
+            string loader,
+            ResourceSource source,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<ResourceProjectItem>>([]);
+    }
+
+    private sealed class FakeResourceDownloadService : IResourceDownloadService
+    {
+        public Task<string> InstallAsync(
+            ResourceType type,
+            ResourceFileItem file,
+            string minecraftFolder,
+            IProgress<DownloadProgress>? progress = null,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult("");
     }
 
     private sealed class FakeModsDownloadService : IModsDownloadService
@@ -293,6 +319,20 @@ public sealed class MainWindowViewModelTests
         {
         }
 
+        public void SetDisplayType(string minecraftFolder, string versionId, InstanceDisplayType displayType)
+        {
+        }
+
+        public void SetInstanceLaunchSettings(
+            string minecraftFolder,
+            string versionId,
+            int? maxMemoryMb,
+            string? javaPath,
+            string? jvmArguments,
+            string? gameArguments)
+        {
+        }
+
         public void SetDescription(string minecraftFolder, string versionId, string description)
         {
         }
@@ -316,6 +356,33 @@ public sealed class MainWindowViewModelTests
         public string Export(LaunchPlan plan, string filePath) => filePath;
     }
 
+    private sealed class FakeInstanceClassifier : IInstanceClassifier
+    {
+        public IReadOnlyDictionary<InstanceGroup, IReadOnlyList<VersionInstance>> Group(
+            IEnumerable<VersionInstance> instances,
+            bool showHidden)
+            => new Dictionary<InstanceGroup, IReadOnlyList<VersionInstance>>
+            {
+                [InstanceGroup.Star] = [],
+                [InstanceGroup.Api] = [],
+                [InstanceGroup.OriginalLike] = instances.ToList(),
+                [InstanceGroup.Rubbish] = [],
+                [InstanceGroup.Fool] = [],
+                [InstanceGroup.Error] = [],
+                [InstanceGroup.Hidden] = [],
+            };
+    }
+
+    private sealed class FakeInstancePackExporter : IInstancePackExporter
+    {
+        public string Export(
+            string minecraftFolder,
+            string versionId,
+            string displayName,
+            string outputPath)
+            => outputPath;
+    }
+
     private sealed class FakeOtherToolsService : IOtherToolsService
     {
         public OtherEnvironmentInfo GetEnvironmentInfo(string minecraftFolder, string configDirectory)
@@ -324,6 +391,67 @@ public sealed class MainWindowViewModelTests
         public GarbageReport ScanGarbage(IReadOnlyList<string> roots) => new(0, 0);
 
         public GarbageReport CleanGarbage(IReadOnlyList<string> roots) => new(0, 0);
+    }
+
+    private sealed class FakeLinkService : ILinkService
+    {
+        public LinkState State => LinkState.Waiting;
+
+        public string StatusMessage => "";
+
+        public double Progress => 0;
+
+        public string? ErrorMessage => null;
+
+        public LinkSession? Session => null;
+
+        public IReadOnlyList<LinkPeer> Peers => [];
+
+        public LinkNatType NatType => LinkNatType.Pending;
+
+        public event Action? StateChanged;
+
+        public void RaiseStateChanged() => StateChanged?.Invoke();
+
+        public Task<LinkSession> CreateRoomAsync(
+            int serverPort,
+            LinkLatencyMode latencyMode,
+            string customPeer,
+            IProgress<double>? progress = null,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<LinkSession>(CreateSession(serverPort, customPeer));
+
+        public Task<LinkSession> JoinRoomAsync(
+            string inviteCode,
+            LinkLatencyMode latencyMode,
+            string customPeer,
+            IProgress<double>? progress = null,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<LinkSession>(CreateSession(25565, customPeer));
+
+        public Task RefreshPeersAsync(CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+
+        public Task StopAsync() => Task.CompletedTask;
+
+        public void Dispose()
+        {
+        }
+
+        private static LinkSession CreateSession(int port, string customPeer)
+        {
+            return new LinkSession(
+                IsServer: true,
+                ServerPort: port,
+                ClientPort: 0,
+                RpcPort: 15780,
+                ListenersPort: 15781,
+                NetworkName: "P63D9-ABCDE",
+                NetworkSecret: "12345",
+                Hostname: "Server-ab0012",
+                DiscoverNodeId: -1,
+                Peers: [customPeer]);
+        }
     }
 
     private static (FakeSettingsService Settings, FakeThemeService Theme, MainWindowViewModel ViewModel) CreateViewModel(
@@ -343,6 +471,8 @@ public sealed class MainWindowViewModelTests
             new FakeManifestService(),
             new FakeInstaller(),
             new FakeModsService(),
+            new FakeInstanceClassifier(),
+            new FakeInstancePackExporter(),
             new FakeAccountService(),
             new FakeMicrosoftAuthenticationService(),
             new FakeModrinthApi(),
@@ -351,12 +481,15 @@ public sealed class MainWindowViewModelTests
             new FakeCurseForgeDownloadService(),
             new FakeCurseForgeModpackService(),
             new FakeModpackInstaller(),
+            new FakeResourceSearchService(),
+            new FakeResourceDownloadService(),
             new FakeFabricLoaderService(),
             new FakeForgelikeLoaderService(),
             new FakeVersionManager(),
             new FakeFolderOpener(),
             new FakeScriptExporter(),
-            new FakeOtherToolsService());
+            new FakeOtherToolsService(),
+            new FakeLinkService());
         return (settings, theme, viewModel);
     }
 
@@ -408,9 +541,17 @@ public sealed class MainWindowViewModelTests
 
         Assert.IsType<ModsDownloadPageViewModel>(viewModel.CurrentPage);
 
+        viewModel.SelectedItem = viewModel.Items.Single(item => item.Title == "资源下载");
+
+        Assert.IsType<ResourceDownloadPageViewModel>(viewModel.CurrentPage);
+
         viewModel.SelectedItem = viewModel.Items.Single(item => item.Title == "整合包");
 
         Assert.IsType<IntegrationPacksPageViewModel>(viewModel.CurrentPage);
+
+        viewModel.SelectedItem = viewModel.Items.Single(item => item.Title == "联机");
+
+        Assert.IsType<LinkPageViewModel>(viewModel.CurrentPage);
 
         viewModel.SelectedItem = viewModel.Items.Single(item => item.Title == "其他");
 
@@ -437,6 +578,8 @@ public sealed class MainWindowViewModelTests
             new FakeManifestService(),
             new FakeInstaller(),
             new FakeModsService(),
+            new FakeInstanceClassifier(),
+            new FakeInstancePackExporter(),
             new FakeAccountService(),
             new FakeMicrosoftAuthenticationService(),
             new FakeModrinthApi(),
@@ -445,12 +588,15 @@ public sealed class MainWindowViewModelTests
             new FakeCurseForgeDownloadService(),
             new FakeCurseForgeModpackService(),
             new FakeModpackInstaller(),
+            new FakeResourceSearchService(),
+            new FakeResourceDownloadService(),
             new FakeFabricLoaderService(),
             new FakeForgelikeLoaderService(),
             new FakeVersionManager(),
             new FakeFolderOpener(),
             new FakeScriptExporter(),
-            new FakeOtherToolsService());
+            new FakeOtherToolsService(),
+            new FakeLinkService());
 
         viewModel.ToggleThemeCommand.Execute(null);
 

@@ -27,4 +27,8 @@ public sealed record AppSettings
     public LinkLatencyMode LinkLatencyMode { get; init; } = LinkLatencyMode.PreferredDirect;
 
     public string LinkCustomPeer { get; init; } = "";
+
+    public IReadOnlyList<MinecraftFolder> LaunchFolders { get; init; } = [];
 }
+
+public sealed record MinecraftFolder(string Name, string Path);

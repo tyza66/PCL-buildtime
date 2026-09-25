@@ -1,0 +1,217 @@
+<UserControl
+    x:Class="PCL.Avalonia.Views.Pages.LinkPageView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="clr-namespace:PCL.Avalonia.ViewModels.Pages;assembly=PCL2.Avalonia"
+    xmlns:link="clr-namespace:PCL.Avalonia.Services.Link;assembly=PCL2.Avalonia"
+    x:DataType="vm:LinkPageViewModel">
+    <ScrollViewer>
+        <StackPanel Margin="32" Spacing="14">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                <StackPanel Spacing="2">
+                    <TextBlock
+                        Text="联机"
+                        FontSize="26"
+                        FontWeight="SemiBold"
+                        Foreground="{DynamicResource TextPrimaryBrush}" />
+                    <TextBlock
+                        Text="{Binding StatusMessage}"
+                        FontSize="13"
+                        TextWrapping="Wrap"
+                        Foreground="{DynamicResource TextSecondaryBrush}" />
+                </StackPanel>
+                <Button
+                    Grid.Column="1"
+                    Content="退出联机"
+                    VerticalAlignment="Top"
+                    Command="{Binding ExitLinkCommand}"
+                    Background="{DynamicResource ButtonBackgroundBrush}"
+                    Foreground="{DynamicResource TextPrimaryBrush}" />
+            </Grid>
+
+            <Grid
+                ColumnDefinitions="*,*"
+                ColumnSpacing="14">
+                <Border
+                    Background="{DynamicResource CardBackgroundBrush}"
+                    CornerRadius="8">
+                    <StackPanel Margin="18" Spacing="10">
+                        <TextBlock
+                            Text="创建房间"
+                            FontSize="16"
+                            FontWeight="SemiBold"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <TextBlock
+                            Text="服务器端口"
+                            FontSize="13"
+                            Foreground="{DynamicResource TextSecondaryBrush}" />
+                        <TextBox
+                            Text="{Binding ServerPort}"
+                            Watermark="25565"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <TextBlock
+                            Text="模式"
+                            FontSize="13"
+                            Foreground="{DynamicResource TextSecondaryBrush}" />
+                        <ComboBox
+                            ItemsSource="{Binding LinkLatencyModes}"
+                            SelectedItem="{Binding LinkLatencyMode}"
+                            Background="{DynamicResource CardBackgroundBrush}"
+                            Foreground="{DynamicResource TextPrimaryBrush}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:LinkLatencyModeOption">
+                                    <TextBlock
+                                        Text="{Binding Label}"
+                                        Foreground="{DynamicResource TextPrimaryBrush}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <Button
+                            Content="创建房间"
+                            HorizontalAlignment="Stretch"
+                            Command="{Binding CreateRoomCommand}"
+                            Background="{DynamicResource ButtonBackgroundBrush}"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                    </StackPanel>
+                </Border>
+                <Border
+                    Grid.Column="1"
+                    Background="{DynamicResource CardBackgroundBrush}"
+                    CornerRadius="8">
+                    <StackPanel Margin="18" Spacing="10">
+                        <TextBlock
+                            Text="加入房间"
+                            FontSize="16"
+                            FontWeight="SemiBold"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <TextBlock
+                            Text="邀请码"
+                            FontSize="13"
+                            Foreground="{DynamicResource TextSecondaryBrush}" />
+                        <TextBox
+                            Text="{Binding InviteCode}"
+                            Watermark="P0001-ABCDE-12345-02000"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <TextBlock
+                            Text="自定义节点"
+                            FontSize="13"
+                            Foreground="{DynamicResource TextSecondaryBrush}" />
+                        <TextBox
+                            Text="{Binding CustomPeer}"
+                            Watermark="tcp://public.easytier.cn:11010"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <Button
+                            Content="加入房间"
+                            HorizontalAlignment="Stretch"
+                            Command="{Binding JoinRoomCommand}"
+                            Background="{DynamicResource ButtonBackgroundBrush}"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <ProgressBar
+                Minimum="0"
+                Maximum="1"
+                Value="{Binding Progress}"
+                IsVisible="{Binding IsBusy}" />
+
+            <TextBlock
+                Text="{Binding ErrorMessage, TargetNullValue=''}"
+                FontSize="13"
+                TextWrapping="Wrap"
+                Foreground="#E76F51" />
+
+            <Border
+                Background="{DynamicResource CardBackgroundBrush}"
+                CornerRadius="8"
+                IsVisible="{Binding IsSessionActive}">
+                <StackPanel Margin="18" Spacing="12">
+                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+                        <StackPanel Spacing="2">
+                            <TextBlock
+                                Text="房间信息"
+                                FontSize="16"
+                                FontWeight="SemiBold"
+                                Foreground="{DynamicResource TextPrimaryBrush}" />
+                            <TextBlock
+                                Text="{Binding InviteCodeText}"
+                                FontSize="13"
+                                TextWrapping="Wrap"
+                                Foreground="{DynamicResource TextSecondaryBrush}" />
+                        </StackPanel>
+                        <Button
+                            Grid.Column="1"
+                            Content="复制邀请码"
+                            VerticalAlignment="Top"
+                            Click="CopyInviteCode_Click"
+                            Background="{DynamicResource ButtonBackgroundBrush}"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <Button
+                            Grid.Column="2"
+                            Content="复制 IP"
+                            VerticalAlignment="Top"
+                            Click="CopyAddress_Click"
+                            Background="{DynamicResource ButtonBackgroundBrush}"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                    </Grid>
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <TextBlock
+                            Text="{Binding Session.ClientAddress, TargetNullValue='', StringFormat=服务器地址：{0}}"
+                            FontSize="13"
+                            Foreground="{DynamicResource TextSecondaryBrush}" />
+                        <TextBlock
+                            Text="{Binding NatTypeText, StringFormat=NAT 类型：{0}}"
+                            FontSize="13"
+                            Foreground="{DynamicResource TextSecondaryBrush}" />
+                        <Button
+                            Content="刷新节点"
+                            Command="{Binding RefreshPeersCommand}"
+                            Background="{DynamicResource ButtonBackgroundBrush}"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                    </StackPanel>
+                    <TextBlock
+                        Text="节点列表"
+                        FontSize="14"
+                        FontWeight="SemiBold"
+                        Foreground="{DynamicResource TextPrimaryBrush}" />
+                    <ListBox
+                        MaxHeight="180"
+                        ItemsSource="{Binding Peers}"
+                        Background="Transparent"
+                        BorderThickness="0">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="link:LinkPeer">
+                                <StackPanel Margin="6,3" Spacing="1">
+                                    <TextBlock
+                                        Text="{Binding Name}"
+                                        FontSize="13"
+                                        FontWeight="SemiBold"
+                                        Foreground="{DynamicResource TextPrimaryBrush}" />
+                                    <StackPanel Orientation="Horizontal" Spacing="12">
+                                        <TextBlock
+                                            Text="{Binding Ping, StringFormat='延迟 {0:0.#} ms'}"
+                                            FontSize="12"
+                                            Foreground="{DynamicResource TextSecondaryBrush}" />
+                                        <TextBlock
+                                            Text="{Binding Type}"
+                                            FontSize="12"
+                                            Foreground="{DynamicResource TextSecondaryBrush}" />
+                                        <TextBlock
+                                            Text="{Binding Relay, StringFormat=中转：{0}}"
+                                            FontSize="12"
+                                            Foreground="{DynamicResource TextSecondaryBrush}" />
+                                        <TextBlock
+                                            Text="{Binding NatType}"
+                                            FontSize="12"
+                                            Foreground="{DynamicResource TextSecondaryBrush}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

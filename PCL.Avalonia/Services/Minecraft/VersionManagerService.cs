@@ -9,6 +9,10 @@ public sealed class VersionManagerService : IVersionManagerService
     private const string KeyFavorite = "IsStar";
     private const string KeyDisplayType = "DisplayType";
     private const string KeyDescription = "CustomInfo";
+    private const string KeyMemory = "VersionRamCustom";
+    private const string KeyJavaPath = "JavaDir";
+    private const string KeyJvmArguments = "VersionJvmArgs";
+    private const string KeyGameArguments = "VersionGameArgs";
 
     public VersionSettings LoadSettings(string minecraftFolder, string versionId)
     {
@@ -23,7 +27,12 @@ public sealed class VersionManagerService : IVersionManagerService
         {
             IsFavorite = ParseBoolean(values.GetValueOrDefault(KeyFavorite)),
             IsHidden = ParseDisplayType(values.GetValueOrDefault(KeyDisplayType)),
+            DisplayType = ParseDisplayTypeValue(values.GetValueOrDefault(KeyDisplayType)),
             Description = values.GetValueOrDefault(KeyDescription) ?? "",
+            MaxMemoryMb = ParseNullableInt(values.GetValueOrDefault(KeyMemory)),
+            JavaPath = values.GetValueOrDefault(KeyJavaPath),
+            JvmArguments = values.GetValueOrDefault(KeyJvmArguments),
+            GameArguments = values.GetValueOrDefault(KeyGameArguments),
         };
     }
 
@@ -37,9 +46,17 @@ public sealed class VersionManagerService : IVersionManagerService
 
     public void SetHidden(string minecraftFolder, string versionId, bool isHidden)
     {
+        SetDisplayType(
+            minecraftFolder,
+            versionId,
+            isHidden ? InstanceDisplayType.Hidden : InstanceDisplayType.Auto);
+    }
+
+    public void SetDisplayType(string minecraftFolder, string versionId, InstanceDisplayType displayType)
+    {
         UpdateSettings(minecraftFolder, versionId, new Dictionary<string, string>
         {
-            [KeyDisplayType] = isHidden ? "1" : "0",
+            [KeyDisplayType] = ((int)displayType).ToString(),
         });
     }
 
@@ -48,6 +65,28 @@ public sealed class VersionManagerService : IVersionManagerService
         UpdateSettings(minecraftFolder, versionId, new Dictionary<string, string>
         {
             [KeyDescription] = description ?? "",
+        });
+    }
+
+    public void SetInstanceLaunchSettings(
+        string minecraftFolder,
+        string versionId,
+        int? maxMemoryMb,
+        string? javaPath,
+        string? jvmArguments,
+        string? gameArguments)
+    {
+        if (maxMemoryMb is not null && maxMemoryMb != 0 && maxMemoryMb < 256)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maxMemoryMb), "手动内存不能小于 256 MB");
+        }
+
+        UpdateSettings(minecraftFolder, versionId, new Dictionary<string, string>
+        {
+            [KeyMemory] = maxMemoryMb?.ToString() ?? "",
+            [KeyJavaPath] = javaPath ?? "",
+            [KeyJvmArguments] = jvmArguments ?? "",
+            [KeyGameArguments] = gameArguments ?? "",
         });
     }
 
@@ -227,6 +266,22 @@ public sealed class VersionManagerService : IVersionManagerService
     {
         return string.Equals(value, "1", StringComparison.Ordinal)
             || string.Equals(value, "True", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static InstanceDisplayType ParseDisplayTypeValue(string? value)
+    {
+        if (int.TryParse(value, out var numeric)
+            && Enum.IsDefined(typeof(InstanceDisplayType), numeric))
+        {
+            return (InstanceDisplayType)numeric;
+        }
+
+        return InstanceDisplayType.Auto;
+    }
+
+    private static int? ParseNullableInt(string? value)
+    {
+        return int.TryParse(value, out var numeric) ? numeric : null;
     }
 
     private static void ValidateVersionId(string versionId)

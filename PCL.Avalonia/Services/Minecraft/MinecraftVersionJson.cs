@@ -26,8 +26,14 @@ public sealed class MinecraftVersionJson
     [JsonPropertyName("jar")]
     public string? Jar { get; set; }
 
+    [JsonPropertyName("clientVersion")]
+    public string? ClientVersion { get; set; }
+
     [JsonPropertyName("minecraftArguments")]
     public string? MinecraftArguments { get; set; }
+
+    [JsonPropertyName("patches")]
+    public List<VersionPatchJson> Patches { get; set; } = [];
 
     [JsonPropertyName("assetIndex")]
     public AssetIndexJson? AssetIndex { get; set; }
@@ -40,6 +46,15 @@ public sealed class MinecraftVersionJson
 
     [JsonPropertyName("downloads")]
     public VersionDownloadsJson? Downloads { get; set; }
+}
+
+public sealed class VersionPatchJson
+{
+    [JsonPropertyName("id")]
+    public string? Id { get; set; }
+
+    [JsonPropertyName("version")]
+    public string? Version { get; set; }
 }
 
 public sealed class AssetIndexJson
