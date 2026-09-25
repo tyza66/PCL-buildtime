@@ -101,7 +101,7 @@ public sealed class GameLauncher : IGameLauncher
         var accessToken = isMicrosoft ? account!.AccessToken!.Trim() : "0";
         var userType = isMicrosoft ? "msa" : "legacy";
         var jvmArgs = BuildJvmArguments(chain, settings);
-        var gameArgs = BuildGameArguments(chain, version, userName, authUuid, accessToken, userType, assetsIndexName);
+        var gameArgs = BuildGameArguments(chain, version, userName, authUuid, accessToken, userType, assetsIndexName, settings);
         var classPath = string.Join(Path.PathSeparator, classPathEntries);
         var replacements = BuildReplacements(
             version,
@@ -414,6 +414,7 @@ public sealed class GameLauncher : IGameLauncher
 
         result.Add($"-Xmx{Math.Max(256, settings.MaxMemoryMb)}M");
         result.Add("-Dlog4j2.formatMsgNoLookups=true");
+        result.AddRange(SplitArguments(settings.JvmArguments));
         return result;
     }
 
@@ -424,7 +425,8 @@ public sealed class GameLauncher : IGameLauncher
         string authUuid,
         string accessToken,
         string userType,
-        string assetsIndexName)
+        string assetsIndexName,
+        AppSettings settings)
     {
         var result = new List<string>();
         var hasNewArguments = chain.Any(json => json.Arguments?.Game is { Count: > 0 });
@@ -466,6 +468,7 @@ public sealed class GameLauncher : IGameLauncher
         result.Add(string.IsNullOrWhiteSpace(version.Type) ? "release" : version.Type);
         result.Add("--userProperties");
         result.Add("${user_properties}");
+        result.AddRange(SplitArguments(settings.GameArguments));
         return result;
     }
 
@@ -650,7 +653,7 @@ public sealed class GameLauncher : IGameLauncher
                 inQuotes = !inQuotes;
                 current.Append(character);
             }
-            else if (character == ' ' && !inQuotes)
+            else if ((character == ' ' || character == '\r' || character == '\n') && !inQuotes)
             {
                 if (current.Length > 0)
                 {

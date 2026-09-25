@@ -13,4 +13,8 @@ public sealed record AppSettings
     public string UserName { get; init; } = "";
 
     public int MaxMemoryMb { get; init; } = 4096;
+
+    public string JvmArguments { get; init; } = "";
+
+    public string GameArguments { get; init; } = "";
 }

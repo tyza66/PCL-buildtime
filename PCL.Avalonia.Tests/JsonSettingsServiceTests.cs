@@ -45,6 +45,8 @@ public sealed class JsonSettingsServiceTests : IDisposable
             UserName = "Steve",
             MaxMemoryMb = 8192,
             DownloadSource = DownloadSource.Mojang,
+            JvmArguments = "-Dcustom=1",
+            GameArguments = "--demo --config \"hello world\"",
         });
 
         var loaded = service.Load();
@@ -55,6 +57,8 @@ public sealed class JsonSettingsServiceTests : IDisposable
         Assert.Equal("Steve", loaded.UserName);
         Assert.Equal(8192, loaded.MaxMemoryMb);
         Assert.Equal(DownloadSource.Mojang, loaded.DownloadSource);
+        Assert.Equal("-Dcustom=1", loaded.JvmArguments);
+        Assert.Equal("--demo --config \"hello world\"", loaded.GameArguments);
     }
 
     [Fact]

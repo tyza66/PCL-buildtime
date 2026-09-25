@@ -359,8 +359,26 @@ public sealed class VersionInstallerTests : IDisposable
 
     private sealed class ListProgress<T> : IProgress<T>
     {
-        public List<T> Values { get; } = [];
+        private readonly object _lock = new();
+        private readonly List<T> _values = [];
 
-        public void Report(T value) => Values.Add(value);
+        public IReadOnlyList<T> Values
+        {
+            get
+            {
+                lock (_lock)
+                {
+                    return _values.ToArray();
+                }
+            }
+        }
+
+        public void Report(T value)
+        {
+            lock (_lock)
+            {
+                _values.Add(value);
+            }
+        }
     }
 }

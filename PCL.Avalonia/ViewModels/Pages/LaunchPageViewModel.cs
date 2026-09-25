@@ -169,9 +169,9 @@ public sealed partial class LaunchPageViewModel : ObservableObject
             }
 
             _activeLaunch = null;
-            IsRunning = false;
             LogLine($"游戏进程已退出（退出码 {exitCode}）");
             StatusMessage = $"已退出 {versionId}（退出码 {exitCode}）";
+            IsRunning = false;
             launch.Dispose();
         });
     }

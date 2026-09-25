@@ -38,6 +38,8 @@ public sealed class SettingsPageViewModelTests
                 UserName = "Alex",
                 MaxMemoryMb = 6144,
                 DownloadSource = DownloadSource.Mojang,
+                JvmArguments = "-Dcustom=1",
+                GameArguments = "--demo",
             },
         };
 
@@ -48,6 +50,8 @@ public sealed class SettingsPageViewModelTests
         Assert.Equal("Alex", viewModel.UserName);
         Assert.Equal(6144, viewModel.MaxMemoryMb);
         Assert.Equal(DownloadSource.Mojang, viewModel.DownloadSource.Source);
+        Assert.Equal("-Dcustom=1", viewModel.JvmArguments);
+        Assert.Equal("--demo", viewModel.GameArguments);
     }
 
     [Fact]
@@ -74,6 +78,8 @@ public sealed class SettingsPageViewModelTests
         viewModel.MaxMemoryMb = 8192;
         viewModel.DownloadSource = viewModel.DownloadSources.Single(
             option => option.Source == DownloadSource.Mojang);
+        viewModel.JvmArguments = "-Dcustom=2";
+        viewModel.GameArguments = "--config \"hello world\"";
 
         viewModel.SaveCommand.Execute(null);
 
@@ -82,6 +88,8 @@ public sealed class SettingsPageViewModelTests
         Assert.Equal("Steve", settings.Settings.UserName);
         Assert.Equal(8192, settings.Settings.MaxMemoryMb);
         Assert.Equal(DownloadSource.Mojang, settings.Settings.DownloadSource);
+        Assert.Equal("-Dcustom=2", settings.Settings.JvmArguments);
+        Assert.Equal("--config \"hello world\"", settings.Settings.GameArguments);
         Assert.False(settings.Settings.UseDarkTheme);
         Assert.Equal("设置已保存", viewModel.StatusMessage);
     }

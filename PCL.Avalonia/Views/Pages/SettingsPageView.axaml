@@ -53,6 +53,30 @@
                 Watermark="4096"
                 Foreground="{DynamicResource TextPrimaryBrush}" />
             <TextBlock
+                Text="JVM 启动参数"
+                FontSize="13"
+                FontWeight="SemiBold"
+                Margin="0,14,0,0"
+                Foreground="{DynamicResource TextPrimaryBrush}" />
+            <TextBox
+                Text="{Binding JvmArguments}"
+                AcceptsReturn="True"
+                Height="84"
+                Watermark="例如：-Dminecraft.api=1"
+                Foreground="{DynamicResource TextPrimaryBrush}" />
+            <TextBlock
+                Text="游戏启动参数"
+                FontSize="13"
+                FontWeight="SemiBold"
+                Margin="0,14,0,0"
+                Foreground="{DynamicResource TextPrimaryBrush}" />
+            <TextBox
+                Text="{Binding GameArguments}"
+                AcceptsReturn="True"
+                Height="84"
+                Watermark="例如：--demo"
+                Foreground="{DynamicResource TextPrimaryBrush}" />
+            <TextBlock
                 Text="下载源"
                 FontSize="13"
                 FontWeight="SemiBold"

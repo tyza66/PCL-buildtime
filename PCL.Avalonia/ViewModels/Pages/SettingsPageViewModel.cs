@@ -19,6 +19,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject
         UserName = string.IsNullOrWhiteSpace(settings.UserName) ? "Player" : settings.UserName;
         MaxMemoryMb = settings.MaxMemoryMb;
         DownloadSource = DownloadSources.First(option => option.Source == settings.DownloadSource);
+        JvmArguments = settings.JvmArguments;
+        GameArguments = settings.GameArguments;
     }
 
     public IReadOnlyList<DownloadSourceOption> DownloadSources { get; } =
@@ -40,6 +42,12 @@ public sealed partial class SettingsPageViewModel : ObservableObject
     private int _maxMemoryMb = 4096;
 
     [ObservableProperty]
+    private string _jvmArguments = "";
+
+    [ObservableProperty]
+    private string _gameArguments = "";
+
+    [ObservableProperty]
     private DownloadSourceOption _downloadSource = new(PCL.Avalonia.Services.DownloadSource.Bmclapi, "BMCLAPI（推荐）");
 
     [ObservableProperty]
@@ -56,6 +64,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject
             UserName = string.IsNullOrWhiteSpace(UserName) ? "Player" : UserName.Trim(),
             MaxMemoryMb = MaxMemoryMb,
             DownloadSource = DownloadSource.Source,
+            JvmArguments = JvmArguments.Trim(),
+            GameArguments = GameArguments.Trim(),
         });
         StatusMessage = "设置已保存";
     }

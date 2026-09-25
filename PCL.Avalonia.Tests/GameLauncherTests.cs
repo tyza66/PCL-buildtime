@@ -237,6 +237,28 @@ public sealed class GameLauncherTests : IDisposable
     }
 
     [Fact]
+    public void BuildLaunchPlan_AppendsCustomJvmAndGameArguments_WithMarkerReplacement()
+    {
+        var version = FindForgeVersion();
+        var settings = new AppSettings
+        {
+            MinecraftFolder = _minecraftFolder,
+            UserName = "Steve",
+            MaxMemoryMb = 4096,
+            JvmArguments = "-Dcustom=${version_name}\n-Duser.extra=1",
+            GameArguments = "--demo ${auth_player_name}",
+        };
+
+        var plan = new GameLauncher(_catalog).BuildLaunchPlan(version, settings, _javaPath);
+
+        Assert.Contains("-Dcustom=forge-1.20.1", plan.Arguments);
+        Assert.Contains("-Duser.extra=1", plan.Arguments);
+        Assert.Contains("--demo", plan.Arguments);
+        Assert.Contains("Steve", plan.Arguments);
+        Assert.DoesNotContain(plan.Arguments, argument => argument.Contains("${auth_player_name}", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void BuildLaunchPlan_ThrowsWhenMainJarMissing()
     {
         var version = _catalog.Scan(_minecraftFolder).Single(item => item.Id == "1.20.1");

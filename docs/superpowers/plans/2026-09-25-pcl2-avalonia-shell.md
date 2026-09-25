@@ -499,3 +499,40 @@
 - 账号页可用设备码登录微软账号，登录后账号持久化并可设默认。
 - 启动正版账号时使用真实 UUID / Token / `msa`，令牌过期自动刷新。
 - GitHub Actions 三平台测试与 7 RID 打包通过。
+
+## Phase 13：自定义启动参数
+
+### 目标
+
+- 设置页新增“JVM 启动参数”与“游戏启动参数”文本编辑区。
+- 启动器解析自定义参数并按空格、引号与换行拆分，支持 `${version_name}`、`${auth_player_name}` 等既有占位符。
+- 自定义参数继承默认参数一起参与去重和标记替换，用户可覆盖默认值。
+- 顺手修复全量测试偶发竞态：退出流程测试等待真实清理完成、下载进度收集线程安全。
+
+### 修改文件
+
+- Modify: `PCL.Avalonia/Services/AppSettings.cs`（新增 `JvmArguments`、`GameArguments`）
+- Modify: `PCL.Avalonia/Services/Minecraft/GameLauncher.cs`（JVM/游戏参数追加与换行切分）
+- Modify: `PCL.Avalonia/ViewModels/Pages/SettingsPageViewModel.cs`
+- Modify: `PCL.Avalonia/Views/Pages/SettingsPageView.axaml`
+- Modify: `PCL.Avalonia/ViewModels/Pages/LaunchPageViewModel.cs`（退出日志先于运行态清理）
+- Modify: `PCL.Avalonia.Tests/SettingsPageViewModelTests.cs`
+- Modify: `PCL.Avalonia.Tests/JsonSettingsServiceTests.cs`
+- Modify: `PCL.Avalonia.Tests/GameLauncherTests.cs`
+- Modify: `PCL.Avalonia.Tests/LaunchPageViewModelTests.cs`
+- Modify: `PCL.Avalonia.Tests/VersionInstallerTests.cs`
+
+### 任务
+
+- [x] 先在 `SettingsPageViewModelTests`、`JsonSettingsServiceTests`、`GameLauncherTests` 写失败测试覆盖加载、保存、参数追加与占位符替换。
+- [x] `AppSettings` 增加字段并按需在 JSON 设置中往返。
+- [x] `GameLauncher` 追加自定义 JVM/游戏参数，`SplitArguments` 支持换行分隔。
+- [x] 设置页 AXAML 增加两个参数输入框。
+- [x] 修复测试竞态：退出测试等待 `FakeGameLaunch.DisposeTcs`，进度收集改为线程安全。
+- [x] 本地 `dotnet build` 0 警告，`dotnet test` 全绿。
+
+### 验收
+
+- 设置页可保存自定义 JVM/游戏启动参数。
+- 启动时自定义参数进入实际命令行并替换占位符。
+- 全量测试连续多轮稳定通过。
