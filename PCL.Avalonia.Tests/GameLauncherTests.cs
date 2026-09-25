@@ -145,6 +145,10 @@ public sealed class GameLauncherTests : IDisposable
 
             zip.CreateEntry("META-INF/MANIFEST.MF");
         }
+
+        var assetIndexes = Path.Combine(_minecraftFolder, "assets", "indexes");
+        Directory.CreateDirectory(assetIndexes);
+        File.WriteAllText(Path.Combine(assetIndexes, "1.20.json"), "{}");
     }
 
     private void WriteLibrary(string relativePath)
@@ -229,5 +233,55 @@ public sealed class GameLauncherTests : IDisposable
         Assert.True(File.Exists(Path.Combine(plan.NativesDirectory, "libexample.so")));
         Assert.False(File.Exists(Path.Combine(plan.NativesDirectory, "META-INF", "MANIFEST.MF")));
         Assert.DoesNotContain(plan.Arguments, argument => argument.Contains("${auth_player_name}", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void BuildLaunchPlan_ThrowsWhenMainJarMissing()
+    {
+        var version = _catalog.Scan(_minecraftFolder).Single(item => item.Id == "1.20.1");
+        File.Delete(Path.Combine(_minecraftFolder, "versions", "1.20.1", "1.20.1.jar"));
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            new GameLauncher(_catalog).BuildLaunchPlan(
+                version,
+                new AppSettings { MinecraftFolder = _minecraftFolder },
+                _javaPath));
+
+        Assert.Contains("1.20.1.jar", exception.Message);
+    }
+
+    [Fact]
+    public void BuildLaunchPlan_ThrowsWhenRequiredLibraryMissing()
+    {
+        var version = FindForgeVersion();
+        File.Delete(Path.Combine(
+            _minecraftFolder,
+            "libraries",
+            "com",
+            "example",
+            "core",
+            "1.0",
+            "core-1.0.jar"));
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            new GameLauncher(_catalog).BuildLaunchPlan(
+                version,
+                new AppSettings { MinecraftFolder = _minecraftFolder },
+                _javaPath));
+
+        Assert.Contains("core-1.0.jar", exception.Message);
+    }
+
+    [Fact]
+    public void BuildLaunchPlan_ThrowsWhenAssetIndexMissing()
+    {
+        var version = _catalog.Scan(_minecraftFolder).Single(item => item.Id == "1.20.1");
+        File.Delete(Path.Combine(_minecraftFolder, "assets", "indexes", "1.20.json"));
+
+        Assert.Throws<FileNotFoundException>(() =>
+            new GameLauncher(_catalog).BuildLaunchPlan(
+                version,
+                new AppSettings { MinecraftFolder = _minecraftFolder },
+                _javaPath));
     }
 }

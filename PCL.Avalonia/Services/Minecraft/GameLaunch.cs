@@ -2,7 +2,7 @@ using System.Diagnostics;
 
 namespace PCL.Avalonia.Services.Minecraft;
 
-public sealed class GameLaunch : IDisposable
+public sealed class GameLaunch : IGameLaunch
 {
     private readonly Process _process;
 
@@ -15,6 +15,12 @@ public sealed class GameLaunch : IDisposable
 
     public bool HasExited => _process.HasExited;
 
+    public async Task<int> WaitForExitAsync(CancellationToken cancellationToken = default)
+    {
+        await _process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+        return _process.ExitCode;
+    }
+
     public void Kill()
     {
         try
@@ -25,6 +31,9 @@ public sealed class GameLaunch : IDisposable
             }
         }
         catch (InvalidOperationException)
+        {
+        }
+        catch (System.ComponentModel.Win32Exception)
         {
         }
     }

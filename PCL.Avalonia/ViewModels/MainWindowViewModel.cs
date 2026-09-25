@@ -17,6 +17,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         ISettingsService settingsService,
         IThemeService themeService,
         SessionState session,
+        IUiDispatcher dispatcher,
         IVersionCatalogService versionCatalogService,
         IGameLauncher gameLauncher,
         IJavaService javaService,
@@ -33,7 +34,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
         Items =
         [
-            new NavItemViewModel("启动", new LaunchPageViewModel(settingsService, javaService, gameLauncher, session)),
+            new NavItemViewModel("启动", new LaunchPageViewModel(settingsService, javaService, gameLauncher, session, dispatcher)),
             new NavItemViewModel("下载", new DownloadPageViewModel(settingsService, versionManifestService, versionInstaller, versionCatalogService, platformService, session)),
             new NavItemViewModel("版本", new VersionPageViewModel(settingsService, versionCatalogService, session, platformService)),
             new NavItemViewModel("设置", new SettingsPageViewModel(settingsService, platformService)),

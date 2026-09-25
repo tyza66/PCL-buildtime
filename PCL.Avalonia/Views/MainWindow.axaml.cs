@@ -24,12 +24,14 @@ public partial class MainWindow : Window
         var platform = new PlatformService();
         var settings = new JsonSettingsService(Path.Combine(platform.GetConfigDirectory(), "settings.json"));
         var session = new SessionState();
+        var dispatcher = new AvaloniaUiDispatcher();
         var catalog = new VersionCatalogService();
         var downloadClient = new HttpDownloadClient();
         return new MainWindowViewModel(
             settings,
             new AvaloniaThemeService(),
             session,
+            dispatcher,
             catalog,
             new GameLauncher(catalog),
             new JavaService(),

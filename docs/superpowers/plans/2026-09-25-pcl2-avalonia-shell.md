@@ -155,3 +155,50 @@
 
 - 本地 `dotnet test` 全绿，构建 0 警告。
 - 下载页安装成功后，切到版本页无需手动刷新即能看到并选中该版本；切到启动页可直接看到“当前版本：<id>”。
+
+## Phase 5：启动完整性检查与进程生命周期
+
+### 目标
+
+- 启动前检查主 jar、必要支持库、原生库与资源索引，缺失时给出明确中文错误，不再让 Java 静默失败。
+- 游戏进程退出后启动页自动结束“运行中”状态并记录退出码，取消按钮仍可主动终止进程。
+- `IGameLauncher.Launch` 返回可等待退出的 `IGameLaunch`，便于测试和 UI 联动。
+
+### 修改文件
+
+- Modify: `PCL.Avalonia/Services/Minecraft/GameLauncher.cs`
+- Modify: `PCL.Avalonia/Services/Minecraft/IGameLauncher.cs`
+- Modify: `PCL.Avalonia/Services/Minecraft/GameLaunch.cs`
+- Create: `PCL.Avalonia/Services/Minecraft/IGameLaunch.cs`
+- Create: `PCL.Avalonia/Services/IUiDispatcher.cs`
+- Create: `PCL.Avalonia/Services/AvaloniaUiDispatcher.cs`
+- Modify: `PCL.Avalonia/ViewModels/Pages/LaunchPageViewModel.cs`
+- Modify: `PCL.Avalonia.Tests/GameLauncherTests.cs`
+- Create: `PCL.Avalonia.Tests/LaunchPageViewModelTests.cs`
+- Modify: `PCL.Avalonia.Tests/MainWindowViewModelTests.cs`
+
+### 任务 1：先写失败测试
+
+- [ ] 在 `GameLauncherTests` 增加三个用例：删除主 jar 后 `BuildLaunchPlan` 抛 `InvalidOperationException` 且消息包含 jar 名；删除 `com/example/core/.../core-1.0.jar` 后同样抛错并包含 `core-1.0.jar`；删除 `assets/indexes/1.20.json` 后抛 `FileNotFoundException`。
+- [ ] 新建 `LaunchPageViewModelTests`，用假 `IGameLauncher`、假 `IGameLaunch` 和同步 `IUiDispatcher` 验证：启动后 `IsRunning` 为 true，`WaitForExitAsync` 完成后 `IsRunning` 自动变 false 且日志含退出码；`Cancel` 调用 `Kill` 并立即结束运行状态。
+- [ ] 修改 `MainWindowViewModelTests` 的假启动器，让 `Launch` 返回 `IGameLaunch`（仍抛 `NotSupportedException` 即可）。
+- [ ] 运行 `~/.dotnet/dotnet test PCL.Avalonia.sln --filter "FullyQualifiedName~GameLauncherTests|FullyQualifiedName~LaunchPageViewModelTests|FullyQualifiedName~MainWindowViewModelTests"`，确认先红。
+
+### 任务 2：实现启动检查
+
+- [ ] `GameLauncher.BuildLaunchPlan` 在构建 classpath 后收集缺失文件：主 jar、非原生支持库、当前平台原生库；任一缺失则抛 `InvalidOperationException`，消息以“游戏文件不完整”开头并列出文件名。
+- [ ] 资源索引文件不存在时抛 `FileNotFoundException`，消息包含索引路径。
+- [ ] 运行 `~/.dotnet/dotnet test PCL.Avalonia.sln --filter "FullyQualifiedName~GameLauncherTests"`，确认绿。
+
+### 任务 3：实现进程生命周期
+
+- [ ] 新建 `IGameLaunch`：`ProcessId`、`HasExited`、`WaitForExitAsync(CancellationToken)`、`Kill()`、`Dispose()`；`GameLaunch` 实现并用 `Process.WaitForExitAsync`。
+- [ ] `IGameLauncher.Launch` 返回 `IGameLaunch`。
+- [ ] 新建 `IUiDispatcher` / `AvaloniaUiDispatcher`，包装 `Dispatcher.UIThread.Post`；`LaunchPageViewModel` 增加可选 `IUiDispatcher` 参数。
+- [ ] `LaunchPageViewModel` 启动成功后后台等待 `WaitForExitAsync`，退出后经 dispatcher 清理 `_activeLaunch`、`Dispose`、置 `IsRunning=false` 并记录退出码；取消时 `Kill` 后立即清理。
+- [ ] 运行 `~/.dotnet/dotnet test PCL.Avalonia.sln`，确认全绿。
+
+### 验收
+
+- 本地 `dotnet test` 全绿，构建 0 警告。
+- 缺失任何关键游戏文件时启动页显示明确原因；游戏自然退出后启动页自动回到可启动状态。

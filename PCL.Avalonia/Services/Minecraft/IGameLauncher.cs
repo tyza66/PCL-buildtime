@@ -4,5 +4,5 @@ public interface IGameLauncher
 {
     LaunchPlan BuildLaunchPlan(MinecraftVersion version, AppSettings settings, string javaExecutable);
 
-    GameLaunch Launch(LaunchPlan plan, IProgress<string>? output = null);
+    IGameLaunch Launch(LaunchPlan plan, IProgress<string>? output = null);
 }

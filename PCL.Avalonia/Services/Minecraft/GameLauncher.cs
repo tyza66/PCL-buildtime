@@ -45,14 +45,30 @@ public sealed class GameLauncher : IGameLauncher
 
         var libraries = ResolveLibraries(chain, librariesRoot);
         var mainJar = Path.Combine(rootFolder, (root.Jar ?? rootId) + ".jar");
+        var assetsIndexPath = Path.Combine(assetsRoot, "indexes", assetsIndexName + ".json");
+        if (!File.Exists(assetsIndexPath))
+        {
+            throw new FileNotFoundException("缺少资源索引文件", assetsIndexPath);
+        }
+
+        foreach (var library in libraries)
+        {
+            if (!File.Exists(library.Path))
+            {
+                throw new InvalidOperationException($"缺少游戏库：{library.Path}");
+            }
+        }
+
+        if (!File.Exists(mainJar))
+        {
+            throw new InvalidOperationException($"缺少主 JAR：{mainJar}");
+        }
+
         var classPathEntries = libraries
-            .Where(library => !library.IsNatives && File.Exists(library.Path))
+            .Where(library => !library.IsNatives)
             .Select(library => library.Path)
             .ToList();
-        if (File.Exists(mainJar))
-        {
-            classPathEntries.Add(mainJar);
-        }
+        classPathEntries.Add(mainJar);
 
         ExtractNatives(libraries.Where(library => library.IsNatives), nativesDirectory);
 
@@ -104,7 +120,7 @@ public sealed class GameLauncher : IGameLauncher
         };
     }
 
-    public GameLaunch Launch(LaunchPlan plan, IProgress<string>? output = null)
+    public IGameLaunch Launch(LaunchPlan plan, IProgress<string>? output = null)
     {
         ArgumentNullException.ThrowIfNull(plan);
         if (!File.Exists(plan.JavaExecutable))

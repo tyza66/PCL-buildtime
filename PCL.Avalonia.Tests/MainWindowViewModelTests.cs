@@ -48,7 +48,7 @@ public sealed class MainWindowViewModelTests
         public LaunchPlan BuildLaunchPlan(MinecraftVersion version, AppSettings settings, string javaExecutable)
             => throw new NotSupportedException();
 
-        public GameLaunch Launch(LaunchPlan plan, IProgress<string>? output = null)
+        public IGameLaunch Launch(LaunchPlan plan, IProgress<string>? output = null)
             => throw new NotSupportedException();
     }
 
@@ -77,6 +77,11 @@ public sealed class MainWindowViewModelTests
             => Task.FromResult(new VersionInstallResult(versionId, []));
     }
 
+    private sealed class FakeDispatcher : IUiDispatcher
+    {
+        public void Post(Action action) => action();
+    }
+
     private static (FakeSettingsService Settings, FakeThemeService Theme, MainWindowViewModel ViewModel) CreateViewModel(
         bool useDarkTheme)
     {
@@ -86,6 +91,7 @@ public sealed class MainWindowViewModelTests
             settings,
             theme,
             new SessionState(),
+            new FakeDispatcher(),
             new FakeVersionCatalogService(),
             new FakeGameLauncher(),
             new FakeJavaService(),
@@ -136,6 +142,7 @@ public sealed class MainWindowViewModelTests
             settings,
             theme,
             new SessionState(),
+            new FakeDispatcher(),
             new FakeVersionCatalogService(),
             new FakeGameLauncher(),
             new FakeJavaService(),

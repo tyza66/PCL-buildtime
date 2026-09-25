@@ -1,4 +1,3 @@
-using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PCL.Avalonia.Services;
@@ -12,18 +11,21 @@ public sealed partial class LaunchPageViewModel : ObservableObject
     private readonly IJavaService _javaService;
     private readonly IGameLauncher _launcher;
     private readonly SessionState _session;
-    private GameLaunch? _activeLaunch;
+    private readonly IUiDispatcher _dispatcher;
+    private IGameLaunch? _activeLaunch;
 
     public LaunchPageViewModel(
         ISettingsService settingsService,
         IJavaService javaService,
         IGameLauncher launcher,
-        SessionState session)
+        SessionState session,
+        IUiDispatcher dispatcher)
     {
         _settingsService = settingsService;
         _javaService = javaService;
         _launcher = launcher;
         _session = session;
+        _dispatcher = dispatcher;
         _session.PropertyChanged += OnSessionPropertyChanged;
         SelectedVersion = _session.SelectedVersion;
         StatusMessage = SelectedVersion is null
@@ -78,10 +80,12 @@ public sealed partial class LaunchPageViewModel : ObservableObject
 
             var plan = await Task.Run(() => _launcher.BuildLaunchPlan(version, settings, java));
             LogLine("启动命令：" + plan.CommandLine);
-            _activeLaunch = _launcher.Launch(plan, new Progress<string>(LogLine));
+            var launch = _launcher.Launch(plan, new Progress<string>(LogLine));
+            _activeLaunch = launch;
             IsRunning = true;
-            LogLine($"Java 进程已启动（PID {_activeLaunch.ProcessId}）");
+            LogLine($"Java 进程已启动（PID {launch.ProcessId}）");
             StatusMessage = $"正在运行 {version.Id}";
+            _ = TrackExitAsync(launch, version.Id);
         }
         catch (Exception ex)
         {
@@ -97,12 +101,45 @@ public sealed partial class LaunchPageViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanCancel))]
     private void Cancel()
     {
-        _activeLaunch?.Kill();
-        _activeLaunch?.Dispose();
+        var launch = _activeLaunch;
+        if (launch is null)
+        {
+            return;
+        }
+
         _activeLaunch = null;
         IsRunning = false;
+        launch.Kill();
+        launch.Dispose();
         LogLine("已请求终止游戏进程");
         StatusMessage = SelectedVersion is null ? "请先选择一个版本" : $"已停止 {SelectedVersion.Id}";
+    }
+
+    private async Task TrackExitAsync(IGameLaunch launch, string versionId)
+    {
+        var exitCode = 0;
+        try
+        {
+            exitCode = await launch.WaitForExitAsync().ConfigureAwait(false);
+        }
+        catch (Exception)
+        {
+            exitCode = -1;
+        }
+
+        _dispatcher.Post(() =>
+        {
+            if (!ReferenceEquals(_activeLaunch, launch))
+            {
+                return;
+            }
+
+            _activeLaunch = null;
+            IsRunning = false;
+            LogLine($"游戏进程已退出（退出码 {exitCode}）");
+            StatusMessage = $"已退出 {versionId}（退出码 {exitCode}）";
+            launch.Dispose();
+        });
     }
 
     private void OnSessionPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -118,12 +155,9 @@ public sealed partial class LaunchPageViewModel : ObservableObject
 
     private void LogLine(string line)
     {
-        if (!Dispatcher.UIThread.CheckAccess())
+        _dispatcher.Post(() =>
         {
-            Dispatcher.UIThread.Post(() => LogLine(line));
-            return;
-        }
-
-        LogText = LogText.Length == 0 ? line : LogText + "\n" + line;
+            LogText = LogText.Length == 0 ? line : LogText + "\n" + line;
+        });
     }
 }
