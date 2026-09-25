@@ -35,7 +35,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         ICurseForgeDownloadService curseForgeDownloadService,
         ICurseForgeModpackService curseForgeModpackService,
         IModpackInstallerService modpackInstaller,
-        IFabricLoaderService fabricLoaderService)
+        IFabricLoaderService fabricLoaderService,
+        IForgelikeLoaderService forgelikeLoaderService)
     {
         _settingsService = settingsService;
         _themeService = themeService;
@@ -57,6 +58,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             new NavItemViewModel("账号", new AccountsPageViewModel(accountService, microsoftAuthentication, session)),
             new NavItemViewModel("下载", new DownloadPageViewModel(settingsService, versionManifestService, versionInstaller, versionCatalogService, platformService, session)),
             new NavItemViewModel("Fabric", new FabricLoaderPageViewModel(settingsService, fabricLoaderService, platformService, session)),
+            new NavItemViewModel("Forge", new ForgelikeLoaderPageViewModel(settingsService, forgelikeLoaderService, platformService, session)),
             new NavItemViewModel("Mod下载", new ModsDownloadPageViewModel(settingsService, modrinthApi, modsDownloadService, platformService, curseForgeApi, curseForgeDownloadService)),
             new NavItemViewModel("整合包", new IntegrationPacksPageViewModel(settingsService, curseForgeModpackService, modpackInstaller, platformService)),
             new NavItemViewModel("版本", new VersionPageViewModel(settingsService, versionCatalogService, session, platformService)),

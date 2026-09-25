@@ -574,3 +574,51 @@
 - Fabric 页可按游戏版本列出稳定版优先的加载器并一键安装。
 - 安装产物包含 profile JSON 与完整支持库，安装成功后在版本页可见。
 - GitHub Actions 三平台测试与 7 RID 打包通过。
+
+## Phase 15：Forge / NeoForge 加载器安装
+
+### 目标
+
+- 新增“Forge”导航页，可在 Forge / NeoForge 两种模式间切换。
+- Forge 从 BMCL/官方列表获取指定游戏版本条目，按 installer jar > universal zip > client zip 选文件并处理版本分支特判。
+- NeoForge 从 BMCL/官方 Maven API 获取全量版本，正则解析、排除 `47.1.82`、按版本号排序。
+- 新版 Forge（首段 >= 20）与 NeoForge 安装：补齐原版版本、下载 installer、合并 `install_profile.json` / `version.json` 支持库并按规则过滤、下载库到 `libraries`、运行真实注入器后复制新增版本 JSON。
+- 旧版 Forge（首段 < 20）支持无 `install` 与有 `install` 两种 Legacy 安装方式。
+- 支持库路径做穿越过滤；单库失败逐项汇总；安装成功后通知版本目录刷新。
+- 真实 Java 注入器支持 JavaWrapper 失败后无 Wrapper 重试，Java 9+ 追加 `--add-exports`。
+- 保持单元测试可验证，不依赖真实网络；原 WPF 工程零改动。
+
+### 修改文件
+
+- Create: `PCL.Avalonia/Services/Minecraft/IForgelikeLoaderService.cs` / `ForgelikeLoaderService.cs`
+- Create: `PCL.Avalonia/Services/Minecraft/IForgelikeInstallRunner.cs` / `JavaForgelikeInstallRunner.cs`
+- Create: `PCL.Avalonia/ViewModels/Pages/ForgelikeLoaderPageViewModel.cs`
+- Create: `PCL.Avalonia/Views/Pages/ForgelikeLoaderPageView.axaml` / `.axaml.cs`
+- Create: `PCL.Avalonia.Tests/ForgelikeLoaderServiceTests.cs`
+- Create: `PCL.Avalonia.Tests/ForgelikeLoaderPageViewModelTests.cs`
+- Create: `PCL.Avalonia.Tests/JavaForgelikeInstallRunnerTests.cs`
+- Modify: `PCL.Avalonia/PCL.Avalonia.csproj`（内嵌 jar 资源与 InternalsVisibleTo）
+- Modify: `PCL.Avalonia/ViewModels/MainWindowViewModel.cs` / `Views/MainWindow.axaml` / `Views/MainWindow.axaml.cs`
+- Modify: `PCL.Avalonia.Tests/MainWindowViewModelTests.cs`
+- Copy: `Plain Craft Launcher 2/Resources/forge-installer.jar`、`PCLCS/Launch/JavaWrapper.jar` 到 `PCL.Avalonia/Assets/`
+
+### 任务 1：先写失败测试
+
+- [x] `ForgelikeLoaderServiceTests`：Forge BMCL JSON 解析与文件优先级/分支特判；NeoForge 官方与 BMCL 列表解析、排除 `47.1.82` 与排序；新版 Forge / NeoForge 安装（补齐原版、下载 installer、合并库并下载、fake runner 写新增版本 JSON）；旧版 Forge 两种 Legacy 方式；库失败汇总与路径穿越拒绝。
+- [x] `ForgelikeLoaderPageViewModelTests`：Forge / NeoForge 模式刷新、安装调用与 `SessionState` 通知、失败摘要、Forge 缺游戏版本提示。
+- [x] `JavaForgelikeInstallRunnerTests`：Java 版本输出解析、Java 9+ 参数与 Wrapper 参数构建。
+- [x] `MainWindowViewModelTests`：注入假 `IForgelikeLoaderService`，新增“Forge”导航断言。
+
+### 任务 2：实现加载器安装服务与页面
+
+- [x] `ForgelikeLoaderService`：双源列表、下载 URL（BMCL 优先镜像）、新版库合并/过滤/下载/去原始项、Legacy 两种安装、路径穿越拒绝、注入器调用与新增版本 JSON 复制。
+- [x] `JavaForgelikeInstallRunner`：解包内嵌 jar、选择 Java、JavaWrapper 优先与失败重试、输出 `true` 判定。
+- [x] `ForgelikeLoaderPageViewModel`：模式切换、版本列表、安装/取消、分阶段进度与中文状态。
+- [x] 主窗口注入真实服务并注册页面模板；内嵌 `forge-installer.jar` / `JavaWrapper.jar`。
+- [x] 本地 `dotnet build` 0 警告，`dotnet test` 全绿（118 + 新增测试）。
+
+### 验收
+
+- Forge 页可按游戏版本列出 Forge 条目、按全量列表列出 NeoForge 条目并一键安装。
+- 新版安装产物包含目标版本 JSON 与完整支持库；旧版安装产物按 Legacy 方式落盘；成功后在版本页可见。
+- GitHub Actions 三平台测试与 7 RID 打包通过。

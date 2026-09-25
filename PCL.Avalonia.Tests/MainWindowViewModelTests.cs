@@ -254,6 +254,30 @@ public sealed class MainWindowViewModelTests
             => Task.FromResult(new FabricInstallResult("fabric-loader", gameVersion, loaderVersion, []));
     }
 
+    private sealed class FakeForgelikeLoaderService : IForgelikeLoaderService
+    {
+        public Task<IReadOnlyList<ForgelikeLoaderVersion>> GetForgeVersionsAsync(
+            string gameVersion,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<ForgelikeLoaderVersion>>([]);
+
+        public Task<IReadOnlyList<ForgelikeLoaderVersion>> GetNeoForgeVersionsAsync(
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<ForgelikeLoaderVersion>>([]);
+
+        public Task<ForgelikeInstallResult> InstallAsync(
+            ForgelikeLoaderVersion version,
+            string minecraftFolder,
+            DownloadSource source,
+            IProgress<ForgelikeInstallProgress>? progress = null,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(new ForgelikeInstallResult(
+                $"{version.Kind.ToString().ToLowerInvariant()}-{version.VersionName}",
+                version.GameVersion,
+                version.VersionName,
+                []));
+    }
+
     private static (FakeSettingsService Settings, FakeThemeService Theme, MainWindowViewModel ViewModel) CreateViewModel(
         bool useDarkTheme)
     {
@@ -279,7 +303,8 @@ public sealed class MainWindowViewModelTests
             new FakeCurseForgeDownloadService(),
             new FakeCurseForgeModpackService(),
             new FakeModpackInstaller(),
-            new FakeFabricLoaderService());
+            new FakeFabricLoaderService(),
+            new FakeForgelikeLoaderService());
         return (settings, theme, viewModel);
     }
 
@@ -314,6 +339,10 @@ public sealed class MainWindowViewModelTests
         viewModel.SelectedItem = viewModel.Items.Single(item => item.Title == "Fabric");
 
         Assert.IsType<FabricLoaderPageViewModel>(viewModel.CurrentPage);
+
+        viewModel.SelectedItem = viewModel.Items.Single(item => item.Title == "Forge");
+
+        Assert.IsType<ForgelikeLoaderPageViewModel>(viewModel.CurrentPage);
 
         viewModel.SelectedItem = viewModel.Items.Single(item => item.Title == "Mod管理");
 
@@ -360,7 +389,8 @@ public sealed class MainWindowViewModelTests
             new FakeCurseForgeDownloadService(),
             new FakeCurseForgeModpackService(),
             new FakeModpackInstaller(),
-            new FakeFabricLoaderService());
+            new FakeFabricLoaderService(),
+            new FakeForgelikeLoaderService());
 
         viewModel.ToggleThemeCommand.Execute(null);
 

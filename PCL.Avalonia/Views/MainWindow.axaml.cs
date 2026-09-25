@@ -38,6 +38,8 @@ public partial class MainWindow : Window
         var curseForgeDownloadService = new CurseForgeDownloadService(downloadClient);
         var versionInstaller = new VersionInstaller(downloadClient, catalog);
         var fabricLoaderService = new FabricLoaderService(downloadClient, versionInstaller);
+        var forgelikeInstallRunner = new JavaForgelikeInstallRunner(settings, new JavaService());
+        var forgelikeLoaderService = new ForgelikeLoaderService(downloadClient, versionInstaller, forgelikeInstallRunner);
         var curseForgeModpackService = new CurseForgeModpackService(curseForgeApi, downloadClient);
         var modpackInstaller = new ModpackInstallerService(curseForgeApi, downloadClient, versionInstaller);
         return new MainWindowViewModel(
@@ -60,6 +62,7 @@ public partial class MainWindow : Window
             curseForgeDownloadService,
             curseForgeModpackService,
             modpackInstaller,
-            fabricLoaderService);
+            fabricLoaderService,
+            forgelikeLoaderService);
     }
 }

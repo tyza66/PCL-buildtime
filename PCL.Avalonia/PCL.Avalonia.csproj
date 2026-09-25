@@ -24,4 +24,13 @@
     <AvaloniaResource Include="Assets\**" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="PCL.Avalonia.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\forge-installer.jar" LogicalName="Assets.forge-installer.jar" />
+    <EmbeddedResource Include="Assets\JavaWrapper.jar" LogicalName="Assets.JavaWrapper.jar" />
+  </ItemGroup>
+
 </Project>
