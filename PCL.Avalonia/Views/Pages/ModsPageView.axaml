@@ -1,0 +1,94 @@
+<UserControl
+    x:Class="PCL.Avalonia.Views.Pages.ModsPageView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="clr-namespace:PCL.Avalonia.ViewModels.Pages;assembly=PCL2.Avalonia"
+    x:DataType="vm:ModsPageViewModel">
+    <DockPanel Margin="32">
+        <Grid
+            DockPanel.Dock="Top"
+            ColumnDefinitions="*,240,Auto"
+            ColumnSpacing="8"
+            Margin="0,0,0,14">
+            <StackPanel Spacing="2">
+                <TextBlock
+                    Text="Mod管理"
+                    FontSize="26"
+                    FontWeight="SemiBold"
+                    Foreground="{DynamicResource TextPrimaryBrush}" />
+                <TextBlock
+                    Text="{Binding StatusMessage}"
+                    FontSize="13"
+                    TextWrapping="Wrap"
+                    Foreground="{DynamicResource TextSecondaryBrush}" />
+            </StackPanel>
+            <TextBox
+                Grid.Column="1"
+                Text="{Binding SearchText}"
+                Watermark="搜索 Mod"
+                VerticalAlignment="Top"
+                Foreground="{DynamicResource TextPrimaryBrush}" />
+            <Button
+                Grid.Column="2"
+                Content="刷新"
+                VerticalAlignment="Top"
+                Command="{Binding RefreshCommand}"
+                Background="{DynamicResource ButtonBackgroundBrush}"
+                Foreground="{DynamicResource TextPrimaryBrush}" />
+        </Grid>
+        <Border
+            Background="{DynamicResource CardBackgroundBrush}"
+            CornerRadius="8">
+            <ListBox
+                ItemsSource="{Binding Mods}"
+                Background="Transparent"
+                BorderThickness="0">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ModItemViewModel">
+                        <Grid
+                            ColumnDefinitions="*,Auto,Auto"
+                            ColumnSpacing="8"
+                            Margin="14,10">
+                            <StackPanel Spacing="3">
+                                <TextBlock
+                                    Text="{Binding DisplayName}"
+                                    FontSize="15"
+                                    FontWeight="SemiBold"
+                                    Foreground="{DynamicResource TextPrimaryBrush}" />
+                                <StackPanel Orientation="Horizontal" Spacing="12">
+                                    <TextBlock
+                                        Text="{Binding EnabledText}"
+                                        FontSize="12"
+                                        FontWeight="SemiBold"
+                                        Foreground="{DynamicResource AccentBrush}" />
+                                    <TextBlock
+                                        Text="{Binding SizeText}"
+                                        FontSize="12"
+                                        Foreground="{DynamicResource TextSecondaryBrush}" />
+                                    <TextBlock
+                                        Text="{Binding LastModifiedText}"
+                                        FontSize="12"
+                                        Foreground="{DynamicResource TextSecondaryBrush}" />
+                                </StackPanel>
+                            </StackPanel>
+                            <Button
+                                Grid.Column="1"
+                                Content="{Binding ToggleButtonText}"
+                                VerticalAlignment="Center"
+                                Command="{Binding ToggleCommand}"
+                                Background="{DynamicResource ButtonBackgroundBrush}"
+                                Foreground="{DynamicResource TextPrimaryBrush}" />
+                            <Button
+                                Grid.Column="2"
+                                Content="删除"
+                                VerticalAlignment="Center"
+                                Command="{Binding DeleteCommand}"
+                                Background="{DynamicResource ButtonBackgroundBrush}"
+                                Foreground="{DynamicResource TextPrimaryBrush}" />
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Border>
+    </DockPanel>
+</UserControl>

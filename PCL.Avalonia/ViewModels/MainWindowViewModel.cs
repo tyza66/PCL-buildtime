@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using PCL.Avalonia.Services;
 using PCL.Avalonia.Services.Downloads;
 using PCL.Avalonia.Services.Minecraft;
+using PCL.Avalonia.Services.Mods;
 using PCL.Avalonia.ViewModels.Pages;
 
 namespace PCL.Avalonia.ViewModels;
@@ -23,7 +24,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         IJavaService javaService,
         IPlatformService platformService,
         IVersionManifestService versionManifestService,
-        IVersionInstaller versionInstaller)
+        IVersionInstaller versionInstaller,
+        IModsService modsService)
     {
         _settingsService = settingsService;
         _themeService = themeService;
@@ -37,6 +39,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             new NavItemViewModel("启动", new LaunchPageViewModel(settingsService, javaService, gameLauncher, session, dispatcher)),
             new NavItemViewModel("下载", new DownloadPageViewModel(settingsService, versionManifestService, versionInstaller, versionCatalogService, platformService, session)),
             new NavItemViewModel("版本", new VersionPageViewModel(settingsService, versionCatalogService, session, platformService)),
+            new NavItemViewModel("Mod管理", new ModsPageViewModel(settingsService, modsService, platformService)),
             new NavItemViewModel("设置", new SettingsPageViewModel(settingsService, platformService)),
             new NavItemViewModel("其他", new OtherPageViewModel()),
         ];

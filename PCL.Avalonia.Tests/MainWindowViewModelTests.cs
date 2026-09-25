@@ -1,6 +1,7 @@
 using PCL.Avalonia.Services;
 using PCL.Avalonia.Services.Downloads;
 using PCL.Avalonia.Services.Minecraft;
+using PCL.Avalonia.Services.Mods;
 using PCL.Avalonia.ViewModels;
 using PCL.Avalonia.ViewModels.Pages;
 
@@ -77,6 +78,17 @@ public sealed class MainWindowViewModelTests
             => Task.FromResult(new VersionInstallResult(versionId, []));
     }
 
+    private sealed class FakeModsService : IModsService
+    {
+        public IReadOnlyList<ModInfo> Scan(string minecraftFolder) => [];
+
+        public ModInfo SetEnabled(ModInfo mod, bool enabled) => mod;
+
+        public void Delete(ModInfo mod)
+        {
+        }
+    }
+
     private sealed class FakeDispatcher : IUiDispatcher
     {
         public void Post(Action action) => action();
@@ -97,7 +109,8 @@ public sealed class MainWindowViewModelTests
             new FakeJavaService(),
             new FakePlatformService(),
             new FakeManifestService(),
-            new FakeInstaller());
+            new FakeInstaller(),
+            new FakeModsService());
         return (settings, theme, viewModel);
     }
 
@@ -128,6 +141,10 @@ public sealed class MainWindowViewModelTests
         viewModel.SelectedItem = viewModel.Items.Single(item => item.Title == "下载");
 
         Assert.IsType<DownloadPageViewModel>(viewModel.CurrentPage);
+
+        viewModel.SelectedItem = viewModel.Items.Single(item => item.Title == "Mod管理");
+
+        Assert.IsType<ModsPageViewModel>(viewModel.CurrentPage);
     }
 
     [Fact]
@@ -148,7 +165,8 @@ public sealed class MainWindowViewModelTests
             new FakeJavaService(),
             new FakePlatformService(),
             new FakeManifestService(),
-            new FakeInstaller());
+            new FakeInstaller(),
+            new FakeModsService());
 
         viewModel.ToggleThemeCommand.Execute(null);
 

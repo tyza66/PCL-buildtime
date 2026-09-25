@@ -202,3 +202,44 @@
 
 - 本地 `dotnet test` 全绿，构建 0 警告。
 - 缺失任何关键游戏文件时启动页显示明确原因；游戏自然退出后启动页自动回到可启动状态。
+
+## Phase 6：Mod 管理页
+
+### 目标
+
+- 新增“Mod管理”导航页，扫描 `<游戏目录>/mods` 下的 `.jar` 与 `.jar.disabled` 文件。
+- 支持按名称搜索、启用/禁用（`.jar` 与 `.jar.disabled` 重命名）、删除，并显示大小与修改时间。
+- 文件操作封装为 `IModsService`，页面通过 ViewModel 调用，保持单元测试可验证；原 WPF 工程零改动。
+
+### 修改文件
+
+- Create: `PCL.Avalonia/Services/Mods/ModInfo.cs`
+- Create: `PCL.Avalonia/Services/Mods/IModsService.cs`
+- Create: `PCL.Avalonia/Services/Mods/ModsService.cs`
+- Create: `PCL.Avalonia/ViewModels/Pages/ModsPageViewModel.cs`
+- Create: `PCL.Avalonia/Views/Pages/ModsPageView.axaml` / `.axaml.cs`
+- Modify: `PCL.Avalonia/ViewModels/MainWindowViewModel.cs`
+- Modify: `PCL.Avalonia/Views/MainWindow.axaml`
+- Create: `PCL.Avalonia.Tests/ModsServiceTests.cs`
+- Create: `PCL.Avalonia.Tests/ModsPageViewModelTests.cs`
+- Modify: `PCL.Avalonia.Tests/MainWindowViewModelTests.cs`
+
+### 任务 1：先写失败测试
+
+- [ ] 新建 `ModsServiceTests`：mods 目录缺失返回空；扫描识别 `.jar` 与 `.jar.disabled` 并忽略其他文件；`SetEnabled` 通过重命名切换且可反向恢复；`Delete` 删除文件。
+- [ ] 新建 `ModsPageViewModelTests`：构造时加载 Mod 列表；切换命令调用服务并更新条目；删除命令调用服务并移除条目；搜索文本过滤列表。
+- [ ] 修改 `MainWindowViewModelTests`：构造参数注入假 `IModsService`，导航用例断言“Mod管理”页。
+- [ ] 运行 `~/.dotnet/dotnet test PCL.Avalonia.sln --filter "FullyQualifiedName~ModsServiceTests|FullyQualifiedName~ModsPageViewModelTests|FullyQualifiedName~MainWindowViewModelTests"`，确认先红。
+
+### 任务 2：实现服务与页面
+
+- [ ] `ModInfo`：`FileName`、`DisplayName`、`FilePath`、`IsEnabled`、`SizeBytes`、`LastModifiedUtc`。
+- [ ] `ModsService`：扫描 `mods` 目录，按显示名排序；启用/禁用重命名；删除文件。
+- [ ] `ModsPageViewModel`：加载列表、搜索过滤、异步切换与删除，失败时给出中文状态消息。
+- [ ] `MainWindowViewModel` 注入 `IModsService` 并新增“Mod管理”导航项；`MainWindow.axaml` 注册页面模板。
+- [ ] 运行 `~/.dotnet/dotnet test PCL.Avalonia.sln`，确认全绿。
+
+### 验收
+
+- 本地 `dotnet test` 全绿，构建 0 警告。
+- “Mod管理”页可搜索、启用/禁用、删除本地 `mods` 目录中的 Mod，文件系统状态与列表同步。

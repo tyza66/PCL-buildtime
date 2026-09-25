@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using PCL.Avalonia.Services;
 using PCL.Avalonia.Services.Downloads;
 using PCL.Avalonia.Services.Minecraft;
+using PCL.Avalonia.Services.Mods;
 using PCL.Avalonia.ViewModels;
 
 namespace PCL.Avalonia.Views;
@@ -37,6 +38,7 @@ public partial class MainWindow : Window
             new JavaService(),
             platform,
             new VersionManifestService(downloadClient),
-            new VersionInstaller(downloadClient, catalog));
+            new VersionInstaller(downloadClient, catalog),
+            new ModsService());
     }
 }
