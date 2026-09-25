@@ -138,18 +138,18 @@
 
 ### 任务 1：先写失败测试
 
-- [ ] 新建 `PCL.Avalonia.Tests/SessionStateTests.cs`，断言 `NotifyVersionInstalled("1.20.1")` 以 `"1.20.1"` 触发 `VersionInstalled` 事件。
-- [ ] 新建 `PCL.Avalonia.Tests/VersionPageViewModelTests.cs`，用假设置、假目录扫描器和共享 `SessionState` 构造版本页；先断言 `Refresh` 会选中列表首项，再断言收到 `NotifyVersionInstalled("1.20.1")` 后自动刷新并选中 `1.20.1`。
-- [ ] 修改 `PCL.Avalonia.Tests/DownloadPageViewModelTests.cs` 的 helper，为 `DownloadPageViewModel` 传共享 `SessionState`；安装成功用例断言事件收到 `"1.20.1"`。
-- [ ] 运行 `~/.dotnet/dotnet test PCL.Avalonia.sln --filter "FullyQualifiedName~VersionPageViewModelTests|FullyQualifiedName~SessionStateTests|FullyQualifiedName~DownloadPageViewModelTests"`，确认因缺失构造参数/事件先红。
+- [x] 新建 `PCL.Avalonia.Tests/SessionStateTests.cs`，断言 `NotifyVersionInstalled("1.20.1")` 以 `"1.20.1"` 触发 `VersionInstalled` 事件。
+- [x] 新建 `PCL.Avalonia.Tests/VersionPageViewModelTests.cs`，用假设置、假目录扫描器和共享 `SessionState` 构造版本页；先断言 `Refresh` 会选中列表首项，再断言收到 `NotifyVersionInstalled("1.20.1")` 后自动刷新并选中 `1.20.1`。
+- [x] 修改 `PCL.Avalonia.Tests/DownloadPageViewModelTests.cs` 的 helper，为 `DownloadPageViewModel` 传共享 `SessionState`；安装成功用例断言事件收到 `"1.20.1"`。
+- [x] 运行 `~/.dotnet/dotnet test PCL.Avalonia.sln --filter "FullyQualifiedName~VersionPageViewModelTests|FullyQualifiedName~SessionStateTests|FullyQualifiedName~DownloadPageViewModelTests"`，确认因缺失构造参数/事件先红。
 
 ### 任务 2：实现联动
 
-- [ ] `SessionState` 增加 `public event EventHandler<string>? VersionInstalled;` 与 `public void NotifyVersionInstalled(string versionId)`，方法校验非空后触发事件。
-- [ ] `DownloadPageViewModel` 构造参数增加 `SessionState session` 并保存；`InstallAsync` 成功分支调用 `_session.NotifyVersionInstalled(selected.Id)`。
-- [ ] `VersionPageViewModel` 订阅 `_session.VersionInstalled`；事件处理中先 `Refresh()`，再按 ID 不区分大小写选中新版本。
-- [ ] `MainWindowViewModel` 的下载页构造调用传入已有 `session`。
-- [ ] 运行 `~/.dotnet/dotnet test PCL.Avalonia.sln`，确认全绿。
+- [x] `SessionState` 增加 `public event EventHandler<string>? VersionInstalled;` 与 `public void NotifyVersionInstalled(string versionId)`，方法校验非空后触发事件。
+- [x] `DownloadPageViewModel` 构造参数增加 `SessionState session` 并保存；`InstallAsync` 成功分支调用 `_session.NotifyVersionInstalled(selected.Id)`。
+- [x] `VersionPageViewModel` 订阅 `_session.VersionInstalled`；事件处理中先 `Refresh()`，再按 ID 不区分大小写选中新版本。
+- [x] `MainWindowViewModel` 的下载页构造调用传入已有 `session`。
+- [x] 运行 `~/.dotnet/dotnet test PCL.Avalonia.sln`，确认全绿。
 
 ### 验收
 
@@ -179,24 +179,24 @@
 
 ### 任务 1：先写失败测试
 
-- [ ] 在 `GameLauncherTests` 增加三个用例：删除主 jar 后 `BuildLaunchPlan` 抛 `InvalidOperationException` 且消息包含 jar 名；删除 `com/example/core/.../core-1.0.jar` 后同样抛错并包含 `core-1.0.jar`；删除 `assets/indexes/1.20.json` 后抛 `FileNotFoundException`。
-- [ ] 新建 `LaunchPageViewModelTests`，用假 `IGameLauncher`、假 `IGameLaunch` 和同步 `IUiDispatcher` 验证：启动后 `IsRunning` 为 true，`WaitForExitAsync` 完成后 `IsRunning` 自动变 false 且日志含退出码；`Cancel` 调用 `Kill` 并立即结束运行状态。
-- [ ] 修改 `MainWindowViewModelTests` 的假启动器，让 `Launch` 返回 `IGameLaunch`（仍抛 `NotSupportedException` 即可）。
-- [ ] 运行 `~/.dotnet/dotnet test PCL.Avalonia.sln --filter "FullyQualifiedName~GameLauncherTests|FullyQualifiedName~LaunchPageViewModelTests|FullyQualifiedName~MainWindowViewModelTests"`，确认先红。
+- [x] 在 `GameLauncherTests` 增加三个用例：删除主 jar 后 `BuildLaunchPlan` 抛 `InvalidOperationException` 且消息包含 jar 名；删除 `com/example/core/.../core-1.0.jar` 后同样抛错并包含 `core-1.0.jar`；删除 `assets/indexes/1.20.json` 后抛 `FileNotFoundException`。
+- [x] 新建 `LaunchPageViewModelTests`，用假 `IGameLauncher`、假 `IGameLaunch` 和同步 `IUiDispatcher` 验证：启动后 `IsRunning` 为 true，`WaitForExitAsync` 完成后 `IsRunning` 自动变 false 且日志含退出码；`Cancel` 调用 `Kill` 并立即结束运行状态。
+- [x] 修改 `MainWindowViewModelTests` 的假启动器，让 `Launch` 返回 `IGameLaunch`（仍抛 `NotSupportedException` 即可）。
+- [x] 运行 `~/.dotnet/dotnet test PCL.Avalonia.sln --filter "FullyQualifiedName~GameLauncherTests|FullyQualifiedName~LaunchPageViewModelTests|FullyQualifiedName~MainWindowViewModelTests"`，确认先红。
 
 ### 任务 2：实现启动检查
 
-- [ ] `GameLauncher.BuildLaunchPlan` 在构建 classpath 后收集缺失文件：主 jar、非原生支持库、当前平台原生库；任一缺失则抛 `InvalidOperationException`，消息以“游戏文件不完整”开头并列出文件名。
-- [ ] 资源索引文件不存在时抛 `FileNotFoundException`，消息包含索引路径。
-- [ ] 运行 `~/.dotnet/dotnet test PCL.Avalonia.sln --filter "FullyQualifiedName~GameLauncherTests"`，确认绿。
+- [x] `GameLauncher.BuildLaunchPlan` 在构建 classpath 后收集缺失文件：主 jar、非原生支持库、当前平台原生库；任一缺失则抛 `InvalidOperationException`，消息以“游戏文件不完整”开头并列出文件名。
+- [x] 资源索引文件不存在时抛 `FileNotFoundException`，消息包含索引路径。
+- [x] 运行 `~/.dotnet/dotnet test PCL.Avalonia.sln --filter "FullyQualifiedName~GameLauncherTests"`，确认绿。
 
 ### 任务 3：实现进程生命周期
 
-- [ ] 新建 `IGameLaunch`：`ProcessId`、`HasExited`、`WaitForExitAsync(CancellationToken)`、`Kill()`、`Dispose()`；`GameLaunch` 实现并用 `Process.WaitForExitAsync`。
-- [ ] `IGameLauncher.Launch` 返回 `IGameLaunch`。
-- [ ] 新建 `IUiDispatcher` / `AvaloniaUiDispatcher`，包装 `Dispatcher.UIThread.Post`；`LaunchPageViewModel` 增加可选 `IUiDispatcher` 参数。
-- [ ] `LaunchPageViewModel` 启动成功后后台等待 `WaitForExitAsync`，退出后经 dispatcher 清理 `_activeLaunch`、`Dispose`、置 `IsRunning=false` 并记录退出码；取消时 `Kill` 后立即清理。
-- [ ] 运行 `~/.dotnet/dotnet test PCL.Avalonia.sln`，确认全绿。
+- [x] 新建 `IGameLaunch`：`ProcessId`、`HasExited`、`WaitForExitAsync(CancellationToken)`、`Kill()`、`Dispose()`；`GameLaunch` 实现并用 `Process.WaitForExitAsync`。
+- [x] `IGameLauncher.Launch` 返回 `IGameLaunch`。
+- [x] 新建 `IUiDispatcher` / `AvaloniaUiDispatcher`，包装 `Dispatcher.UIThread.Post`；`LaunchPageViewModel` 增加可选 `IUiDispatcher` 参数。
+- [x] `LaunchPageViewModel` 启动成功后后台等待 `WaitForExitAsync`，退出后经 dispatcher 清理 `_activeLaunch`、`Dispose`、置 `IsRunning=false` 并记录退出码；取消时 `Kill` 后立即清理。
+- [x] 运行 `~/.dotnet/dotnet test PCL.Avalonia.sln`，确认全绿。
 
 ### 验收
 
@@ -226,18 +226,18 @@
 
 ### 任务 1：先写失败测试
 
-- [ ] 新建 `ModsServiceTests`：mods 目录缺失返回空；扫描识别 `.jar` 与 `.jar.disabled` 并忽略其他文件；`SetEnabled` 通过重命名切换且可反向恢复；`Delete` 删除文件。
-- [ ] 新建 `ModsPageViewModelTests`：构造时加载 Mod 列表；切换命令调用服务并更新条目；删除命令调用服务并移除条目；搜索文本过滤列表。
-- [ ] 修改 `MainWindowViewModelTests`：构造参数注入假 `IModsService`，导航用例断言“Mod管理”页。
-- [ ] 运行 `~/.dotnet/dotnet test PCL.Avalonia.sln --filter "FullyQualifiedName~ModsServiceTests|FullyQualifiedName~ModsPageViewModelTests|FullyQualifiedName~MainWindowViewModelTests"`，确认先红。
+- [x] 新建 `ModsServiceTests`：mods 目录缺失返回空；扫描识别 `.jar` 与 `.jar.disabled` 并忽略其他文件；`SetEnabled` 通过重命名切换且可反向恢复；`Delete` 删除文件。
+- [x] 新建 `ModsPageViewModelTests`：构造时加载 Mod 列表；切换命令调用服务并更新条目；删除命令调用服务并移除条目；搜索文本过滤列表。
+- [x] 修改 `MainWindowViewModelTests`：构造参数注入假 `IModsService`，导航用例断言“Mod管理”页。
+- [x] 运行 `~/.dotnet/dotnet test PCL.Avalonia.sln --filter "FullyQualifiedName~ModsServiceTests|FullyQualifiedName~ModsPageViewModelTests|FullyQualifiedName~MainWindowViewModelTests"`，确认先红。
 
 ### 任务 2：实现服务与页面
 
-- [ ] `ModInfo`：`FileName`、`DisplayName`、`FilePath`、`IsEnabled`、`SizeBytes`、`LastModifiedUtc`。
-- [ ] `ModsService`：扫描 `mods` 目录，按显示名排序；启用/禁用重命名；删除文件。
-- [ ] `ModsPageViewModel`：加载列表、搜索过滤、异步切换与删除，失败时给出中文状态消息。
-- [ ] `MainWindowViewModel` 注入 `IModsService` 并新增“Mod管理”导航项；`MainWindow.axaml` 注册页面模板。
-- [ ] 运行 `~/.dotnet/dotnet test PCL.Avalonia.sln`，确认全绿。
+- [x] `ModInfo`：`FileName`、`DisplayName`、`FilePath`、`IsEnabled`、`SizeBytes`、`LastModifiedUtc`。
+- [x] `ModsService`：扫描 `mods` 目录，按显示名排序；启用/禁用重命名；删除文件。
+- [x] `ModsPageViewModel`：加载列表、搜索过滤、异步切换与删除，失败时给出中文状态消息。
+- [x] `MainWindowViewModel` 注入 `IModsService` 并新增“Mod管理”导航项；`MainWindow.axaml` 注册页面模板。
+- [x] 运行 `~/.dotnet/dotnet test PCL.Avalonia.sln`，确认全绿。
 
 ### 验收
 
@@ -621,4 +621,51 @@
 
 - Forge 页可按游戏版本列出 Forge 条目、按全量列表列出 NeoForge 条目并一键安装。
 - 新版安装产物包含目标版本 JSON 与完整支持库；旧版安装产物按 Legacy 方式落盘；成功后在版本页可见。
+- GitHub Actions 三平台测试与 7 RID 打包通过。
+
+## Phase 16：版本管理（实例管理）
+
+### 目标
+
+- 版本页从纯列表升级为实例管理：每个版本显示收藏、隐藏、描述状态，支持收藏、隐藏、删除、打开版本文件夹。
+- 支持重命名版本：移动版本文件夹、重命名主 jar 与 natives 目录、重写版本 JSON 的 `id`、更新 `PCL/Setup.ini` 内路径。
+- 支持导出启动脚本：复用 `IGameLauncher.BuildLaunchPlan` 生成 `.bat` / `.sh` 脚本。
+- 保持单元测试可验证；原 WPF 工程零改动。
+
+### 修改文件
+
+- Create: `PCL.Avalonia/Services/Minecraft/VersionSettings.cs`
+- Create: `PCL.Avalonia/Services/Minecraft/IVersionManagerService.cs` / `VersionManagerService.cs`
+- Create: `PCL.Avalonia/Services/Platform/IFolderOpener.cs` / `DefaultFolderOpener.cs`
+- Create: `PCL.Avalonia/Services/Game/ILaunchScriptExporter.cs` / `LaunchScriptExporter.cs`
+- Modify: `PCL.Avalonia/ViewModels/Pages/VersionPageViewModel.cs`
+- Modify: `PCL.Avalonia/Views/Pages/VersionPageView.axaml`
+- Modify: `PCL.Avalonia/ViewModels/MainWindowViewModel.cs`
+- Modify: `PCL.Avalonia/Views/MainWindow.axaml.cs`
+- Create: `PCL.Avalonia.Tests/VersionManagerServiceTests.cs`
+- Create: `PCL.Avalonia.Tests/LaunchScriptExporterTests.cs`
+- Modify: `PCL.Avalonia.Tests/VersionPageViewModelTests.cs`
+- Modify: `PCL.Avalonia.Tests/MainWindowViewModelTests.cs`
+
+### 任务 1：先写失败测试
+
+- [x] 新建 `VersionManagerServiceTests`：缺 `PCL/Setup.ini` 时返回默认设置；收藏/隐藏/描述往返读写；重命名移动文件夹、改写 JSON `id`、重命名 jar/natives、更新 ini 路径；非法或已存在的目标名拒绝；删除移除版本文件夹。
+- [x] 新建 `LaunchScriptExporterTests`：`.bat` 含 `@echo off`、Java 路径、工作目录与 `pause`；`.sh` 含 `#!/bin/sh`、`cd` 与 `exec`；含空格参数正确加引号。
+- [x] 修改 `VersionPageViewModelTests`：构造注入假 `IVersionManagerService` / `IFolderOpener` / `IJavaService` / `IGameLauncher` / `ILaunchScriptExporter`；新增用例覆盖列表加载实例状态、显示/隐藏过滤、收藏、删除、打开文件夹、重命名、保存描述与导出脚本。
+- [x] 修改 `MainWindowViewModelTests`：注入上述五个假服务并传参给版本页。
+- [x] 运行 `~/.dotnet/dotnet test PCL.Avalonia.sln --filter "FullyQualifiedName~VersionManagerServiceTests|FullyQualifiedName~LaunchScriptExporterTests|FullyQualifiedName~VersionPageViewModelTests|FullyQualifiedName~MainWindowViewModelTests"`，确认先红。
+
+### 任务 2：实现实例管理服务与页面
+
+- [x] `VersionManagerService`：`PCL/Setup.ini` 读写 `IsStar` / `DisplayType` / `CustomInfo`；重命名做目录移动、jar/natives 重命名、JSON `id` 重写与 ini 路径替换；删除整目录。
+- [x] `DefaultFolderOpener`：跨平台用 `ProcessStartInfo(UseShellExecute=true)` 打开文件夹。
+- [x] `LaunchScriptExporter`：按扩展名生成 Windows 批处理或 Unix shell 脚本，参数逐项加引号，Unix 写入后 `chmod +x`。
+- [x] 版本页升级：列表项带收藏/删除/打开文件夹按钮，右侧详情面板支持描述、隐藏、重命名、导出脚本与删除。
+- [x] `MainWindowViewModel` 注入真实服务；`MainWindow.axaml.cs` 创建真实实现。
+- [x] 运行 `~/.dotnet/dotnet test PCL.Avalonia.sln`，确认全绿；`dotnet build -warnaserror` 0 警告。
+
+### 验收
+
+- 版本页可收藏、隐藏、删除、打开文件夹、重命名、保存描述并导出启动脚本。
+- 重命名后版本 JSON、jar、natives 与 `PCL/Setup.ini` 路径保持一致，版本列表刷新后可见新名称。
 - GitHub Actions 三平台测试与 7 RID 打包通过。

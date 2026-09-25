@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using PCL.Avalonia.Services;
 using PCL.Avalonia.Services.Accounts;
 using PCL.Avalonia.Services.Downloads;
+using PCL.Avalonia.Services.Game;
 using PCL.Avalonia.Services.Minecraft;
 using PCL.Avalonia.Services.Mods;
 using PCL.Avalonia.Services.Platform;
@@ -63,6 +64,9 @@ public partial class MainWindow : Window
             curseForgeModpackService,
             modpackInstaller,
             fabricLoaderService,
-            forgelikeLoaderService);
+            forgelikeLoaderService,
+            new VersionManagerService(),
+            new DefaultFolderOpener(),
+            new LaunchScriptExporter());
     }
 }

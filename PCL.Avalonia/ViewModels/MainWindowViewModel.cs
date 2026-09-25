@@ -4,8 +4,10 @@ using CommunityToolkit.Mvvm.Input;
 using PCL.Avalonia.Services;
 using PCL.Avalonia.Services.Accounts;
 using PCL.Avalonia.Services.Downloads;
+using PCL.Avalonia.Services.Game;
 using PCL.Avalonia.Services.Minecraft;
 using PCL.Avalonia.Services.Mods;
+using PCL.Avalonia.Services.Platform;
 using PCL.Avalonia.ViewModels.Pages;
 
 namespace PCL.Avalonia.ViewModels;
@@ -36,7 +38,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
         ICurseForgeModpackService curseForgeModpackService,
         IModpackInstallerService modpackInstaller,
         IFabricLoaderService fabricLoaderService,
-        IForgelikeLoaderService forgelikeLoaderService)
+        IForgelikeLoaderService forgelikeLoaderService,
+        IVersionManagerService versionManager,
+        IFolderOpener folderOpener,
+        ILaunchScriptExporter scriptExporter)
     {
         _settingsService = settingsService;
         _themeService = themeService;
@@ -61,7 +66,16 @@ public sealed partial class MainWindowViewModel : ObservableObject
             new NavItemViewModel("Forge", new ForgelikeLoaderPageViewModel(settingsService, forgelikeLoaderService, platformService, session)),
             new NavItemViewModel("Mod下载", new ModsDownloadPageViewModel(settingsService, modrinthApi, modsDownloadService, platformService, curseForgeApi, curseForgeDownloadService)),
             new NavItemViewModel("整合包", new IntegrationPacksPageViewModel(settingsService, curseForgeModpackService, modpackInstaller, platformService)),
-            new NavItemViewModel("版本", new VersionPageViewModel(settingsService, versionCatalogService, session, platformService)),
+            new NavItemViewModel("版本", new VersionPageViewModel(
+                settingsService,
+                versionCatalogService,
+                session,
+                platformService,
+                versionManager,
+                folderOpener,
+                javaService,
+                gameLauncher,
+                scriptExporter)),
             new NavItemViewModel("Mod管理", new ModsPageViewModel(settingsService, modsService, platformService)),
             new NavItemViewModel("设置", new SettingsPageViewModel(settingsService, platformService)),
             new NavItemViewModel("其他", new OtherPageViewModel()),

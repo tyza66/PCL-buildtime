@@ -3,12 +3,12 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="clr-namespace:PCL.Avalonia.ViewModels.Pages;assembly=PCL2.Avalonia"
-    xmlns:mc="clr-namespace:PCL.Avalonia.Services.Minecraft;assembly=PCL2.Avalonia"
     x:DataType="vm:VersionPageViewModel">
     <DockPanel Margin="32">
         <Grid
             DockPanel.Dock="Top"
-            ColumnDefinitions="*,Auto"
+            ColumnDefinitions="*,Auto,Auto"
+            ColumnSpacing="8"
             Margin="0,0,0,14">
             <StackPanel Spacing="2">
                 <TextBlock
@@ -22,48 +22,163 @@
                     TextWrapping="Wrap"
                     Foreground="{DynamicResource TextSecondaryBrush}" />
             </StackPanel>
-            <Button
+            <CheckBox
                 Grid.Column="1"
+                Content="显示隐藏版本"
+                VerticalAlignment="Top"
+                IsChecked="{Binding ShowHidden}"
+                Foreground="{DynamicResource TextPrimaryBrush}" />
+            <Button
+                Grid.Column="2"
                 Content="刷新"
+                MinWidth="88"
                 VerticalAlignment="Top"
                 Command="{Binding RefreshCommand}"
                 Background="{DynamicResource ButtonBackgroundBrush}"
                 Foreground="{DynamicResource TextPrimaryBrush}" />
         </Grid>
-        <Border
-            Background="{DynamicResource CardBackgroundBrush}"
-            CornerRadius="8">
-            <ListBox
-                ItemsSource="{Binding Versions}"
-                SelectedItem="{Binding SelectedVersion}"
-                Background="Transparent"
-                BorderThickness="0">
-                <ListBox.ItemTemplate>
-                    <DataTemplate x:DataType="mc:MinecraftVersion">
-                        <StackPanel Margin="14,10" Spacing="3">
-                            <TextBlock
-                                Text="{Binding Id}"
-                                FontSize="15"
-                                FontWeight="SemiBold"
-                                Foreground="{DynamicResource TextPrimaryBrush}" />
-                            <StackPanel Orientation="Horizontal" Spacing="12">
-                                <TextBlock
-                                    Text="{Binding Type}"
-                                    FontSize="12"
-                                    Foreground="{DynamicResource TextSecondaryBrush}" />
-                                <TextBlock
-                                    Text="{Binding ReleaseTimeText}"
-                                    FontSize="12"
-                                    Foreground="{DynamicResource TextSecondaryBrush}" />
-                                <TextBlock
-                                    Text="{Binding InheritsFrom, StringFormat=继承自 {0}}"
-                                    FontSize="12"
-                                    Foreground="{DynamicResource TextSecondaryBrush}" />
-                            </StackPanel>
-                        </StackPanel>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
-        </Border>
+        <Grid
+            ColumnDefinitions="*,340"
+            ColumnSpacing="14">
+            <Border
+                Background="{DynamicResource CardBackgroundBrush}"
+                CornerRadius="8">
+                <ListBox
+                    ItemsSource="{Binding Versions}"
+                    SelectedItem="{Binding SelectedItem}"
+                    Background="Transparent"
+                    BorderThickness="0">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:VersionItemViewModel">
+                            <Grid
+                                ColumnDefinitions="*,Auto,Auto,Auto"
+                                ColumnSpacing="8"
+                                Margin="14,10">
+                                <StackPanel Spacing="3">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <TextBlock
+                                            Text="{Binding Id}"
+                                            FontSize="15"
+                                            FontWeight="SemiBold"
+                                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                                        <TextBlock
+                                            Text="{Binding FavoriteButtonText}"
+                                            FontSize="11"
+                                            VerticalAlignment="Center"
+                                            Foreground="{DynamicResource AccentBrush}"
+                                            IsVisible="{Binding IsFavorite}" />
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Spacing="12">
+                                        <TextBlock
+                                            Text="{Binding Type}"
+                                            FontSize="12"
+                                            Foreground="{DynamicResource TextSecondaryBrush}" />
+                                        <TextBlock
+                                            Text="{Binding ReleaseTimeText}"
+                                            FontSize="12"
+                                            Foreground="{DynamicResource TextSecondaryBrush}" />
+                                        <TextBlock
+                                            Text="{Binding InheritsFrom, StringFormat=继承自 {0}}"
+                                            FontSize="12"
+                                            Foreground="{DynamicResource TextSecondaryBrush}" />
+                                    </StackPanel>
+                                </StackPanel>
+                                <Button
+                                    Grid.Column="1"
+                                    Content="{Binding FavoriteButtonText}"
+                                    MinWidth="72"
+                                    VerticalAlignment="Center"
+                                    Command="{Binding FavoriteCommand}"
+                                    Background="{DynamicResource ButtonBackgroundBrush}"
+                                    Foreground="{DynamicResource TextPrimaryBrush}" />
+                                <Button
+                                    Grid.Column="2"
+                                    Content="打开文件夹"
+                                    MinWidth="88"
+                                    VerticalAlignment="Center"
+                                    Command="{Binding OpenFolderCommand}"
+                                    Background="{DynamicResource ButtonBackgroundBrush}"
+                                    Foreground="{DynamicResource TextPrimaryBrush}" />
+                                <Button
+                                    Grid.Column="3"
+                                    Content="删除"
+                                    MinWidth="64"
+                                    VerticalAlignment="Center"
+                                    Command="{Binding DeleteCommand}"
+                                    Background="{DynamicResource ButtonBackgroundBrush}"
+                                    Foreground="{DynamicResource TextPrimaryBrush}" />
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Border>
+            <Border
+                Grid.Column="1"
+                Background="{DynamicResource CardBackgroundBrush}"
+                CornerRadius="8">
+                <StackPanel Margin="18" Spacing="14">
+                    <StackPanel Spacing="3">
+                        <TextBlock
+                            Text="{Binding SelectedItem.Id, TargetNullValue=未选择版本}"
+                            FontSize="20"
+                            FontWeight="SemiBold"
+                            TextWrapping="Wrap"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <TextBlock
+                            Text="{Binding SelectedItem.Description, TargetNullValue=暂无描述}"
+                            FontSize="13"
+                            TextWrapping="Wrap"
+                            Foreground="{DynamicResource TextSecondaryBrush}" />
+                    </StackPanel>
+                    <StackPanel Spacing="8">
+                        <TextBox
+                            Text="{Binding DescriptionInput}"
+                            Watermark="版本描述"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <Button
+                            Content="保存描述"
+                            MinWidth="88"
+                            HorizontalAlignment="Left"
+                            Command="{Binding SaveDescriptionCommand}"
+                            Background="{DynamicResource ButtonBackgroundBrush}"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                    </StackPanel>
+                    <Button
+                        Content="{Binding SelectedItem.HiddenButtonText, TargetNullValue=隐藏}"
+                        MinWidth="88"
+                        HorizontalAlignment="Left"
+                        Command="{Binding SelectedItem.HiddenCommand}"
+                        Background="{DynamicResource ButtonBackgroundBrush}"
+                        Foreground="{DynamicResource TextPrimaryBrush}" />
+                    <StackPanel Spacing="8">
+                        <TextBox
+                            Text="{Binding NewName}"
+                            Watermark="新版本名称"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <Button
+                            Content="重命名"
+                            MinWidth="88"
+                            HorizontalAlignment="Left"
+                            Command="{Binding RenameCommand}"
+                            Background="{DynamicResource ButtonBackgroundBrush}"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                    </StackPanel>
+                    <Button
+                        Content="导出启动脚本"
+                        MinWidth="112"
+                        HorizontalAlignment="Left"
+                        Command="{Binding ExportScriptCommand}"
+                        Background="{DynamicResource ButtonBackgroundBrush}"
+                        Foreground="{DynamicResource TextPrimaryBrush}" />
+                    <Button
+                        Content="删除版本"
+                        MinWidth="88"
+                        HorizontalAlignment="Left"
+                        Command="{Binding SelectedItem.DeleteCommand}"
+                        Background="{DynamicResource ButtonBackgroundBrush}"
+                        Foreground="{DynamicResource TextPrimaryBrush}" />
+                </StackPanel>
+            </Border>
+        </Grid>
     </DockPanel>
 </UserControl>

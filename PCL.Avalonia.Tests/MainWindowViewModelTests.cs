@@ -1,8 +1,10 @@
 using PCL.Avalonia.Services;
 using PCL.Avalonia.Services.Accounts;
 using PCL.Avalonia.Services.Downloads;
+using PCL.Avalonia.Services.Game;
 using PCL.Avalonia.Services.Minecraft;
 using PCL.Avalonia.Services.Mods;
+using PCL.Avalonia.Services.Platform;
 using PCL.Avalonia.ViewModels;
 using PCL.Avalonia.ViewModels.Pages;
 
@@ -275,7 +277,43 @@ public sealed class MainWindowViewModelTests
                 $"{version.Kind.ToString().ToLowerInvariant()}-{version.VersionName}",
                 version.GameVersion,
                 version.VersionName,
-                []));
+            []));
+    }
+
+    private sealed class FakeVersionManager : IVersionManagerService
+    {
+        public VersionSettings LoadSettings(string minecraftFolder, string versionId)
+            => new();
+
+        public void SetFavorite(string minecraftFolder, string versionId, bool isFavorite)
+        {
+        }
+
+        public void SetHidden(string minecraftFolder, string versionId, bool isHidden)
+        {
+        }
+
+        public void SetDescription(string minecraftFolder, string versionId, string description)
+        {
+        }
+
+        public string Rename(string minecraftFolder, string versionId, string newName) => newName;
+
+        public void Delete(string minecraftFolder, string versionId)
+        {
+        }
+    }
+
+    private sealed class FakeFolderOpener : IFolderOpener
+    {
+        public void Open(string path)
+        {
+        }
+    }
+
+    private sealed class FakeScriptExporter : ILaunchScriptExporter
+    {
+        public string Export(LaunchPlan plan, string filePath) => filePath;
     }
 
     private static (FakeSettingsService Settings, FakeThemeService Theme, MainWindowViewModel ViewModel) CreateViewModel(
@@ -304,7 +342,10 @@ public sealed class MainWindowViewModelTests
             new FakeCurseForgeModpackService(),
             new FakeModpackInstaller(),
             new FakeFabricLoaderService(),
-            new FakeForgelikeLoaderService());
+            new FakeForgelikeLoaderService(),
+            new FakeVersionManager(),
+            new FakeFolderOpener(),
+            new FakeScriptExporter());
         return (settings, theme, viewModel);
     }
 
@@ -390,7 +431,10 @@ public sealed class MainWindowViewModelTests
             new FakeCurseForgeModpackService(),
             new FakeModpackInstaller(),
             new FakeFabricLoaderService(),
-            new FakeForgelikeLoaderService());
+            new FakeForgelikeLoaderService(),
+            new FakeVersionManager(),
+            new FakeFolderOpener(),
+            new FakeScriptExporter());
 
         viewModel.ToggleThemeCommand.Execute(null);
 
