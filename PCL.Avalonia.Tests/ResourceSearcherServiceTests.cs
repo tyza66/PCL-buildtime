@@ -24,7 +24,7 @@ public sealed class ResourceSearcherServiceTests
         {
             Calls.Add((query, gameVersion, loader, projectType));
             return Exception is null
-                ? Task.FromResult(new CurseForgeSearchPage(Projects, Projects.Count))
+                ? Task.FromResult(new ModrinthSearchPage(Projects, Projects.Count))
                 : Task.FromException<ModrinthSearchPage>(Exception);
         }
 
@@ -115,7 +115,7 @@ public sealed class ResourceSearcherServiceTests
             "",
             ResourceSource.Modrinth);
 
-        var item = Assert.Single(results);
+        var item = Assert.Single(results.Items);
         Assert.Equal(ResourceSource.Modrinth, item.Source);
         Assert.Equal(ResourceType.ResourcePack, item.Type);
         var (query, gameVersion, loader, projectType) = Assert.Single(api.Calls);
@@ -140,7 +140,7 @@ public sealed class ResourceSearcherServiceTests
             "",
             ResourceSource.Modrinth);
 
-        var item = Assert.Single(results);
+        var item = Assert.Single(results.Items);
         Assert.Equal("JEI", item.Title);
         var (_, _, loader, projectType) = Assert.Single(api.Calls);
         Assert.Equal("fabric", loader);
@@ -162,7 +162,7 @@ public sealed class ResourceSearcherServiceTests
             "",
             ResourceSource.CurseForge);
 
-        var item = Assert.Single(results);
+        var item = Assert.Single(results.Items);
         Assert.Equal(ResourceSource.CurseForge, item.Source);
         Assert.Equal(ResourceType.Shader, item.Type);
         Assert.Equal("654.3K 下载", item.DownloadsText);
