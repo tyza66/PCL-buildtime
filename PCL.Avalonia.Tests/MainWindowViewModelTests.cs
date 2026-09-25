@@ -177,7 +177,9 @@ public sealed class MainWindowViewModelTests
             string query,
             string gameVersion,
             string loader,
+            string tag,
             ResourceSource source,
+            int page = 0,
             CancellationToken cancellationToken = default)
             => Task.FromResult(new ResourceSearchResult([], 0));
     }
