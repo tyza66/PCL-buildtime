@@ -54,6 +54,12 @@ public sealed class CurseForgeModpackServiceTests : IDisposable
             Assert.Equal("1.20.1", gameVersion);
             return Task.FromResult<IReadOnlyList<CurseForgeModFile>>(Files);
         }
+
+        public Task<CurseForgeModFile?> GetFileAsync(
+            int projectId,
+            int fileId,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
     }
 
     private sealed class FakeDownloadClient : IDownloadClient

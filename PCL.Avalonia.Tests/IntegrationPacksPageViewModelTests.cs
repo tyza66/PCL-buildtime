@@ -59,6 +59,35 @@ public sealed class IntegrationPacksPageViewModelTests
         }
     }
 
+    private sealed class FakeModpackInstaller : IModpackInstallerService
+    {
+        public bool Fail { get; set; }
+
+        public string? LastZipPath { get; private set; }
+
+        public string? LastFolder { get; private set; }
+
+        public DownloadSource? LastSource { get; private set; }
+
+        public Task<ModpackInstallResult> InstallAsync(
+            string modpackZipPath,
+            string minecraftFolder,
+            DownloadSource source,
+            IProgress<ModpackInstallProgress>? progress = null,
+            CancellationToken cancellationToken = default)
+        {
+            if (Fail)
+            {
+                throw new InvalidOperationException("安装失败");
+            }
+
+            LastZipPath = modpackZipPath;
+            LastFolder = minecraftFolder;
+            LastSource = source;
+            return Task.FromResult(new ModpackInstallResult("Example Pack", "1.20.1", ["mod-a.jar"], []));
+        }
+    }
+
     private static CurseForgeProject Project() => new()
     {
         Id = 999,
@@ -84,37 +113,76 @@ public sealed class IntegrationPacksPageViewModelTests
     }
 
     [Fact]
-    public async Task InstallCommand_InstallsPack_AndMarksDownloaded()
+    public async Task DownloadCommand_DownloadsPack_AndMarksDownloaded()
     {
         var service = new FakeModpackService { Projects = [Project()] };
-        var viewModel = CreateViewModel(service);
+        var viewModel = CreateViewModel(service, new FakeModpackInstaller());
+        viewModel.SearchText = "example";
+        await viewModel.SearchCommand.ExecuteAsync(null);
+
+        await viewModel.Projects[0].DownloadCommand.ExecuteAsync(null);
+
+        Assert.Equal(999, service.LastProject?.Id);
+        Assert.Equal("1.20.1", service.LastGameVersion);
+        Assert.Equal("/games/mc", service.LastFolder);
+        Assert.True(viewModel.Projects[0].IsDownloaded);
+        Assert.False(viewModel.Projects[0].IsInstalled);
+        Assert.Contains("已下载", viewModel.StatusMessage);
+    }
+
+    [Fact]
+    public async Task DownloadCommand_Failure_ShowsMessageAndKeepsUninstalled()
+    {
+        var service = new FakeModpackService { Projects = [Project()] };
+        service.FailInstall = true;
+        var viewModel = CreateViewModel(service, new FakeModpackInstaller());
+        viewModel.SearchText = "example";
+        await viewModel.SearchCommand.ExecuteAsync(null);
+
+        await viewModel.Projects[0].DownloadCommand.ExecuteAsync(null);
+
+        Assert.False(viewModel.Projects[0].IsDownloaded);
+        Assert.Contains("失败", viewModel.StatusMessage);
+    }
+
+    [Fact]
+    public async Task InstallCommand_InstallsModpack_AfterDownloadingZip()
+    {
+        var installer = new FakeModpackInstaller();
+        var service = new FakeModpackService { Projects = [Project()] };
+        var viewModel = CreateViewModel(service, installer);
         viewModel.SearchText = "example";
         await viewModel.SearchCommand.ExecuteAsync(null);
 
         await viewModel.Projects[0].InstallCommand.ExecuteAsync(null);
 
-        Assert.Equal(999, service.LastProject?.Id);
-        Assert.Equal("1.20.1", service.LastGameVersion);
-        Assert.Equal("/games/mc", service.LastFolder);
+        Assert.Equal(Path.Combine("/games/mc", "downloads", "pack.zip"), installer.LastZipPath);
+        Assert.Equal("/games/mc", installer.LastFolder);
+        Assert.Equal(DownloadSource.Bmclapi, installer.LastSource);
+        Assert.True(viewModel.Projects[0].IsDownloaded);
         Assert.True(viewModel.Projects[0].IsInstalled);
-        Assert.Contains("已下载", viewModel.StatusMessage);
+        Assert.Contains("已安装整合包 Example Pack", viewModel.StatusMessage);
     }
 
     [Fact]
     public async Task InstallCommand_Failure_ShowsMessageAndKeepsUninstalled()
     {
-        var service = new FakeModpackService { Projects = [Project()] };
-        service.FailInstall = true;
-        var viewModel = CreateViewModel(service);
+        var installer = new FakeModpackInstaller { Fail = true };
+        var viewModel = CreateViewModel(new FakeModpackService { Projects = [Project()] }, installer);
         viewModel.SearchText = "example";
         await viewModel.SearchCommand.ExecuteAsync(null);
 
         await viewModel.Projects[0].InstallCommand.ExecuteAsync(null);
 
         Assert.False(viewModel.Projects[0].IsInstalled);
-        Assert.Contains("失败", viewModel.StatusMessage);
+        Assert.Contains("安装失败", viewModel.StatusMessage);
     }
 
     private static IntegrationPacksPageViewModel CreateViewModel(FakeModpackService service)
-        => new(new FakeSettingsService(), service, new FakePlatformService());
+        => CreateViewModel(service, new FakeModpackInstaller());
+
+    private static IntegrationPacksPageViewModel CreateViewModel(
+        FakeModpackService service,
+        FakeModpackInstaller installer)
+        => new(new FakeSettingsService(), service, installer, new FakePlatformService());
 }

@@ -182,4 +182,45 @@ public sealed class CurseForgeApiTests
         Assert.Contains("/v1/mods/999/files", url);
         Assert.Contains("gameVersion=1.20.1", Uri.UnescapeDataString(url));
     }
+
+    [Fact]
+    public async Task GetFileAsync_ParsesSingleFile_AndBuildsUrl()
+    {
+        var client = new FakeDownloadClient
+        {
+            GetResponse = """
+                {
+                  "data": {
+                    "id": 456,
+                    "displayName": "JEI 15.2.0.27",
+                    "fileName": "jei-15.2.0.27.jar",
+                    "downloadUrl": "https://edge.forgecdn.net/files/jei.jar",
+                    "fileLength": 12345,
+                    "fileHashes": [ { "algo": 1, "value": "abc123" } ]
+                  }
+                }
+                """,
+        };
+        var api = new CurseForgeApi(client);
+
+        var file = await api.GetFileAsync(123, 456);
+
+        Assert.NotNull(file);
+        Assert.Equal(456, file!.Id);
+        Assert.Equal("jei-15.2.0.27.jar", file.FileName);
+        Assert.Equal("https://edge.forgecdn.net/files/jei.jar", file.DownloadUrl);
+        Assert.Equal("abc123", file.Sha1);
+        Assert.Equal("https://api.curseforge.com/v1/mods/123/files/456", Assert.Single(client.GetUrls));
+    }
+
+    [Fact]
+    public async Task GetFileAsync_EmptyResponse_ReturnsNull()
+    {
+        var client = new FakeDownloadClient { GetResponse = """{ "data": null }""" };
+        var api = new CurseForgeApi(client);
+
+        var file = await api.GetFileAsync(123, 456);
+
+        Assert.Null(file);
+    }
 }

@@ -34,7 +34,9 @@ public partial class MainWindow : Window
         var modsDownloadService = new ModsDownloadService(downloadClient);
         var curseForgeApi = new CurseForgeApi(downloadClient);
         var curseForgeDownloadService = new CurseForgeDownloadService(downloadClient);
+        var versionInstaller = new VersionInstaller(downloadClient, catalog);
         var curseForgeModpackService = new CurseForgeModpackService(curseForgeApi, downloadClient);
+        var modpackInstaller = new ModpackInstallerService(curseForgeApi, downloadClient, versionInstaller);
         return new MainWindowViewModel(
             settings,
             new AvaloniaThemeService(),
@@ -45,13 +47,14 @@ public partial class MainWindow : Window
             new JavaService(),
             platform,
             new VersionManifestService(downloadClient),
-            new VersionInstaller(downloadClient, catalog),
+            versionInstaller,
             new ModsService(),
             accountService,
             modrinthApi,
             modsDownloadService,
             curseForgeApi,
             curseForgeDownloadService,
-            curseForgeModpackService);
+            curseForgeModpackService,
+            modpackInstaller);
     }
 }

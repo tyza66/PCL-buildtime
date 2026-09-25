@@ -418,3 +418,44 @@
 - 本地 `dotnet test` 全绿，构建 0 警告。
 - 整合包页可搜索并下载 CurseForge 整合包，下载产物出现在 `downloads` 目录。
 - GitHub Actions 三平台测试与 7 RID 打包通过。
+
+## Phase 11：整合包解压安装
+
+### 目标
+
+- 整合包页“安装”按钮把已下载的 CurseForge 整合包 zip 真正安装到游戏目录。
+- 解析 `manifest.json`，缺失原版时先补装对应 Minecraft 版本，再按 `files` 下载必需 Mod 到 `mods`，最后把 `overrides` 覆盖文件写入游戏目录。
+- 文件名与 zip 路径均做穿越过滤；进度按“读取 manifest / 原版 / Mod / 覆盖文件”分阶段展示，支持取消。
+- 保持单元测试可验证，不依赖真实网络；原 WPF 工程零改动。
+
+### 修改文件
+
+- Create: `PCL.Avalonia/Services/Mods/ModpackManifest.cs`（manifest 解析模型）
+- Create: `PCL.Avalonia/Services/Mods/IModpackInstallerService.cs` / `ModpackInstallerService.cs`
+- Modify: `PCL.Avalonia/Services/Mods/ICurseForgeApi.cs` / `CurseForgeApi.cs`（新增 `GetFileAsync` 单文件详情接口）
+- Modify: `PCL.Avalonia/ViewModels/Pages/IntegrationPacksPageViewModel.cs`（下载与完整安装两个动作、分阶段进度）
+- Modify: `PCL.Avalonia/Views/Pages/IntegrationPacksPageView.axaml`（已下载/已安装标记与下载、安装按钮）
+- Modify: `PCL.Avalonia/ViewModels/MainWindowViewModel.cs` / `Views/MainWindow.axaml.cs`
+- Create: `PCL.Avalonia.Tests/ModpackInstallerServiceTests.cs`
+- Modify: `PCL.Avalonia.Tests/CurseForgeApiTests.cs` / `CurseForgeModpackServiceTests.cs` / `ModsDownloadPageViewModelTests.cs` / `IntegrationPacksPageViewModelTests.cs` / `MainWindowViewModelTests.cs`
+
+### 任务 1：先写失败测试
+
+- [x] `ModpackInstallerServiceTests`：缺失原版时调用 `IVersionInstaller` 补装；已存在版本 JSON 时跳过；manifest 只下载必需 Mod、跳过可选；`overrides` 解压到游戏目录；路径穿越条目被阻止；缺 `manifest.json` 抛错。
+- [x] `CurseForgeApiTests`：`GetFileAsync` 请求 `/v1/mods/{id}/files/{fileId}` 并解析单文件；空响应返回 null。
+- [x] `IntegrationPacksPageViewModelTests`：下载命令只下载 zip 并标记“已下载”；安装命令先下载再调用安装器，成功标记“已安装”；失败显示中文状态。
+- [x] 所有实现 `ICurseForgeApi` 的测试假对象补齐 `GetFileAsync`。
+
+### 任务 2：实现安装服务与页面
+
+- [x] `ModpackManifest` 解析 CurseForge `manifest.json` 的 name/version/minecraft/files/overrides。
+- [x] `ModpackInstallerService`：读取 manifest → 按需补装原版 → 下载必需 Mod → 解压 overrides；错误逐项汇总，进度分阶段上报。
+- [x] `CurseForgeApi.GetFileAsync` 获取 manifest 指定的单个文件详情。
+- [x] 整合包页拆分“下载”和“安装”按钮；安装后显示整合包名、原版版本与 Mod 数量。
+- [x] 运行 `~/.dotnet/dotnet test PCL.Avalonia.sln`，确认全绿（96 个测试）。
+
+### 验收
+
+- 本地 `dotnet test` 全绿，构建 0 警告。
+- 整合包下载后可一键安装：原版版本、必需 Mod、覆盖配置文件均落到游戏目录。
+- GitHub Actions 三平台测试与 7 RID 打包通过。

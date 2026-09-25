@@ -85,6 +85,17 @@ public sealed class CurseForgeApi : ICurseForgeApi
             .ToList();
     }
 
+    public async Task<CurseForgeModFile?> GetFileAsync(
+        int projectId,
+        int fileId,
+        CancellationToken cancellationToken = default)
+    {
+        var url = $"{BaseUrl}/v1/mods/{projectId}/files/{fileId}";
+        var json = await _downloadClient.GetStringAsync([url], cancellationToken).ConfigureAwait(false);
+        var envelope = JsonSerializer.Deserialize<Envelope<CurseForgeModFile>>(json, JsonOptions);
+        return envelope?.Data;
+    }
+
     private static int? MapLoaderType(string loader)
     {
         if (string.IsNullOrWhiteSpace(loader))

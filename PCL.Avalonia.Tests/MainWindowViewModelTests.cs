@@ -159,6 +159,12 @@ public sealed class MainWindowViewModelTests
             string gameVersion,
             CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<CurseForgeModFile>>([]);
+
+        public Task<CurseForgeModFile?> GetFileAsync(
+            int projectId,
+            int fileId,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<CurseForgeModFile?>(null);
     }
 
     private sealed class FakeCurseForgeDownloadService : ICurseForgeDownloadService
@@ -187,6 +193,17 @@ public sealed class MainWindowViewModelTests
             => Task.FromResult("");
     }
 
+    private sealed class FakeModpackInstaller : IModpackInstallerService
+    {
+        public Task<ModpackInstallResult> InstallAsync(
+            string modpackZipPath,
+            string minecraftFolder,
+            DownloadSource source,
+            IProgress<ModpackInstallProgress>? progress = null,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(new ModpackInstallResult("pack", "1.20.1", [], []));
+    }
+
     private static (FakeSettingsService Settings, FakeThemeService Theme, MainWindowViewModel ViewModel) CreateViewModel(
         bool useDarkTheme)
     {
@@ -209,7 +226,8 @@ public sealed class MainWindowViewModelTests
             new FakeModsDownloadService(),
             new FakeCurseForgeApi(),
             new FakeCurseForgeDownloadService(),
-            new FakeCurseForgeModpackService());
+            new FakeCurseForgeModpackService(),
+            new FakeModpackInstaller());
         return (settings, theme, viewModel);
     }
 
@@ -283,7 +301,8 @@ public sealed class MainWindowViewModelTests
             new FakeModsDownloadService(),
             new FakeCurseForgeApi(),
             new FakeCurseForgeDownloadService(),
-            new FakeCurseForgeModpackService());
+            new FakeCurseForgeModpackService(),
+            new FakeModpackInstaller());
 
         viewModel.ToggleThemeCommand.Execute(null);
 

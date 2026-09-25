@@ -17,4 +17,9 @@ public interface ICurseForgeApi
         int projectId,
         string gameVersion,
         CancellationToken cancellationToken = default);
+
+    Task<CurseForgeModFile?> GetFileAsync(
+        int projectId,
+        int fileId,
+        CancellationToken cancellationToken = default);
 }

@@ -274,6 +274,12 @@ public sealed partial class ModsDownloadPageViewModel : ObservableObject
             string gameVersion,
             CancellationToken cancellationToken = default)
             => throw new InvalidOperationException("CurseForge 服务不可用");
+
+        public Task<CurseForgeModFile?> GetFileAsync(
+            int projectId,
+            int fileId,
+            CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException("CurseForge 服务不可用");
     }
 
     private sealed class UnavailableCurseForgeInstaller : ICurseForgeDownloadService

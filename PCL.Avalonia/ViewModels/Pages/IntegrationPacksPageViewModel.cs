@@ -11,16 +11,19 @@ public sealed partial class IntegrationPacksPageViewModel : ObservableObject
 {
     private readonly ISettingsService _settingsService;
     private readonly ICurseForgeModpackService _modpackService;
+    private readonly IModpackInstallerService _modpackInstaller;
     private readonly IPlatformService _platform;
     private CancellationTokenSource? _cancellationTokenSource;
 
     public IntegrationPacksPageViewModel(
         ISettingsService settingsService,
         ICurseForgeModpackService modpackService,
+        IModpackInstallerService modpackInstaller,
         IPlatformService platform)
     {
         _settingsService = settingsService;
         _modpackService = modpackService;
+        _modpackInstaller = modpackInstaller;
         _platform = platform;
     }
 
@@ -66,7 +69,7 @@ public sealed partial class IntegrationPacksPageViewModel : ObservableObject
             Projects.Clear();
             foreach (var project in results)
             {
-                Projects.Add(new IntegrationPackItemViewModel(project, InstallAsync));
+                Projects.Add(new IntegrationPackItemViewModel(project, DownloadAsync, InstallModpackAsync));
             }
 
             StatusMessage = $"找到 {Projects.Count} 个整合包（{GameVersion}）";
@@ -82,7 +85,7 @@ public sealed partial class IntegrationPacksPageViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task InstallAsync(IntegrationPackItemViewModel item)
+    private async Task DownloadAsync(IntegrationPackItemViewModel item)
     {
         if (IsBusy)
         {
@@ -105,7 +108,7 @@ public sealed partial class IntegrationPacksPageViewModel : ObservableObject
                 folder,
                 progress,
                 _cancellationTokenSource.Token);
-            item.IsInstalled = true;
+            item.IsDownloaded = true;
             StatusMessage = $"已下载 {item.Title}";
         }
         catch (OperationCanceledException)
@@ -115,6 +118,61 @@ public sealed partial class IntegrationPacksPageViewModel : ObservableObject
         catch (Exception ex)
         {
             StatusMessage = "下载失败：" + ex.Message;
+        }
+        finally
+        {
+            IsBusy = false;
+            IsProgressVisible = false;
+            _cancellationTokenSource?.Dispose();
+            _cancellationTokenSource = null;
+        }
+    }
+
+    [RelayCommand]
+    private async Task InstallModpackAsync(IntegrationPackItemViewModel item)
+    {
+        if (IsBusy)
+        {
+            return;
+        }
+
+        IsBusy = true;
+        IsProgressVisible = true;
+        ProgressPercent = 0;
+        ProgressText = "";
+        _cancellationTokenSource = new CancellationTokenSource();
+        try
+        {
+            var settings = _settingsService.Load();
+            var folder = GetMinecraftFolder(settings);
+            var downloadProgress = new Progress<DownloadProgress>(OnDownloadProgress);
+            var zipPath = await _modpackService.InstallAsync(
+                item.Project,
+                GameVersion,
+                folder,
+                downloadProgress,
+                _cancellationTokenSource.Token);
+            item.IsDownloaded = true;
+
+            var installProgress = new Progress<ModpackInstallProgress>(OnInstallProgress);
+            var result = await _modpackInstaller.InstallAsync(
+                zipPath,
+                folder,
+                settings.DownloadSource,
+                installProgress,
+                _cancellationTokenSource.Token);
+            item.IsInstalled = result.Success;
+            StatusMessage = result.Success
+                ? $"已安装整合包 {result.Name}（原版 {result.MinecraftVersion}，Mod {result.InstalledMods.Count} 个）"
+                : $"安装完成但有 {result.Errors.Count} 个问题：{string.Join("；", result.Errors.Take(3))}";
+        }
+        catch (OperationCanceledException)
+        {
+            StatusMessage = "安装已取消";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = "安装失败：" + ex.Message;
         }
         finally
         {
@@ -150,14 +208,47 @@ public sealed partial class IntegrationPacksPageViewModel : ObservableObject
             ProgressText = $"下载中 {value.Received / (1024.0 * 1024.0):F1} MB";
         }
     }
+
+    private void OnInstallProgress(ModpackInstallProgress value)
+    {
+        switch (value.Stage)
+        {
+            case ModpackInstallStage.ReadingManifest:
+                ProgressPercent = 5;
+                ProgressText = value.ItemName is null
+                    ? "读取整合包..."
+                    : $"读取整合包 {value.ItemName}";
+                break;
+            case ModpackInstallStage.BaseVersion:
+                ProgressPercent = 10;
+                ProgressText = $"准备原版 {value.ItemName}...";
+                break;
+            case ModpackInstallStage.Mods:
+                ProgressPercent = value.TotalItems == 0 ? 50 : 10 + 80.0 * value.CompletedItems / value.TotalItems;
+                ProgressText = value.TotalItems == 0
+                    ? "检查 Mod"
+                    : $"安装 Mod {value.CompletedItems}/{value.TotalItems}";
+                break;
+            case ModpackInstallStage.Overrides:
+                ProgressPercent = 92;
+                ProgressText = "写入整合包文件...";
+                break;
+            case ModpackInstallStage.Complete:
+                ProgressPercent = 100;
+                ProgressText = "安装完成";
+                break;
+        }
+    }
 }
 
 public sealed partial class IntegrationPackItemViewModel : ObservableObject
 {
+    private readonly Func<IntegrationPackItemViewModel, Task> _download;
     private readonly Func<IntegrationPackItemViewModel, Task> _install;
 
     public IntegrationPackItemViewModel(
         CurseForgeProject project,
+        Func<IntegrationPackItemViewModel, Task> download,
         Func<IntegrationPackItemViewModel, Task> install)
     {
         Project = project;
@@ -168,6 +259,7 @@ public sealed partial class IntegrationPackItemViewModel : ObservableObject
             : (string.IsNullOrWhiteSpace(project.Slug) ? project.Id.ToString() : project.Slug);
         DownloadsText = FormatDownloads(project.DownloadCount);
         CategoriesText = string.Join(" · ", project.Categories);
+        _download = download;
         _install = install;
     }
 
@@ -184,7 +276,13 @@ public sealed partial class IntegrationPackItemViewModel : ObservableObject
     public string CategoriesText { get; }
 
     [ObservableProperty]
+    private bool _isDownloaded;
+
+    [ObservableProperty]
     private bool _isInstalled;
+
+    [RelayCommand]
+    private Task Download() => _download(this);
 
     [RelayCommand]
     private Task Install() => _install(this);

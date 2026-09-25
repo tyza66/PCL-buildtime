@@ -96,6 +96,12 @@ public sealed class ModsDownloadPageViewModelTests
             string gameVersion,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
+
+        public Task<CurseForgeModFile?> GetFileAsync(
+            int projectId,
+            int fileId,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
     }
 
     private sealed class FakeCurseForgeInstaller : ICurseForgeDownloadService
