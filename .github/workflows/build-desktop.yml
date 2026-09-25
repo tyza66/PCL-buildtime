@@ -95,6 +95,16 @@ jobs:
             -p:DebugType=None \
             -p:DebugSymbols=false
 
+      - name: Install NSIS
+        if: runner.os == 'Windows'
+        run: choco install nsis -y
+
+      - name: Install Linux packaging deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libfuse2
+
       - name: Package Windows (NSIS)
         if: runner.os == 'Windows'
         shell: bash
@@ -141,9 +151,14 @@ jobs:
         shell: bash
         run: |
           name="PCL2.Avalonia-${describe}-${{ matrix.rid }}"
-          # Download appimagetool if not cached
+          # Download x86_64 appimagetool (runs on the x64 runner regardless of target arch)
+          if [ "${{ matrix.rid }}" = "linux-arm64" ]; then
+            export ARCH=arm64
+          else
+            export ARCH=x86_64
+          fi
           if [ ! -f /tmp/appimagetool ]; then
-            curl -L -o /tmp/appimagetool "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-${{ matrix.rid == 'linux-x64' && 'x86_64' || 'aarch64' }}.AppImage"
+            curl -L -o /tmp/appimagetool "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage"
             chmod +x /tmp/appimagetool
           fi
           # Create AppDir structure
@@ -164,7 +179,7 @@ jobs:
           Categories=Game;
           EOF
           cp PCL.Avalonia/Assets/pcl2-avalonia.png "AppDir/usr/share/icons/hicolor/256x256/apps/pcl2-avalonia.png"
-          /tmp/appimagetool AppDir "${name}.AppImage"
+          /tmp/appimagetool --appimage-extract-and-run AppDir "${name}.AppImage"
           sha256sum "${name}.AppImage" > "${name}.AppImage.sha256"
 
       - name: Upload artifact
