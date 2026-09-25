@@ -303,7 +303,7 @@ public sealed class VersionPageViewModelTests
 
         viewModel.Versions[0].OpenFolderCommand.Execute(null);
 
-        var expectedPath = Path.Combine("/games", "mc", "versions", "1.20.1");
+        var expectedPath = Path.Combine("/games/mc", "versions", "1.20.1");
         Assert.Equal([expectedPath], opener.Opened);
     }
 
