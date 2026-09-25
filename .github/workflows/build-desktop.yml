@@ -53,18 +53,25 @@ jobs:
         include:
           - os: windows-latest
             rid: win-x64
+            suffix: -setup.exe
           - os: windows-latest
             rid: win-x86
+            suffix: -setup.exe
           - os: windows-latest
             rid: win-arm64
+            suffix: -setup.exe
           - os: macos-latest
             rid: osx-x64
+            suffix: .dmg
           - os: macos-latest
             rid: osx-arm64
+            suffix: .dmg
           - os: ubuntu-latest
             rid: linux-x64
+            suffix: .AppImage
           - os: ubuntu-latest
             rid: linux-arm64
+            suffix: .AppImage
 
     steps:
       - name: Checkout
@@ -76,8 +83,16 @@ jobs:
       - name: Resolve version
         shell: bash
         run: |
-          describe="$(git describe --tags --always 2>/dev/null || echo ci)"
-          echo "describe=${describe}" >> "$GITHUB_ENV"
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            version="$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' PCL.Avalonia/PCL.Avalonia.csproj)"
+          fi
+          if [ -z "$version" ]; then
+            echo "::error::Unable to resolve package version"
+            exit 1
+          fi
+          echo "version=${version}" >> "$GITHUB_ENV"
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -110,20 +125,18 @@ jobs:
         shell: bash
         run: |
           export PATH="/c/Program Files (x86)/NSIS:$PATH"
-          name="PCL2.Avalonia-${describe}-${{ matrix.rid }}"
-          outfile="${name}-setup.exe"
+          name="PCL2.Avalonia-${version}-${{ matrix.rid }}"
+          outfile="${name}${{ matrix.suffix }}"
           sed "s|@OUTFILE@|${outfile}|g" build-scripts/installer.nsi > build-scripts/installer-final.nsi
           makensis build-scripts/installer-final.nsi
-          sha256sum "${name}-setup.exe" > "${name}-setup.exe.sha256"
-          echo "--- pwd ---"; pwd
-          echo "--- ls repo root ---"; ls -la
-          echo "--- glob match ---"; ls -la "PCL2.Avalonia-${describe}-${{ matrix.rid }}"* 2>&1
+          sha256sum "${outfile}" > "${outfile}.sha256"
 
       - name: Package macOS (DMG)
         if: runner.os == 'macOS'
         shell: bash
         run: |
-          name="PCL2.Avalonia-${describe}-${{ matrix.rid }}"
+          name="PCL2.Avalonia-${version}-${{ matrix.rid }}"
+          dmg_name="${name}${{ matrix.suffix }}"
           app="$name.app"
           mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
           cp PCL.Avalonia/Assets/Info.plist "$app/Contents/Info.plist"
@@ -146,7 +159,6 @@ jobs:
           # Ad-hoc sign the .app bundle
           codesign --sign - --force --deep --timestamp=none "$app"
           # Create DMG
-          dmg_name="${name}.dmg"
           hdiutil create -volname "PCL2 Avalonia" -srcfolder "$app" -ov -format UDZO "$dmg_name"
           shasum -a 256 "$dmg_name" > "${dmg_name}.sha256"
 
@@ -154,7 +166,8 @@ jobs:
         if: runner.os == 'Linux'
         shell: bash
         run: |
-          name="PCL2.Avalonia-${describe}-${{ matrix.rid }}"
+          name="PCL2.Avalonia-${version}-${{ matrix.rid }}"
+          package="${name}${{ matrix.suffix }}"
           # Download x86_64 appimagetool (runs on the x64 runner regardless of target arch)
           if [ "${{ matrix.rid }}" = "linux-arm64" ]; then
             export ARCH=arm64
@@ -189,14 +202,28 @@ jobs:
           # Icon: must exist at AppDir root with same base name as desktop file
           cp PCL.Avalonia/Assets/pcl2-avalonia.png "AppDir/pcl2-avalonia.png"
           cp PCL.Avalonia/Assets/pcl2-avalonia.png "AppDir/usr/share/icons/hicolor/256x256/apps/pcl2-avalonia.png"
-          /tmp/appimagetool --appimage-extract-and-run AppDir "${name}.AppImage"
-          sha256sum "${name}.AppImage" > "${name}.AppImage.sha256"
+          /tmp/appimagetool --appimage-extract-and-run AppDir "${package}"
+          sha256sum "${package}" > "${package}.sha256"
+
+      - name: Verify package
+        shell: bash
+        run: |
+          base="PCL2.Avalonia-${version}-${{ matrix.rid }}"
+          for f in "$base${{ matrix.suffix }}" "$base${{ matrix.suffix }}.sha256"; do
+            if [ ! -s "$f" ]; then
+              echo "::error::Expected package is missing: $f"
+              exit 1
+            fi
+          done
+          ls -l "$base"*
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
-          name: PCL2.Avalonia-${{ env.describe }}-${{ matrix.rid }}
-          path: PCL2.Avalonia-${{ env.describe }}-${{ matrix.rid }}.*
+          name: PCL2.Avalonia-${{ env.version }}-${{ matrix.rid }}
+          path: |
+            PCL2.Avalonia-${{ env.version }}-${{ matrix.rid }}${{ matrix.suffix }}
+            PCL2.Avalonia-${{ env.version }}-${{ matrix.rid }}${{ matrix.suffix }}.sha256
           if-no-files-found: error
           retention-days: 14
 
@@ -226,7 +253,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           tag="$GITHUB_REF_NAME"
-          if ! gh release view "$tag" >/dev/null 2>&1; then
-            gh release create "$tag" --generate-notes --title "$tag"
+          repo="${{ github.repository }}"
+          if ! gh release view "$tag" -R "$repo" >/dev/null 2>&1; then
+            gh release create "$tag" -R "$repo" --generate-notes --title "$tag"
           fi
-          gh release upload "$tag" release-assets/*.zip release-assets/*.tar.gz release-assets/*.dmg release-assets/*.AppImage release-assets/*.exe release-assets/*.sha256 --clobber
+          gh release upload "$tag" -R "$repo" release-assets/* --clobber
