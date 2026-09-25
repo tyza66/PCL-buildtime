@@ -59,7 +59,7 @@ public sealed class ModrinthApiTests
 
         var results = await api.SearchProjectsAsync("jei", "1.20.1", "fabric");
 
-        var project = Assert.Single(results);
+        var project = Assert.Single(results.Hits);
         Assert.Equal("abc", project.ProjectId);
         Assert.Equal("Just Enough Items", project.Title);
         Assert.Equal("mezz", project.Author);

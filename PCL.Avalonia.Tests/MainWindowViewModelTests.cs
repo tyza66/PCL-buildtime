@@ -216,7 +216,7 @@ public sealed class MainWindowViewModelTests
             int index = 0,
             int pageSize = 40,
             CancellationToken cancellationToken = default)
-            => Task.FromResult(new CurseForgeSearchPage([], 0));
+            => Task.FromResult<IReadOnlyList<CurseForgeProject>>([]);
 
         public Task<IReadOnlyList<CurseForgeModFile>> GetFilesAsync(
             int projectId,

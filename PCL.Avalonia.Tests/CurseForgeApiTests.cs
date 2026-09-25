@@ -72,7 +72,7 @@ public sealed class CurseForgeApiTests
 
         var results = await api.SearchProjectsAsync("jei");
 
-        var project = Assert.Single(results);
+        var project = Assert.Single(results.Projects);
         Assert.Equal(123, project.Id);
         Assert.Equal("Just Enough Items", project.Name);
         Assert.Equal("物品与配方查看", project.Summary);

@@ -112,6 +112,7 @@ public sealed class ResourceSearcherServiceTests
             "faithful",
             "1.20.1",
             "fabric",
+            "",
             ResourceSource.Modrinth);
 
         var item = Assert.Single(results);
@@ -136,6 +137,7 @@ public sealed class ResourceSearcherServiceTests
             "jei",
             "1.20.1",
             "fabric",
+            "",
             ResourceSource.Modrinth);
 
         var item = Assert.Single(results);
@@ -157,6 +159,7 @@ public sealed class ResourceSearcherServiceTests
             "bsl",
             "1.20.1",
             "fabric",
+            "",
             ResourceSource.CurseForge);
 
         var item = Assert.Single(results);
@@ -180,7 +183,8 @@ public sealed class ResourceSearcherServiceTests
                 "jei",
                 "1.20.1",
                 "fabric",
-                ResourceSource.Modrinth));
+            "",
+            ResourceSource.Modrinth));
 
         Assert.Contains("Modrinth:network down", exception.Message);
     }
