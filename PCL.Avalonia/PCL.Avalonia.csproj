@@ -7,6 +7,9 @@
     <Nullable>enable</Nullable>
     <AssemblyName>PCL2.Avalonia</AssemblyName>
     <RootNamespace>PCL.Avalonia</RootNamespace>
+    <Version>1.0.20260925</Version>
+    <AssemblyVersion>1.0.20260925</AssemblyVersion>
+    <FileVersion>1.0.20260925</FileVersion>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
   </PropertyGroup>
