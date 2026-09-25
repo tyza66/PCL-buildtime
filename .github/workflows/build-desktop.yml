@@ -115,6 +115,9 @@ jobs:
           sed "s|@OUTFILE@|${outfile}|g" build-scripts/installer.nsi > build-scripts/installer-final.nsi
           makensis build-scripts/installer-final.nsi
           sha256sum "${name}-setup.exe" > "${name}-setup.exe.sha256"
+          echo "--- pwd ---"; pwd
+          echo "--- ls repo root ---"; ls -la
+          echo "--- glob match ---"; ls -la "PCL2.Avalonia-${describe}-${{ matrix.rid }}"* 2>&1
 
       - name: Package macOS (DMG)
         if: runner.os == 'macOS'
