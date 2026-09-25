@@ -67,6 +67,7 @@ public partial class MainWindow : Window
             forgelikeLoaderService,
             new VersionManagerService(),
             new DefaultFolderOpener(),
-            new LaunchScriptExporter());
+            new LaunchScriptExporter(),
+            new OtherToolsService());
     }
 }

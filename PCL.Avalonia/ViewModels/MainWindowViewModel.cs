@@ -41,7 +41,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         IForgelikeLoaderService forgelikeLoaderService,
         IVersionManagerService versionManager,
         IFolderOpener folderOpener,
-        ILaunchScriptExporter scriptExporter)
+        ILaunchScriptExporter scriptExporter,
+        IOtherToolsService otherToolsService)
     {
         _settingsService = settingsService;
         _themeService = themeService;
@@ -78,7 +79,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 scriptExporter)),
             new NavItemViewModel("Mod管理", new ModsPageViewModel(settingsService, modsService, platformService)),
             new NavItemViewModel("设置", new SettingsPageViewModel(settingsService, platformService)),
-            new NavItemViewModel("其他", new OtherPageViewModel()),
+            new NavItemViewModel("其他", new OtherPageViewModel(
+                settingsService,
+                platformService,
+                otherToolsService,
+                folderOpener)),
         ];
 
         SelectedItem = Items[0];

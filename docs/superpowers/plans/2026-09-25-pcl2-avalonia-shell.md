@@ -669,3 +669,41 @@
 - 版本页可收藏、隐藏、删除、打开文件夹、重命名、保存描述并导出启动脚本。
 - 重命名后版本 JSON、jar、natives 与 `PCL/Setup.ini` 路径保持一致，版本列表刷新后可见新名称。
 - GitHub Actions 三平台测试与 7 RID 打包通过。
+
+## Phase 17：其他页（工具与环境信息）
+
+### 目标
+
+- 把“其他”页从占位页升级为真实工具页：展示应用版本、运行时、操作系统、游戏目录与配置目录。
+- 支持打开游戏目录、打开启动器配置目录、扫描并清理下载中断留下的 `.tmp` / `.part` / `.download` 临时文件。
+- 保持单元测试可验证，不依赖真实文件系统之外的外部资源；原 WPF 工程零改动。
+
+### 修改文件
+
+- Create: `PCL.Avalonia/Services/Platform/IOtherToolsService.cs` / `OtherToolsService.cs`
+- Create: `PCL.Avalonia/ViewModels/Pages/OtherPageViewModel.cs`（重写）
+- Modify: `PCL.Avalonia/Views/Pages/OtherPageView.axaml`
+- Modify: `PCL.Avalonia/ViewModels/MainWindowViewModel.cs`
+- Modify: `PCL.Avalonia/Views/MainWindow.axaml.cs`
+- Create: `PCL.Avalonia.Tests/OtherToolsServiceTests.cs`
+- Create: `PCL.Avalonia.Tests/OtherPageViewModelTests.cs`
+- Modify: `PCL.Avalonia.Tests/MainWindowViewModelTests.cs`
+
+### 任务 1：先写失败测试
+
+- [x] `OtherToolsServiceTests`：环境信息返回路径与运行时信息；递归扫描 `.tmp` / `.part` / `.download`；清理只删除临时文件并保留正常文件；缺失目录返回空报告。
+- [x] `OtherPageViewModelTests`：构造加载环境信息；扫描更新数量与状态；清理后重置计数；打开游戏目录与配置目录调用文件夹打开器。
+- [x] `MainWindowViewModelTests`：注入假 `IOtherToolsService`，新增“其他”导航断言。
+
+### 任务 2：实现其他工具服务与页面
+
+- [x] `OtherToolsService`：`GetEnvironmentInfo` 读取程序集版本、运行时与操作系统描述；扫描/清理按扩展名匹配并统计文件数与字节数。
+- [x] `OtherPageViewModel`：环境信息属性、打开目录命令、扫描与清理命令、字节数人性化格式化。
+- [x] `OtherPageView.axaml`：工具按钮、状态与数量、环境信息表格、关于段落。
+- [x] 主窗口注入真实 `OtherToolsService` 并传给其他页。
+- [x] 本地 `dotnet build -warnaserror` 0 警告，`dotnet test` 全绿（167 个测试）。
+
+### 验收
+
+- “其他”页可查看环境信息、打开两个目录、扫描并清理临时文件。
+- GitHub Actions 三平台测试与 7 RID 打包通过。

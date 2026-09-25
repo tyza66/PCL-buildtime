@@ -4,15 +4,88 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="clr-namespace:PCL.Avalonia.ViewModels.Pages;assembly=PCL2.Avalonia"
     x:DataType="vm:OtherPageViewModel">
-    <StackPanel Margin="32" Spacing="6">
-        <TextBlock
-            Text="其他"
-            FontSize="26"
-            FontWeight="SemiBold"
-            Foreground="{DynamicResource TextPrimaryBrush}" />
-        <TextBlock
-            Text="占位页"
-            FontSize="14"
-            Foreground="{DynamicResource TextSecondaryBrush}" />
-    </StackPanel>
+    <ScrollViewer>
+        <StackPanel Margin="32" Spacing="12">
+            <TextBlock
+                Text="其他"
+                FontSize="26"
+                FontWeight="SemiBold"
+                Foreground="{DynamicResource TextPrimaryBrush}" />
+
+            <TextBlock
+                Text="工具"
+                FontSize="16"
+                FontWeight="SemiBold"
+                Margin="0,14,0,0"
+                Foreground="{DynamicResource TextPrimaryBrush}" />
+            <StackPanel
+                Orientation="Horizontal"
+                Spacing="10">
+                <Button
+                    Content="打开游戏目录"
+                    Command="{Binding OpenGameFolderCommand}"
+                    Background="{DynamicResource ButtonBackgroundBrush}"
+                    Foreground="{DynamicResource TextPrimaryBrush}" />
+                <Button
+                    Content="打开启动器文件夹"
+                    Command="{Binding OpenConfigFolderCommand}"
+                    Background="{DynamicResource ButtonBackgroundBrush}"
+                    Foreground="{DynamicResource TextPrimaryBrush}" />
+                <Button
+                    Content="扫描临时文件"
+                    Command="{Binding ScanGarbageCommand}"
+                    Background="{DynamicResource ButtonBackgroundBrush}"
+                    Foreground="{DynamicResource TextPrimaryBrush}" />
+                <Button
+                    Content="清理临时文件"
+                    Command="{Binding CleanGarbageCommand}"
+                    Background="{DynamicResource ButtonBackgroundBrush}"
+                    Foreground="{DynamicResource TextPrimaryBrush}" />
+            </StackPanel>
+            <TextBlock
+                Text="{Binding StatusMessage}"
+                FontSize="13"
+                TextWrapping="Wrap"
+                Foreground="{DynamicResource TextSecondaryBrush}" />
+            <TextBlock
+                Text="{Binding GarbageFileCount, StringFormat='临时文件数量：{0}'}"
+                FontSize="13"
+                Foreground="{DynamicResource TextSecondaryBrush}" />
+            <TextBlock
+                Text="{Binding GarbageSizeText, StringFormat='占用空间：{0}'}"
+                FontSize="13"
+                Foreground="{DynamicResource TextSecondaryBrush}" />
+
+            <TextBlock
+                Text="环境信息"
+                FontSize="16"
+                FontWeight="SemiBold"
+                Margin="0,14,0,0"
+                Foreground="{DynamicResource TextPrimaryBrush}" />
+            <Grid ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="8">
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="版本" Foreground="{DynamicResource TextSecondaryBrush}" />
+                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding AppVersion}" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" />
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="运行时" Foreground="{DynamicResource TextSecondaryBrush}" />
+                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Runtime}" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" />
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="操作系统" Foreground="{DynamicResource TextSecondaryBrush}" />
+                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding OperatingSystem}" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" />
+                <TextBlock Grid.Row="3" Grid.Column="0" Text="游戏目录" Foreground="{DynamicResource TextSecondaryBrush}" />
+                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding MinecraftFolder}" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" />
+                <TextBlock Grid.Row="4" Grid.Column="0" Text="配置目录" Foreground="{DynamicResource TextSecondaryBrush}" />
+                <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding ConfigDirectory}" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" />
+            </Grid>
+
+            <TextBlock
+                Text="关于"
+                FontSize="16"
+                FontWeight="SemiBold"
+                Margin="0,14,0,0"
+                Foreground="{DynamicResource TextPrimaryBrush}" />
+            <TextBlock
+                Text="这是 PCL2 的 Avalonia 跨平台复刻版，可在 Windows、macOS 与 Linux 上运行。核心单机功能已实现，联机、帮助库与部分高级功能仍在逐步补齐。"
+                FontSize="13"
+                TextWrapping="Wrap"
+                Foreground="{DynamicResource TextSecondaryBrush}" />
+        </StackPanel>
+    </ScrollViewer>
 </UserControl>

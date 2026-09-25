@@ -316,6 +316,16 @@ public sealed class MainWindowViewModelTests
         public string Export(LaunchPlan plan, string filePath) => filePath;
     }
 
+    private sealed class FakeOtherToolsService : IOtherToolsService
+    {
+        public OtherEnvironmentInfo GetEnvironmentInfo(string minecraftFolder, string configDirectory)
+            => new("1.0.0", ".NET 8.0", "TestOS", minecraftFolder, configDirectory);
+
+        public GarbageReport ScanGarbage(IReadOnlyList<string> roots) => new(0, 0);
+
+        public GarbageReport CleanGarbage(IReadOnlyList<string> roots) => new(0, 0);
+    }
+
     private static (FakeSettingsService Settings, FakeThemeService Theme, MainWindowViewModel ViewModel) CreateViewModel(
         bool useDarkTheme)
     {
@@ -345,7 +355,8 @@ public sealed class MainWindowViewModelTests
             new FakeForgelikeLoaderService(),
             new FakeVersionManager(),
             new FakeFolderOpener(),
-            new FakeScriptExporter());
+            new FakeScriptExporter(),
+            new FakeOtherToolsService());
         return (settings, theme, viewModel);
     }
 
@@ -400,6 +411,10 @@ public sealed class MainWindowViewModelTests
         viewModel.SelectedItem = viewModel.Items.Single(item => item.Title == "整合包");
 
         Assert.IsType<IntegrationPacksPageViewModel>(viewModel.CurrentPage);
+
+        viewModel.SelectedItem = viewModel.Items.Single(item => item.Title == "其他");
+
+        Assert.IsType<OtherPageViewModel>(viewModel.CurrentPage);
     }
 
     [Fact]
@@ -434,7 +449,8 @@ public sealed class MainWindowViewModelTests
             new FakeForgelikeLoaderService(),
             new FakeVersionManager(),
             new FakeFolderOpener(),
-            new FakeScriptExporter());
+            new FakeScriptExporter(),
+            new FakeOtherToolsService());
 
         viewModel.ToggleThemeCommand.Execute(null);
 
