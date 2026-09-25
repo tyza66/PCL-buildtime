@@ -256,7 +256,7 @@ public sealed partial class ModsDownloadPageViewModel : ObservableObject
 
     private sealed class UnavailableCurseForgeApi : ICurseForgeApi
     {
-        public Task<IReadOnlyList<CurseForgeProject>> SearchProjectsAsync(
+        public Task<CurseForgeSearchPage> SearchProjectsAsync(
             string query,
             int classId = 6,
             string gameVersion = "",
@@ -265,7 +265,7 @@ public sealed partial class ModsDownloadPageViewModel : ObservableObject
             int index = 0,
             int pageSize = 40,
             CancellationToken cancellationToken = default)
-            => throw new InvalidOperationException("CurseForge 服务不可用");
+            => Task.FromResult(new CurseForgeSearchPage([], 0));
 
         public Task<IReadOnlyList<CurseForgeModFile>> GetFilesAsync(
             int projectId,
