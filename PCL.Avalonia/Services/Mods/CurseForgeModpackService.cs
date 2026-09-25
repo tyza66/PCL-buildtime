@@ -18,11 +18,11 @@ public sealed class CurseForgeModpackService : ICurseForgeModpackService
         string query,
         CancellationToken cancellationToken = default)
     {
-        var projects = await _api.SearchProjectsAsync(
+        var page = await _api.SearchProjectsAsync(
             query,
             ModpackClassId,
-            cancellationToken).ConfigureAwait(false);
-        return projects;
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        return page.Projects;
     }
 
     public async Task<string> InstallAsync(

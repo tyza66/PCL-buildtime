@@ -126,7 +126,7 @@ public sealed partial class ResourceDownloadPageViewModel : ObservableObject
                 null,
                 Source.Value);
             Projects.Clear();
-            foreach (var project in results)
+            foreach (var project in results.Items)
             {
                 Projects.Add(new ResourceProjectItemViewModel(project, InstallAsync));
             }

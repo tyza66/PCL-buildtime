@@ -170,7 +170,7 @@ public sealed partial class ModsDownloadPageViewModel : ObservableObject
             GameVersion,
             EffectiveLoader);
         Projects.Clear();
-        foreach (var project in results)
+        foreach (var project in results.Hits)
         {
             Projects.Add(DownloadProjectItemViewModel.FromModrinth(project, InstallAsync));
         }
@@ -182,7 +182,7 @@ public sealed partial class ModsDownloadPageViewModel : ObservableObject
     {
         var results = await _curseForgeApi.SearchProjectsAsync(SearchText);
         Projects.Clear();
-        foreach (var project in results)
+        foreach (var project in results.Projects)
         {
             Projects.Add(DownloadProjectItemViewModel.FromCurseForge(project, InstallAsync));
         }
