@@ -49,7 +49,7 @@ public partial class MainWindow : Window
             session,
             dispatcher,
             catalog,
-            new GameLauncher(catalog),
+            new GameLauncher(catalog, new MemoryOptimizer()),
             new JavaService(),
             platform,
             new VersionManifestService(downloadClient),

@@ -78,7 +78,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 gameLauncher,
                 scriptExporter)),
             new NavItemViewModel("Mod管理", new ModsPageViewModel(settingsService, modsService, platformService)),
-            new NavItemViewModel("设置", new SettingsPageViewModel(settingsService, platformService)),
+            new NavItemViewModel("设置", new SettingsPageViewModel(settingsService, platformService, _themeService)),
             new NavItemViewModel("其他", new OtherPageViewModel(
                 settingsService,
                 platformService,

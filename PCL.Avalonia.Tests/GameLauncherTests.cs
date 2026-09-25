@@ -39,6 +39,13 @@ public sealed class GameLauncherTests : IDisposable
 
     private static string ArchSuffix => Environment.Is64BitProcess ? "64" : "32";
 
+    private sealed class RecordingMemoryOptimizer : IMemoryOptimizer
+    {
+        public int CallCount { get; private set; }
+
+        public void Optimize() => CallCount++;
+    }
+
     private void BuildFixture()
     {
         var versions = Path.Combine(_minecraftFolder, "versions");
@@ -306,6 +313,42 @@ public sealed class GameLauncherTests : IDisposable
                 version,
                 new AppSettings { MinecraftFolder = _minecraftFolder },
                 _javaPath));
+    }
+
+    [Fact]
+    public void BuildLaunchPlan_OptimizesMemoryBeforeLaunch_WhenEnabled()
+    {
+        var version = FindForgeVersion();
+        var optimizer = new RecordingMemoryOptimizer();
+
+        new GameLauncher(_catalog, optimizer).BuildLaunchPlan(
+            version,
+            new AppSettings
+            {
+                MinecraftFolder = _minecraftFolder,
+                OptimizeMemoryBeforeLaunch = true,
+            },
+            _javaPath);
+
+        Assert.Equal(1, optimizer.CallCount);
+    }
+
+    [Fact]
+    public void BuildLaunchPlan_SkipsMemoryOptimization_WhenDisabled()
+    {
+        var version = FindForgeVersion();
+        var optimizer = new RecordingMemoryOptimizer();
+
+        new GameLauncher(_catalog, optimizer).BuildLaunchPlan(
+            version,
+            new AppSettings
+            {
+                MinecraftFolder = _minecraftFolder,
+                OptimizeMemoryBeforeLaunch = false,
+            },
+            _javaPath);
+
+        Assert.Equal(0, optimizer.CallCount);
     }
 
     [Fact]

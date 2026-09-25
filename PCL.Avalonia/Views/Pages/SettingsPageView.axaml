@@ -12,89 +12,168 @@
                 FontSize="26"
                 FontWeight="SemiBold"
                 Foreground="{DynamicResource TextPrimaryBrush}" />
-            <TextBlock
-                Text="游戏目录"
-                FontSize="13"
-                FontWeight="SemiBold"
-                Margin="0,14,0,0"
-                Foreground="{DynamicResource TextPrimaryBrush}" />
-            <TextBox
-                Text="{Binding MinecraftFolder}"
-                Watermark="例如：~/.minecraft"
-                Foreground="{DynamicResource TextPrimaryBrush}" />
-            <TextBlock
-                Text="Java 路径"
-                FontSize="13"
-                FontWeight="SemiBold"
-                Margin="0,14,0,0"
-                Foreground="{DynamicResource TextPrimaryBrush}" />
-            <TextBox
-                Text="{Binding JavaPath}"
-                Watermark="java 或 java.exe 的完整路径"
-                Foreground="{DynamicResource TextPrimaryBrush}" />
-            <TextBlock
-                Text="用户名"
-                FontSize="13"
-                FontWeight="SemiBold"
-                Margin="0,14,0,0"
-                Foreground="{DynamicResource TextPrimaryBrush}" />
-            <TextBox
-                Text="{Binding UserName}"
-                Watermark="Player"
-                Foreground="{DynamicResource TextPrimaryBrush}" />
-            <TextBlock
-                Text="最大内存（MB）"
-                FontSize="13"
-                FontWeight="SemiBold"
-                Margin="0,14,0,0"
-                Foreground="{DynamicResource TextPrimaryBrush}" />
-            <TextBox
-                Text="{Binding MaxMemoryMb}"
-                Watermark="4096"
-                Foreground="{DynamicResource TextPrimaryBrush}" />
-            <TextBlock
-                Text="JVM 启动参数"
-                FontSize="13"
-                FontWeight="SemiBold"
-                Margin="0,14,0,0"
-                Foreground="{DynamicResource TextPrimaryBrush}" />
-            <TextBox
-                Text="{Binding JvmArguments}"
-                AcceptsReturn="True"
-                Height="84"
-                Watermark="例如：-Dminecraft.api=1"
-                Foreground="{DynamicResource TextPrimaryBrush}" />
-            <TextBlock
-                Text="游戏启动参数"
-                FontSize="13"
-                FontWeight="SemiBold"
-                Margin="0,14,0,0"
-                Foreground="{DynamicResource TextPrimaryBrush}" />
-            <TextBox
-                Text="{Binding GameArguments}"
-                AcceptsReturn="True"
-                Height="84"
-                Watermark="例如：--demo"
-                Foreground="{DynamicResource TextPrimaryBrush}" />
-            <TextBlock
-                Text="下载源"
-                FontSize="13"
-                FontWeight="SemiBold"
-                Margin="0,14,0,0"
-                Foreground="{DynamicResource TextPrimaryBrush}" />
-            <ComboBox
-                ItemsSource="{Binding DownloadSources}"
-                SelectedItem="{Binding DownloadSource}"
+            <TabControl
+                x:Name="SettingsTabs"
+                Margin="0,18,0,0"
+                SelectionChanged="SettingsTabs_OnSelectionChanged"
                 Background="{DynamicResource CardBackgroundBrush}"
                 Foreground="{DynamicResource TextPrimaryBrush}">
-                <ComboBox.ItemTemplate>
-                    <DataTemplate x:DataType="pages:DownloadSourceOption">
+                <TabItem Header="启动">
+                    <StackPanel Margin="0,18,0,0" Spacing="12">
                         <TextBlock
-                            Text="{Binding Label}"
+                            Text="游戏目录"
+                            FontSize="13"
+                            FontWeight="SemiBold"
                             Foreground="{DynamicResource TextPrimaryBrush}" />
-                    </DataTemplate>
-                </ComboBox.ItemTemplate>
-            </ComboBox>
+                        <TextBox
+                            Text="{Binding MinecraftFolder}"
+                            Watermark="例如：~/.minecraft"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <TextBlock
+                            Text="Java 路径"
+                            FontSize="13"
+                            FontWeight="SemiBold"
+                            Margin="0,14,0,0"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <TextBox
+                            Text="{Binding JavaPath}"
+                            Watermark="java 或 java.exe 的完整路径"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <TextBlock
+                            Text="用户名"
+                            FontSize="13"
+                            FontWeight="SemiBold"
+                            Margin="0,14,0,0"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <TextBox
+                            Text="{Binding UserName}"
+                            Watermark="Player"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <TextBlock
+                            Text="最大内存（MB）"
+                            FontSize="13"
+                            FontWeight="SemiBold"
+                            Margin="0,14,0,0"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <TextBox
+                            Text="{Binding MaxMemoryMb}"
+                            Watermark="4096"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <CheckBox
+                            Content="启动前优化内存"
+                            IsChecked="{Binding OptimizeMemoryBeforeLaunch}"
+                            Margin="0,10,0,0"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <TextBlock
+                            Text="JVM 启动参数"
+                            FontSize="13"
+                            FontWeight="SemiBold"
+                            Margin="0,14,0,0"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <TextBox
+                            Text="{Binding JvmArguments}"
+                            AcceptsReturn="True"
+                            Height="84"
+                            Watermark="例如：-Dminecraft.api=1"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <TextBlock
+                            Text="游戏启动参数"
+                            FontSize="13"
+                            FontWeight="SemiBold"
+                            Margin="0,14,0,0"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <TextBox
+                            Text="{Binding GameArguments}"
+                            AcceptsReturn="True"
+                            Height="84"
+                            Watermark="例如：--demo"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                    </StackPanel>
+                </TabItem>
+                <TabItem Header="下载">
+                    <StackPanel Margin="0,18,0,0" Spacing="12">
+                        <TextBlock
+                            Text="文件下载源"
+                            FontSize="13"
+                            FontWeight="SemiBold"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <ComboBox
+                            ItemsSource="{Binding DownloadSources}"
+                            SelectedItem="{Binding DownloadSource}"
+                            Background="{DynamicResource CardBackgroundBrush}"
+                            Foreground="{DynamicResource TextPrimaryBrush}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="pages:DownloadSourceOption">
+                                    <TextBlock
+                                        Text="{Binding Label}"
+                                        Foreground="{DynamicResource TextPrimaryBrush}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <TextBlock
+                            Text="最大线程数"
+                            FontSize="13"
+                            FontWeight="SemiBold"
+                            Margin="0,14,0,0"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <TextBox
+                            Text="{Binding DownloadThreads}"
+                            Watermark="64（1 - 255）"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <TextBlock
+                            Text="速度限制（KB/s）"
+                            FontSize="13"
+                            FontWeight="SemiBold"
+                            Margin="0,14,0,0"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <TextBox
+                            Text="{Binding DownloadSpeedLimitKbps}"
+                            Watermark="0 表示不限速"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                    </StackPanel>
+                </TabItem>
+                <TabItem Header="个性化">
+                    <StackPanel Margin="0,18,0,0" Spacing="12">
+                        <CheckBox
+                            Content="使用深色主题"
+                            IsChecked="{Binding UseDarkTheme}"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                    </StackPanel>
+                </TabItem>
+                <TabItem Header="联机">
+                    <StackPanel Margin="0,18,0,0" Spacing="12">
+                        <TextBlock
+                            Text="模式"
+                            FontSize="13"
+                            FontWeight="SemiBold"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <ComboBox
+                            ItemsSource="{Binding LinkLatencyModes}"
+                            SelectedItem="{Binding LinkLatencyMode}"
+                            Background="{DynamicResource CardBackgroundBrush}"
+                            Foreground="{DynamicResource TextPrimaryBrush}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="pages:LinkLatencyModeOption">
+                                    <TextBlock
+                                        Text="{Binding Label}"
+                                        Foreground="{DynamicResource TextPrimaryBrush}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <TextBlock
+                            Text="自定义节点"
+                            FontSize="13"
+                            FontWeight="SemiBold"
+                            Margin="0,14,0,0"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <TextBox
+                            Text="{Binding LinkCustomPeer}"
+                            Watermark="tcp://public.easytier.cn:11010"
+                            ToolTip.Tip="使用逗号分隔多个节点，例如：tcp://public.easytier.cn:11010,tcp://public2.easytier.cn:54321"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                    </StackPanel>
+                </TabItem>
+            </TabControl>
             <StackPanel
                 Orientation="Horizontal"
                 Spacing="12"

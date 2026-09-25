@@ -17,4 +17,14 @@ public sealed record AppSettings
     public string JvmArguments { get; init; } = "";
 
     public string GameArguments { get; init; } = "";
+
+    public int DownloadThreads { get; init; } = 64;
+
+    public int DownloadSpeedLimitKbps { get; init; }
+
+    public bool OptimizeMemoryBeforeLaunch { get; init; } = true;
+
+    public LinkLatencyMode LinkLatencyMode { get; init; } = LinkLatencyMode.PreferredDirect;
+
+    public string LinkCustomPeer { get; init; } = "";
 }

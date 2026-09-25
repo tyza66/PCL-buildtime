@@ -707,3 +707,47 @@
 
 - “其他”页可查看环境信息、打开两个目录、扫描并清理临时文件。
 - GitHub Actions 三平台测试与 7 RID 打包通过。
+
+## Phase 18：设置页分区与扩展设置项
+
+### 目标
+
+- 将“设置”页拆成“启动 / 下载 / 个性化 / 联机”四个页签，覆盖原版 PageSetup 的核心入口。
+- 新增下载线程数、下载速度限制、启动前内存优化、联机模式与自定义 EasyTier 节点等设置项并持久化。
+- 让“启动前内存优化”真正生效：启动游戏构建启动计划前主动压缩托管堆。
+- 保持单元测试可验证，不依赖真实外部资源；原 WPF 工程零改动。
+
+### 修改文件
+
+- Create: `PCL.Avalonia/Services/IMemoryOptimizer.cs` / `MemoryOptimizer.cs`
+- Create: `PCL.Avalonia/Services/LinkLatencyMode.cs`
+- Modify: `PCL.Avalonia/Services/AppSettings.cs`
+- Modify: `PCL.Avalonia/Services/Minecraft/GameLauncher.cs`
+- Modify: `PCL.Avalonia/ViewModels/Pages/SettingsPageViewModel.cs`
+- Modify: `PCL.Avalonia/Views/Pages/SettingsPageView.axaml` / `.axaml.cs`
+- Modify: `PCL.Avalonia/ViewModels/MainWindowViewModel.cs`
+- Modify: `PCL.Avalonia/Views/MainWindow.axaml.cs`
+- Modify: `PCL.Avalonia.Tests/SettingsPageViewModelTests.cs`
+- Modify: `PCL.Avalonia.Tests/GameLauncherTests.cs`
+
+### 任务 1：先写失败测试
+
+- [x] 设置页新字段（线程数、限速、内存优化、联机模式、自定义节点、主题）构造加载与默认值。
+- [x] 保存持久化全部新字段、保留旧设置，并对内存/线程/限速做边界钳制。
+- [x] 保存时应用选中的深浅主题。
+- [x] `GameLauncher` 在 `OptimizeMemoryBeforeLaunch` 开启时调用内存优化器，关闭时不调用。
+
+### 任务 2：实现设置分区与内存优化
+
+- [x] `MemoryOptimizer`：强制压缩式 GC 回收并等待终结器，供启动游戏前调用。
+- [x] `AppSettings` 新增 `DownloadThreads`、`DownloadSpeedLimitKbps`、`OptimizeMemoryBeforeLaunch`、`LinkLatencyMode`、`LinkCustomPeer`。
+- [x] `SettingsPageViewModel`：四个设置分区、主题开关、下载与联机选项，保存时钳制数值并应用主题。
+- [x] `SettingsPageView.axaml`：四个页签对应原版“启动 / 其他(下载) / 个性化 / 联机”设置入口。
+- [x] 主窗口注入真实 `MemoryOptimizer` 与主题服务。
+- [x] 本地 `dotnet build -warnaserror` 0 警告，`dotnet test` 全绿（172 个测试）。
+
+### 验收
+
+- 设置页可按分区编辑启动、下载、个性化与联机选项，保存后重启仍生效。
+- 开启“启动前内存优化”后，每次构建游戏启动计划前执行内存整理。
+- GitHub Actions 三平台测试与 7 RID 打包通过。

@@ -12,11 +12,13 @@ public sealed class GameLauncher : IGameLauncher
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private readonly IVersionCatalogService _catalog;
+    private readonly IMemoryOptimizer? _memoryOptimizer;
     private readonly string _launcherVersion;
 
-    public GameLauncher(IVersionCatalogService catalog)
+    public GameLauncher(IVersionCatalogService catalog, IMemoryOptimizer? memoryOptimizer = null)
     {
         _catalog = catalog;
+        _memoryOptimizer = memoryOptimizer;
         _launcherVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0";
     }
 
@@ -32,6 +34,11 @@ public sealed class GameLauncher : IGameLauncher
         if (string.IsNullOrWhiteSpace(settings.MinecraftFolder))
         {
             throw new InvalidOperationException("未设置游戏目录");
+        }
+
+        if (settings.OptimizeMemoryBeforeLaunch)
+        {
+            _memoryOptimizer?.Optimize();
         }
 
         var minecraftFolder = settings.MinecraftFolder.Trim();
