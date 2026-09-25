@@ -203,7 +203,7 @@ public sealed class ResourceSearcherService : IResourceSearchService
     {
         if (string.IsNullOrWhiteSpace(tag))
         {
-            return (null, null);
+            return ("", "");
         }
 
         var trimmed = tag.Trim();
