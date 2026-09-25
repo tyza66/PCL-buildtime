@@ -1,6 +1,9 @@
 !include "MUI2.nsh"
 !include "FileFunc.nsh"
 
+; Script lives in build-scripts/, but publish output is at repo root
+!cd ".."
+
 Name "PCL2 Avalonia"
 OutFile "@OUTFILE@"
 InstallDir "$PROGRAMFILES\PCL2 Avalonia"
@@ -21,7 +24,7 @@ RequestExecutionLevel admin
 
 Section "Install"
   SetOutPath "$INSTDIR"
-  File /r "@PUBLISH_DIR@\*.*"
+  File /r "publish\*.*"
   WriteUninstaller "$INSTDIR\uninstall.exe"
   CreateDirectory "$SMPROGRAMS\PCL2 Avalonia"
   CreateShortcut "$SMPROGRAMS\PCL2 Avalonia\PCL2 Avalonia.lnk" "$INSTDIR\PCL2.Avalonia.exe"

@@ -112,12 +112,7 @@ jobs:
           export PATH="/c/Program Files (x86)/NSIS:$PATH"
           name="PCL2.Avalonia-${describe}-${{ matrix.rid }}"
           outfile="${name}-setup.exe"
-          # Use absolute path for publish dir since NSIS resolves relative to script location
-          publish_abs="$(cygpath -w "$(pwd)/publish")"
-          sed -e "s|@OUTFILE@|${outfile}|g" \
-              -e "s|@PUBLISH_DIR@|${publish_abs}|g" \
-              build-scripts/installer.nsi > build-scripts/installer-final.nsi
-          cat build-scripts/installer-final.nsi
+          sed "s|@OUTFILE@|${outfile}|g" build-scripts/installer.nsi > build-scripts/installer-final.nsi
           makensis build-scripts/installer-final.nsi
           sha256sum "${name}-setup.exe" > "${name}-setup.exe.sha256"
 
