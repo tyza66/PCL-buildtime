@@ -77,6 +77,7 @@ public sealed class ModsDownloadPageViewModelTests
 
         public Task<IReadOnlyList<CurseForgeProject>> SearchProjectsAsync(
             string query,
+            int classId = 6,
             CancellationToken cancellationToken = default)
         {
             SearchQueries.Add(query);
@@ -89,6 +90,12 @@ public sealed class ModsDownloadPageViewModelTests
             string loader,
             CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<CurseForgeModFile>>(Files);
+
+        public Task<IReadOnlyList<CurseForgeModFile>> GetModpackFilesAsync(
+            int projectId,
+            string gameVersion,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
     }
 
     private sealed class FakeCurseForgeInstaller : ICurseForgeDownloadService

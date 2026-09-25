@@ -31,7 +31,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         IModrinthApi modrinthApi,
         IModsDownloadService modsDownloadService,
         ICurseForgeApi curseForgeApi,
-        ICurseForgeDownloadService curseForgeDownloadService)
+        ICurseForgeDownloadService curseForgeDownloadService,
+        ICurseForgeModpackService curseForgeModpackService)
     {
         _settingsService = settingsService;
         _themeService = themeService;
@@ -46,6 +47,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             new NavItemViewModel("账号", new AccountsPageViewModel(accountService, session)),
             new NavItemViewModel("下载", new DownloadPageViewModel(settingsService, versionManifestService, versionInstaller, versionCatalogService, platformService, session)),
             new NavItemViewModel("Mod下载", new ModsDownloadPageViewModel(settingsService, modrinthApi, modsDownloadService, platformService, curseForgeApi, curseForgeDownloadService)),
+            new NavItemViewModel("整合包", new IntegrationPacksPageViewModel(settingsService, curseForgeModpackService, platformService)),
             new NavItemViewModel("版本", new VersionPageViewModel(settingsService, versionCatalogService, session, platformService)),
             new NavItemViewModel("Mod管理", new ModsPageViewModel(settingsService, modsService, platformService)),
             new NavItemViewModel("设置", new SettingsPageViewModel(settingsService, platformService)),

@@ -377,3 +377,44 @@
 - 本地 `dotnet test` 全绿，构建 0 警告。
 - Mod 下载页可在 Modrinth / CurseForge 之间切换并搜索、安装 Mod。
 - GitHub Actions 三平台测试与 7 RID 打包通过。
+
+## Phase 10：整合包下载
+
+### 目标
+
+- 新增“整合包”导航页，通过 CurseForge 搜索整合包并按游戏版本过滤。
+- 选择整合包后获取最新支持文件，下载对应 `.zip` 到游戏目录下的 `downloads` 文件夹。
+- 复用 `IDownloadClient` 大小/SHA-1 校验、进度、取消能力；原 WPF 工程零改动。
+
+### 修改文件
+
+- Modify: `PCL.Avalonia/Services/Mods/ICurseForgeApi.cs` / `CurseForgeApi.cs`（搜索支持 `classId`，新增 `GetModpackFilesAsync`）
+- Create: `PCL.Avalonia/Services/Mods/ICurseForgeModpackService.cs` / `CurseForgeModpackService.cs`
+- Create: `PCL.Avalonia/ViewModels/Pages/IntegrationPacksPageViewModel.cs`
+- Create: `PCL.Avalonia/Views/Pages/IntegrationPacksPageView.axaml` / `.axaml.cs`
+- Modify: `PCL.Avalonia/ViewModels/MainWindowViewModel.cs` / `Views/MainWindow.axaml` / `Views/MainWindow.axaml.cs`
+- Create: `PCL.Avalonia.Tests/CurseForgeModpackServiceTests.cs`
+- Create: `PCL.Avalonia.Tests/IntegrationPacksPageViewModelTests.cs`
+- Modify: `PCL.Avalonia.Tests/CurseForgeApiTests.cs`
+- Modify: `PCL.Avalonia.Tests/MainWindowViewModelTests.cs`
+
+### 任务 1：先写失败测试
+
+- [x] `CurseForgeApiTests`：新增 `SearchProjectsAsync` 支持 `classId` 参数断言；新增 `GetModpackFilesAsync` 拼接 `/v1/mods/{id}/files` 并解析文件。
+- [x] `CurseForgeModpackServiceTests`：搜索只保留 classId=4471 的整合包；文件列表只取包含 `modpack` 的 manifest；下载落盘 `downloads` 目录并带校验；已存在跳过；过滤路径穿越。
+- [x] `IntegrationPacksPageViewModelTests`：搜索加载整合包；安装调用服务并标记已安装；无适配版本时提示中文。
+- [x] `MainWindowViewModelTests`：注入假 `ICurseForgeModpackService`，导航断言“整合包”页。
+
+### 任务 2：实现整合包服务与页面
+
+- [x] `ICurseForgeApi` 扩展 `GetModpackFilesAsync(projectId, gameVersion, cancellationToken)`，内部请求文件列表并筛选 `modpack` 类型的 manifest。
+- [x] `CurseForgeModpackService`：搜索 `classId=4471` 整合包、选最新适配文件，下载到 `<mc>/downloads/<filename>`，已存在跳过。
+- [x] `IntegrationPacksPageViewModel`：搜索、安装下载、进度/取消、中文状态。
+- [x] `MainWindowViewModel` 注入服务并新增“整合包”导航项；`MainWindow.axaml` 注册页面模板；`MainWindow.axaml.cs` 创建真实服务。
+- [x] 运行 `~/.dotnet/dotnet test PCL.Avalonia.sln`，确认全绿。
+
+### 验收
+
+- 本地 `dotnet test` 全绿，构建 0 警告。
+- 整合包页可搜索并下载 CurseForge 整合包，下载产物出现在 `downloads` 目录。
+- GitHub Actions 三平台测试与 7 RID 打包通过。

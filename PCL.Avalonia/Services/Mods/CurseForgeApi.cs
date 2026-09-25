@@ -32,12 +32,13 @@ public sealed class CurseForgeApi : ICurseForgeApi
 
     public async Task<IReadOnlyList<CurseForgeProject>> SearchProjectsAsync(
         string query,
+        int classId = 6,
         CancellationToken cancellationToken = default)
     {
         var search = new SearchRequest
         {
             GameId = MinecraftGameId,
-            ClassId = ModClassId,
+            ClassId = classId,
             SearchFilter = query.Trim(),
             PageSize = 30,
             SortField = 6,
@@ -68,6 +69,20 @@ public sealed class CurseForgeApi : ICurseForgeApi
         var json = await _downloadClient.GetStringAsync([url], cancellationToken).ConfigureAwait(false);
         var envelope = JsonSerializer.Deserialize<Envelope<List<CurseForgeModFile>>>(json, JsonOptions);
         return envelope?.Data ?? [];
+    }
+
+    public async Task<IReadOnlyList<CurseForgeModFile>> GetModpackFilesAsync(
+        int projectId,
+        string gameVersion,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(gameVersion);
+        var url = $"{BaseUrl}/v1/mods/{projectId}/files?gameVersion={Uri.EscapeDataString(gameVersion.Trim())}";
+        var json = await _downloadClient.GetStringAsync([url], cancellationToken).ConfigureAwait(false);
+        var envelope = JsonSerializer.Deserialize<Envelope<List<CurseForgeModFile>>>(json, JsonOptions);
+        return (envelope?.Data ?? [])
+            .Where(file => file.FileName.Contains("modpack", StringComparison.OrdinalIgnoreCase))
+            .ToList();
     }
 
     private static int? MapLoaderType(string loader)

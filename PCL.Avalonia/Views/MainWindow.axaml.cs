@@ -34,6 +34,7 @@ public partial class MainWindow : Window
         var modsDownloadService = new ModsDownloadService(downloadClient);
         var curseForgeApi = new CurseForgeApi(downloadClient);
         var curseForgeDownloadService = new CurseForgeDownloadService(downloadClient);
+        var curseForgeModpackService = new CurseForgeModpackService(curseForgeApi, downloadClient);
         return new MainWindowViewModel(
             settings,
             new AvaloniaThemeService(),
@@ -50,6 +51,7 @@ public partial class MainWindow : Window
             modrinthApi,
             modsDownloadService,
             curseForgeApi,
-            curseForgeDownloadService);
+            curseForgeDownloadService,
+            curseForgeModpackService);
     }
 }

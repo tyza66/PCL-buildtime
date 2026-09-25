@@ -89,6 +89,19 @@ public sealed class CurseForgeApiTests
     }
 
     [Fact]
+    public async Task SearchProjectsAsync_SupportsClassId()
+    {
+        var client = new FakeDownloadClient { PostResponse = """{ "data": [] }""" };
+        var api = new CurseForgeApi(client);
+
+        await api.SearchProjectsAsync("pack", classId: 4471);
+
+        var body = Assert.Single(client.PostBodies);
+        using var json = JsonDocument.Parse(body);
+        Assert.Equal(4471, json.RootElement.GetProperty("classId").GetInt32());
+    }
+
+    [Fact]
     public async Task GetFilesAsync_ParsesFiles_AndBuildsFilters()
     {
         var client = new FakeDownloadClient
@@ -128,5 +141,45 @@ public sealed class CurseForgeApiTests
         var decoded = Uri.UnescapeDataString(url);
         Assert.Contains("gameVersion=1.20.1", decoded);
         Assert.Contains("modLoaderType=4", decoded);
+    }
+
+    [Fact]
+    public async Task GetModpackFilesAsync_FiltersModpackFiles()
+    {
+        var client = new FakeDownloadClient
+        {
+            GetResponse = """
+                {
+                  "data": [
+                    {
+                      "id": 101,
+                      "displayName": "Example Pack 1.0.0",
+                      "fileName": "example-pack-1.0.0-modpack.zip",
+                      "downloadUrl": "https://edge.forgecdn.net/files/pack.zip",
+                      "fileLength": 999,
+                      "fileDate": "2024-02-01T00:00:00Z",
+                      "fileHashes": [ { "algo": 1, "value": "abc123" } ]
+                    },
+                    {
+                      "id": 102,
+                      "displayName": "Not A Pack",
+                      "fileName": "helper.jar",
+                      "downloadUrl": "https://edge.forgecdn.net/files/helper.jar",
+                      "fileLength": 10
+                    }
+                  ]
+                }
+                """,
+        };
+        var api = new CurseForgeApi(client);
+
+        var files = await api.GetModpackFilesAsync(999, "1.20.1");
+
+        var file = Assert.Single(files);
+        Assert.Equal("example-pack-1.0.0-modpack.zip", file.FileName);
+        Assert.Equal("abc123", file.Sha1);
+        var url = Assert.Single(client.GetUrls);
+        Assert.Contains("/v1/mods/999/files", url);
+        Assert.Contains("gameVersion=1.20.1", Uri.UnescapeDataString(url));
     }
 }

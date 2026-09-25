@@ -23,6 +23,9 @@
         <DataTemplate DataType="{x:Type pages:ModsDownloadPageViewModel}">
             <views:ModsDownloadPageView />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type pages:IntegrationPacksPageViewModel}">
+            <views:IntegrationPacksPageView />
+        </DataTemplate>
         <DataTemplate DataType="{x:Type pages:VersionPageViewModel}">
             <views:VersionPageView />
         </DataTemplate>

@@ -258,6 +258,7 @@ public sealed partial class ModsDownloadPageViewModel : ObservableObject
     {
         public Task<IReadOnlyList<CurseForgeProject>> SearchProjectsAsync(
             string query,
+            int classId = 6,
             CancellationToken cancellationToken = default)
             => throw new InvalidOperationException("CurseForge 服务不可用");
 
@@ -265,6 +266,12 @@ public sealed partial class ModsDownloadPageViewModel : ObservableObject
             int projectId,
             string gameVersion,
             string loader,
+            CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException("CurseForge 服务不可用");
+
+        public Task<IReadOnlyList<CurseForgeModFile>> GetModpackFilesAsync(
+            int projectId,
+            string gameVersion,
             CancellationToken cancellationToken = default)
             => throw new InvalidOperationException("CurseForge 服务不可用");
     }

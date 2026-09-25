@@ -143,6 +143,7 @@ public sealed class MainWindowViewModelTests
     {
         public Task<IReadOnlyList<CurseForgeProject>> SearchProjectsAsync(
             string query,
+            int classId = 6,
             CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<CurseForgeProject>>([]);
 
@@ -152,6 +153,12 @@ public sealed class MainWindowViewModelTests
             string loader,
             CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<CurseForgeModFile>>([]);
+
+        public Task<IReadOnlyList<CurseForgeModFile>> GetModpackFilesAsync(
+            int projectId,
+            string gameVersion,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<CurseForgeModFile>>([]);
     }
 
     private sealed class FakeCurseForgeDownloadService : ICurseForgeDownloadService
@@ -159,6 +166,22 @@ public sealed class MainWindowViewModelTests
         public Task<string> InstallAsync(
             CurseForgeModFile file,
             string modsFolder,
+            IProgress<DownloadProgress>? progress = null,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult("");
+    }
+
+    private sealed class FakeCurseForgeModpackService : ICurseForgeModpackService
+    {
+        public Task<IReadOnlyList<CurseForgeProject>> SearchAsync(
+            string query,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<CurseForgeProject>>([]);
+
+        public Task<string> InstallAsync(
+            CurseForgeProject project,
+            string gameVersion,
+            string minecraftFolder,
             IProgress<DownloadProgress>? progress = null,
             CancellationToken cancellationToken = default)
             => Task.FromResult("");
@@ -185,7 +208,8 @@ public sealed class MainWindowViewModelTests
             new FakeModrinthApi(),
             new FakeModsDownloadService(),
             new FakeCurseForgeApi(),
-            new FakeCurseForgeDownloadService());
+            new FakeCurseForgeDownloadService(),
+            new FakeCurseForgeModpackService());
         return (settings, theme, viewModel);
     }
 
@@ -228,6 +252,10 @@ public sealed class MainWindowViewModelTests
         viewModel.SelectedItem = viewModel.Items.Single(item => item.Title == "Mod下载");
 
         Assert.IsType<ModsDownloadPageViewModel>(viewModel.CurrentPage);
+
+        viewModel.SelectedItem = viewModel.Items.Single(item => item.Title == "整合包");
+
+        Assert.IsType<IntegrationPacksPageViewModel>(viewModel.CurrentPage);
     }
 
     [Fact]
@@ -254,7 +282,8 @@ public sealed class MainWindowViewModelTests
             new FakeModrinthApi(),
             new FakeModsDownloadService(),
             new FakeCurseForgeApi(),
-            new FakeCurseForgeDownloadService());
+            new FakeCurseForgeDownloadService(),
+            new FakeCurseForgeModpackService());
 
         viewModel.ToggleThemeCommand.Execute(null);
 
