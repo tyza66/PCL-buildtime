@@ -55,11 +55,13 @@ public sealed class MacJavaLocatorTests : IDisposable
     [Fact]
     public void JavaExecutablesUnderDirectory_MapsBundleAndHomebrewLayouts()
     {
-        var candidates = MacJavaLocator.JavaExecutablesUnderDirectory("/opt/homebrew/opt/openjdk").ToList();
+        const string Root = "/opt/homebrew/opt/openjdk";
+        var candidates = MacJavaLocator.JavaExecutablesUnderDirectory(Root).ToList();
 
-        Assert.Contains("/opt/homebrew/opt/openjdk/bin/java", candidates);
-        Assert.Contains("/opt/homebrew/opt/openjdk/Contents/Home/bin/java", candidates);
-        Assert.Contains("/opt/homebrew/opt/openjdk/libexec/openjdk.jdk/Contents/Home/bin/java", candidates);
+        Assert.Equal(3, candidates.Count);
+        Assert.Contains(Path.Combine(Root, "bin", "java"), candidates);
+        Assert.Contains(Path.Combine(Root, "Contents", "Home", "bin", "java"), candidates);
+        Assert.Contains(Path.Combine(Root, "libexec", "openjdk.jdk", "Contents", "Home", "bin", "java"), candidates);
     }
 
     [Fact]
