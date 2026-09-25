@@ -1,0 +1,80 @@
+<Window
+    x:Class="PCL.Avalonia.Views.MainWindow"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="clr-namespace:PCL.Avalonia.ViewModels;assembly=PCL2.Avalonia"
+    xmlns:pages="clr-namespace:PCL.Avalonia.ViewModels.Pages;assembly=PCL2.Avalonia"
+    xmlns:views="clr-namespace:PCL.Avalonia.Views.Pages;assembly=PCL2.Avalonia"
+    x:DataType="vm:MainWindowViewModel"
+    Title="PCL2 Avalonia"
+    Width="1080"
+    Height="720"
+    MinWidth="900"
+    MinHeight="600"
+    Background="{DynamicResource WindowBackgroundBrush}"
+    WindowStartupLocation="CenterScreen">
+    <Window.DataTemplates>
+        <DataTemplate DataType="{x:Type pages:LaunchPageViewModel}">
+            <views:LaunchPageView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type pages:DownloadPageViewModel}">
+            <views:DownloadPageView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type pages:VersionPageViewModel}">
+            <views:VersionPageView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type pages:SettingsPageViewModel}">
+            <views:SettingsPageView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type pages:OtherPageViewModel}">
+            <views:OtherPageView />
+        </DataTemplate>
+    </Window.DataTemplates>
+    <DockPanel>
+        <Border
+            DockPanel.Dock="Left"
+            Width="220"
+            Background="{DynamicResource SidebarBackgroundBrush}">
+            <Grid RowDefinitions="Auto,*,Auto">
+                <StackPanel Grid.Row="0" Margin="20,20,20,14" Spacing="2">
+                    <TextBlock
+                        Text="PCL2"
+                        FontSize="22"
+                        FontWeight="Bold"
+                        Foreground="{DynamicResource TextPrimaryBrush}" />
+                    <TextBlock
+                        Text="Avalonia Shell"
+                        FontSize="12"
+                        Foreground="{DynamicResource TextSecondaryBrush}" />
+                </StackPanel>
+                <ListBox
+                    Grid.Row="1"
+                    ItemsSource="{Binding Items}"
+                    SelectedItem="{Binding SelectedItem}"
+                    Background="Transparent"
+                    BorderThickness="0">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:NavItemViewModel">
+                            <TextBlock
+                                Text="{Binding Title}"
+                                FontSize="14"
+                                Padding="16,10"
+                                Foreground="{DynamicResource TextPrimaryBrush}" />
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                <Button
+                    Grid.Row="2"
+                    Margin="12,12"
+                    HorizontalAlignment="Stretch"
+                    Background="{DynamicResource ButtonBackgroundBrush}"
+                    Foreground="{DynamicResource TextPrimaryBrush}"
+                    Command="{Binding ToggleThemeCommand}"
+                    Content="{Binding ThemeButtonText}" />
+            </Grid>
+        </Border>
+        <Border Background="{DynamicResource PageBackgroundBrush}">
+            <ContentControl Content="{Binding CurrentPage}" />
+        </Border>
+    </DockPanel>
+</Window>

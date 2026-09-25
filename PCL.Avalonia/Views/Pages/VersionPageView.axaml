@@ -1,0 +1,18 @@
+<UserControl
+    x:Class="PCL.Avalonia.Views.Pages.VersionPageView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="clr-namespace:PCL.Avalonia.ViewModels.Pages;assembly=PCL2.Avalonia"
+    x:DataType="vm:VersionPageViewModel">
+    <StackPanel Margin="32" Spacing="6">
+        <TextBlock
+            Text="版本"
+            FontSize="26"
+            FontWeight="SemiBold"
+            Foreground="{DynamicResource TextPrimaryBrush}" />
+        <TextBlock
+            Text="占位页"
+            FontSize="14"
+            Foreground="{DynamicResource TextSecondaryBrush}" />
+    </StackPanel>
+</UserControl>
