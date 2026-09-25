@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PCL.Avalonia.Services;
+using PCL.Avalonia.Services.Minecraft;
 using PCL.Avalonia.ViewModels.Pages;
 
 namespace PCL.Avalonia.ViewModels;
@@ -11,7 +12,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private readonly ISettingsService _settingsService;
     private readonly IThemeService _themeService;
 
-    public MainWindowViewModel(ISettingsService settingsService, IThemeService themeService)
+    public MainWindowViewModel(
+        ISettingsService settingsService,
+        IThemeService themeService,
+        SessionState session,
+        IVersionCatalogService versionCatalogService,
+        IGameLauncher gameLauncher,
+        IJavaService javaService,
+        IPlatformService platformService)
     {
         _settingsService = settingsService;
         _themeService = themeService;
@@ -22,10 +30,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
         Items =
         [
-            new NavItemViewModel("启动", new LaunchPageViewModel()),
+            new NavItemViewModel("启动", new LaunchPageViewModel(settingsService, javaService, gameLauncher, session)),
             new NavItemViewModel("下载", new DownloadPageViewModel()),
-            new NavItemViewModel("版本", new VersionPageViewModel()),
-            new NavItemViewModel("设置", new SettingsPageViewModel()),
+            new NavItemViewModel("版本", new VersionPageViewModel(settingsService, versionCatalogService, session, platformService)),
+            new NavItemViewModel("设置", new SettingsPageViewModel(settingsService, platformService)),
             new NavItemViewModel("其他", new OtherPageViewModel()),
         ];
 
@@ -56,6 +64,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     {
         UseDarkTheme = !UseDarkTheme;
         _themeService.Apply(UseDarkTheme);
-        _settingsService.Save(new AppSettings { UseDarkTheme = UseDarkTheme });
+        var current = _settingsService.Load();
+        _settingsService.Save(current with { UseDarkTheme = UseDarkTheme });
     }
 }

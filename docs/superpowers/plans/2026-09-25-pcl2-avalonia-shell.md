@@ -56,3 +56,33 @@
 
 - 全量改动提交到 `main`，git 日志用中文描述。
 - 验收：测试全绿；workflow 语法可解析；原 WPF 文件零改动。
+
+## Phase 2：版本页与离线启动基础
+
+### 目标
+
+- 设置页可配置游戏目录、Java 路径、用户名与最大内存，持久化到 `settings.json`。
+- 版本页真实枚举 `<游戏目录>/versions/*/<id>.json`，展示 id、类型、发布时间，支持刷新与选中。
+- 启动页基于选中版本和版本 JSON 构建启动参数，支持 `inheritsFrom` 继承链、libraries 本地 classpath、native 库解压、`arguments.jvm/game` 与 `${...}` 标记替换，并以离线账号启动。
+- 原 WPF 工程保持零改动，全部逻辑在 `PCL.Avalonia` 内重写，保持单元测试可验证。
+
+### 新增服务
+
+- `MinecraftVersion`：版本元数据（Id、Folder、JsonPath、Type、ReleaseTime、MainClass、InheritsFrom）。
+- `IVersionCatalogService`：读取 `versions` 目录下的版本 JSON，损坏文件跳过，按发布时间倒序。
+- `IJavaService`：按「设置路径 > JAVA_HOME > 系统 PATH」解析 Java 可执行文件。
+- `IGameLauncher`：解析版本 JSON、构建 `LaunchPlan`、解压 native 库并启动 Java 进程。
+- `SessionState`：在版本页与启动页之间共享选中的版本。
+
+### 测试
+
+- `VersionCatalogServiceTests`：正常解析、无 JSON 跳过、发布时间倒序。
+- `GameLauncherTests`：classpath 包含本地库与版本 jar；JVM/游戏参数含 `-Xmx`、`--gameDir`、`--assetIndex`；native 库路径与解压；标记替换。
+- `SettingsPageViewModelTests`：载入与保存设置。
+- `JavaServiceTests`：优先使用设置里的路径。
+
+### 验收
+
+- 本地 `dotnet test` 全绿。
+- GitHub Actions 三平台测试通过。
+- 有本地 Minecraft 安装时，选择版本后能生成可执行启动命令并启动离线游戏。

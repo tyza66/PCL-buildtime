@@ -4,15 +4,68 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="clr-namespace:PCL.Avalonia.ViewModels.Pages;assembly=PCL2.Avalonia"
     x:DataType="vm:SettingsPageViewModel">
-    <StackPanel Margin="32" Spacing="6">
-        <TextBlock
-            Text="设置"
-            FontSize="26"
-            FontWeight="SemiBold"
-            Foreground="{DynamicResource TextPrimaryBrush}" />
-        <TextBlock
-            Text="占位页"
-            FontSize="14"
-            Foreground="{DynamicResource TextSecondaryBrush}" />
-    </StackPanel>
+    <ScrollViewer>
+        <StackPanel Margin="32" Spacing="12">
+            <TextBlock
+                Text="设置"
+                FontSize="26"
+                FontWeight="SemiBold"
+                Foreground="{DynamicResource TextPrimaryBrush}" />
+            <TextBlock
+                Text="游戏目录"
+                FontSize="13"
+                FontWeight="SemiBold"
+                Margin="0,14,0,0"
+                Foreground="{DynamicResource TextPrimaryBrush}" />
+            <TextBox
+                Text="{Binding MinecraftFolder}"
+                Watermark="例如：~/.minecraft"
+                Foreground="{DynamicResource TextPrimaryBrush}" />
+            <TextBlock
+                Text="Java 路径"
+                FontSize="13"
+                FontWeight="SemiBold"
+                Margin="0,14,0,0"
+                Foreground="{DynamicResource TextPrimaryBrush}" />
+            <TextBox
+                Text="{Binding JavaPath}"
+                Watermark="java 或 java.exe 的完整路径"
+                Foreground="{DynamicResource TextPrimaryBrush}" />
+            <TextBlock
+                Text="用户名"
+                FontSize="13"
+                FontWeight="SemiBold"
+                Margin="0,14,0,0"
+                Foreground="{DynamicResource TextPrimaryBrush}" />
+            <TextBox
+                Text="{Binding UserName}"
+                Watermark="Player"
+                Foreground="{DynamicResource TextPrimaryBrush}" />
+            <TextBlock
+                Text="最大内存（MB）"
+                FontSize="13"
+                FontWeight="SemiBold"
+                Margin="0,14,0,0"
+                Foreground="{DynamicResource TextPrimaryBrush}" />
+            <TextBox
+                Text="{Binding MaxMemoryMb}"
+                Watermark="4096"
+                Foreground="{DynamicResource TextPrimaryBrush}" />
+            <StackPanel
+                Orientation="Horizontal"
+                Spacing="12"
+                Margin="0,14,0,0">
+                <Button
+                    Content="保存设置"
+                    Command="{Binding SaveCommand}"
+                    Background="{DynamicResource ButtonBackgroundBrush}"
+                    Foreground="{DynamicResource TextPrimaryBrush}" />
+                <TextBlock
+                    Text="{Binding StatusMessage}"
+                    VerticalAlignment="Center"
+                    FontSize="13"
+                    Foreground="{DynamicResource TextSecondaryBrush}" />
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
 </UserControl>

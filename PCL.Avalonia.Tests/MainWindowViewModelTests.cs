@@ -1,4 +1,5 @@
 using PCL.Avalonia.Services;
+using PCL.Avalonia.Services.Minecraft;
 using PCL.Avalonia.ViewModels;
 using PCL.Avalonia.ViewModels.Pages;
 
@@ -27,12 +28,47 @@ public sealed class MainWindowViewModelTests
         public void Apply(bool useDarkTheme) => LastAppliedTheme = useDarkTheme;
     }
 
+    private sealed class FakePlatformService : IPlatformService
+    {
+        public string GetConfigDirectory() => Path.GetTempPath();
+
+        public string GetDefaultMinecraftFolder() => Path.Combine(Path.GetTempPath(), ".minecraft");
+    }
+
+    private sealed class FakeVersionCatalogService : IVersionCatalogService
+    {
+        public IReadOnlyList<MinecraftVersion> Scan(string minecraftFolder) => [];
+
+        public MinecraftVersionJson? LoadJson(string minecraftFolder, string id) => null;
+    }
+
+    private sealed class FakeGameLauncher : IGameLauncher
+    {
+        public LaunchPlan BuildLaunchPlan(MinecraftVersion version, AppSettings settings, string javaExecutable)
+            => throw new NotSupportedException();
+
+        public GameLaunch Launch(LaunchPlan plan, IProgress<string>? output = null)
+            => throw new NotSupportedException();
+    }
+
+    private sealed class FakeJavaService : IJavaService
+    {
+        public string? ResolveJavaExecutable(AppSettings settings) => settings.JavaPath;
+    }
+
     private static (FakeSettingsService Settings, FakeThemeService Theme, MainWindowViewModel ViewModel) CreateViewModel(
         bool useDarkTheme)
     {
         var settings = new FakeSettingsService { Settings = new AppSettings { UseDarkTheme = useDarkTheme } };
         var theme = new FakeThemeService();
-        var viewModel = new MainWindowViewModel(settings, theme);
+        var viewModel = new MainWindowViewModel(
+            settings,
+            theme,
+            new SessionState(),
+            new FakeVersionCatalogService(),
+            new FakeGameLauncher(),
+            new FakeJavaService(),
+            new FakePlatformService());
         return (settings, theme, viewModel);
     }
 
@@ -64,13 +100,26 @@ public sealed class MainWindowViewModelTests
     [Fact]
     public void ToggleThemeCommand_FlipsTheme_AppliesAndPersists()
     {
-        var (settings, theme, viewModel) = CreateViewModel(useDarkTheme: true);
+        var settings = new FakeSettingsService
+        {
+            Settings = new AppSettings { UseDarkTheme = true, MinecraftFolder = "/games/mc" },
+        };
+        var theme = new FakeThemeService();
+        var viewModel = new MainWindowViewModel(
+            settings,
+            theme,
+            new SessionState(),
+            new FakeVersionCatalogService(),
+            new FakeGameLauncher(),
+            new FakeJavaService(),
+            new FakePlatformService());
 
         viewModel.ToggleThemeCommand.Execute(null);
 
         Assert.False(viewModel.UseDarkTheme);
         Assert.False(theme.LastAppliedTheme);
         Assert.False(settings.Settings.UseDarkTheme);
+        Assert.Equal("/games/mc", settings.Settings.MinecraftFolder);
         Assert.Equal(1, settings.SaveCount);
     }
 }

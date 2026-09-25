@@ -36,11 +36,22 @@ public sealed class JsonSettingsServiceTests : IDisposable
     public void SaveThenLoad_RoundTripsSettings()
     {
         var service = new JsonSettingsService(SettingsPath);
-        service.Save(new AppSettings { UseDarkTheme = false });
+        service.Save(new AppSettings
+        {
+            UseDarkTheme = false,
+            MinecraftFolder = "/games/minecraft",
+            JavaPath = "/opt/java/bin/java",
+            UserName = "Steve",
+            MaxMemoryMb = 8192,
+        });
 
         var loaded = service.Load();
 
         Assert.False(loaded.UseDarkTheme);
+        Assert.Equal("/games/minecraft", loaded.MinecraftFolder);
+        Assert.Equal("/opt/java/bin/java", loaded.JavaPath);
+        Assert.Equal("Steve", loaded.UserName);
+        Assert.Equal(8192, loaded.MaxMemoryMb);
     }
 
     [Fact]

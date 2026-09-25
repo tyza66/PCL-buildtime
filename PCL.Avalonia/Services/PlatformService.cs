@@ -22,4 +22,21 @@ public sealed class PlatformService : IPlatformService
             : xdgConfig;
         return Path.Combine(configRoot, "PCL2Avalonia");
     }
+
+    public string GetDefaultMinecraftFolder()
+    {
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (OperatingSystem.IsWindows())
+        {
+            var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            return Path.Combine(appData, ".minecraft");
+        }
+
+        if (OperatingSystem.IsMacOS())
+        {
+            return Path.Combine(home, "Library", "Application Support", "minecraft");
+        }
+
+        return Path.Combine(home, ".minecraft");
+    }
 }

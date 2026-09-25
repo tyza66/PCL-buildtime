@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using PCL.Avalonia.Services;
+using PCL.Avalonia.Services.Minecraft;
 using PCL.Avalonia.ViewModels;
 
 namespace PCL.Avalonia.Views;
@@ -21,6 +22,15 @@ public partial class MainWindow : Window
     {
         var platform = new PlatformService();
         var settings = new JsonSettingsService(Path.Combine(platform.GetConfigDirectory(), "settings.json"));
-        return new MainWindowViewModel(settings, new AvaloniaThemeService());
+        var session = new SessionState();
+        var catalog = new VersionCatalogService();
+        return new MainWindowViewModel(
+            settings,
+            new AvaloniaThemeService(),
+            session,
+            catalog,
+            new GameLauncher(catalog),
+            new JavaService(),
+            platform);
     }
 }

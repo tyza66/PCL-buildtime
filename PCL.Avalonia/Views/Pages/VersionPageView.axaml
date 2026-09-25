@@ -3,16 +3,67 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="clr-namespace:PCL.Avalonia.ViewModels.Pages;assembly=PCL2.Avalonia"
+    xmlns:mc="clr-namespace:PCL.Avalonia.Services.Minecraft;assembly=PCL2.Avalonia"
     x:DataType="vm:VersionPageViewModel">
-    <StackPanel Margin="32" Spacing="6">
-        <TextBlock
-            Text="版本"
-            FontSize="26"
-            FontWeight="SemiBold"
-            Foreground="{DynamicResource TextPrimaryBrush}" />
-        <TextBlock
-            Text="占位页"
-            FontSize="14"
-            Foreground="{DynamicResource TextSecondaryBrush}" />
-    </StackPanel>
+    <DockPanel Margin="32">
+        <Grid
+            DockPanel.Dock="Top"
+            ColumnDefinitions="*,Auto"
+            Margin="0,0,0,14">
+            <StackPanel Spacing="2">
+                <TextBlock
+                    Text="版本"
+                    FontSize="26"
+                    FontWeight="SemiBold"
+                    Foreground="{DynamicResource TextPrimaryBrush}" />
+                <TextBlock
+                    Text="{Binding StatusMessage}"
+                    FontSize="13"
+                    TextWrapping="Wrap"
+                    Foreground="{DynamicResource TextSecondaryBrush}" />
+            </StackPanel>
+            <Button
+                Grid.Column="1"
+                Content="刷新"
+                VerticalAlignment="Top"
+                Command="{Binding RefreshCommand}"
+                Background="{DynamicResource ButtonBackgroundBrush}"
+                Foreground="{DynamicResource TextPrimaryBrush}" />
+        </Grid>
+        <Border
+            Background="{DynamicResource CardBackgroundBrush}"
+            CornerRadius="8">
+            <ListBox
+                ItemsSource="{Binding Versions}"
+                SelectedItem="{Binding SelectedVersion}"
+                Background="Transparent"
+                BorderThickness="0">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="mc:MinecraftVersion">
+                        <StackPanel Margin="14,10" Spacing="3">
+                            <TextBlock
+                                Text="{Binding Id}"
+                                FontSize="15"
+                                FontWeight="SemiBold"
+                                Foreground="{DynamicResource TextPrimaryBrush}" />
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <TextBlock
+                                    Text="{Binding Type}"
+                                    FontSize="12"
+                                    Foreground="{DynamicResource TextSecondaryBrush}" />
+                                <TextBlock
+                                    Text="{Binding ReleaseTimeText}"
+                                    FontSize="12"
+                                    Foreground="{DynamicResource TextSecondaryBrush}" />
+                                <TextBlock
+                                    Text="{Binding InheritsFrom, StringFormat=继承自 {0}}"
+                                    FontSize="12"
+                                    Foreground="{DynamicResource TextSecondaryBrush}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Border>
+    </DockPanel>
 </UserControl>
