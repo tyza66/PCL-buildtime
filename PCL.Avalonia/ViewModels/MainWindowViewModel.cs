@@ -124,6 +124,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
     partial void OnSelectedItemChanged(NavItemViewModel? value)
     {
         CurrentPage = value?.Page;
+        if (value?.Page is IPageActivatable activatable)
+        {
+            // RefreshAsync 内部自带异常兜底，这里触发后即可返回。
+            _ = activatable.OnActivatedAsync();
+        }
     }
 
     [RelayCommand]

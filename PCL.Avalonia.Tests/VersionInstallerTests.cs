@@ -312,9 +312,54 @@ public sealed class VersionInstallerTests : IDisposable
             cancellationToken: cancellation.Token));
     }
 
+    [Fact]
+    public async Task InstallAsync_DownloadsLibrariesConcurrently_AndCollectsEveryFailure()
+    {
+        var extraLibraries = string.Join(",", Enumerable.Range(0, 4).Select(index =>
+            $"{{\"name\":\"com.example:lib{index}:1.0\",\"downloads\":{{\"artifact\":{{\"path\":\"com/example/lib{index}/1.0/lib{index}-1.0.jar\",\"url\":\"https://example.com/lib{index}.jar\"}}}}}}"));
+        var versionFolder = Path.Combine(_minecraftFolder, "versions", "1.20.1");
+        Directory.CreateDirectory(versionFolder);
+        File.WriteAllText(
+            Path.Combine(versionFolder, "1.20.1.json"),
+            BuildVersionJson("1.20.1", null, $"[{CoreLibraryJson},{NativeLibraryJson},{extraLibraries}]"));
+        _client.Requests.Clear();
+        _client.ExceptionProvider = request =>
+            request.DestinationPath.Contains("lib1-1.0.jar", StringComparison.Ordinal)
+                || request.DestinationPath.Contains("lib2-1.0.jar", StringComparison.Ordinal)
+                ? new InvalidOperationException("mirror failed")
+                : null;
+
+        var progress = new ListProgress<InstallProgress>();
+        var result = await _installer.InstallAsync(
+            "1.20.1",
+            new VersionManifestEntry { Id = "1.20.1" },
+            DownloadSource.Bmclapi,
+            _minecraftFolder,
+            progress);
+
+        Assert.False(result.Success);
+        Assert.Equal(2, result.Errors.Count);
+        Assert.Contains(result.Errors, error => error.Contains("lib1", StringComparison.Ordinal));
+        Assert.Contains(result.Errors, error => error.Contains("lib2", StringComparison.Ordinal));
+        Assert.Contains(_client.Requests, request => request.DestinationPath.Contains("lib0-1.0.jar", StringComparison.Ordinal));
+        Assert.Contains(_client.Requests, request => request.DestinationPath.Contains("lib3-1.0.jar", StringComparison.Ordinal));
+        Assert.True(File.Exists(Path.Combine(
+            _minecraftFolder, "libraries", "com", "example", "lib3", "1.0", "lib3-1.0.jar")));
+
+        // 六个支持库无论先后完成，进度计数都必须恰好各报一次。
+        var completions = progress.Values
+            .Where(value => value.Stage == InstallStage.Libraries && value.CompletedItems > 0)
+            .Select(value => value.CompletedItems)
+            .Distinct()
+            .ToList();
+        Assert.Equal(6, completions.Count);
+    }
+
     private sealed class FakeDownloadClient : IDownloadClient
     {
         public List<DownloadRequest> Requests { get; } = [];
+
+        private readonly object _requestLock = new();
 
         public Func<DownloadRequest, string> ContentProvider { get; set; } = _ => "content";
 
@@ -325,7 +370,11 @@ public sealed class VersionInstallerTests : IDisposable
             IProgress<DownloadProgress>? progress = null,
             CancellationToken cancellationToken = default)
         {
-            Requests.Add(request);
+            lock (_requestLock)
+            {
+                Requests.Add(request);
+            }
+
             cancellationToken.ThrowIfCancellationRequested();
             var exception = ExceptionProvider(request);
             if (exception is not null)

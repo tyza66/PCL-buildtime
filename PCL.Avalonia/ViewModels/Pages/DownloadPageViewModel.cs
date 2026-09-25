@@ -7,7 +7,7 @@ using PCL.Avalonia.Services.Minecraft;
 
 namespace PCL.Avalonia.ViewModels.Pages;
 
-public sealed partial class DownloadPageViewModel : ObservableObject
+public sealed partial class DownloadPageViewModel : ObservableObject, IPageActivatable
 {
     private readonly ISettingsService _settingsService;
     private readonly IVersionManifestService _manifestService;
@@ -18,6 +18,10 @@ public sealed partial class DownloadPageViewModel : ObservableObject
     private readonly List<DownloadVersionItemViewModel> _allVersions = [];
     private HashSet<string> _installedIds = new(StringComparer.OrdinalIgnoreCase);
     private CancellationTokenSource? _cancellationTokenSource;
+    private DateTimeOffset _lastRefreshedAt;
+
+    /// <summary>列表超过这个时长才在切入页面时重新拉取，避免每次切换都打一次清单接口。</summary>
+    private static readonly TimeSpan RefreshWindow = TimeSpan.FromMinutes(2);
 
     public DownloadPageViewModel(
         ISettingsService settingsService,
@@ -33,6 +37,21 @@ public sealed partial class DownloadPageViewModel : ObservableObject
         _catalog = catalog;
         _platform = platform;
         _session = session;
+    }
+
+    public async Task OnActivatedAsync()
+    {
+        if (IsRefreshing || IsInstalling)
+        {
+            return;
+        }
+
+        if (_allVersions.Count > 0 && DateTimeOffset.UtcNow - _lastRefreshedAt < RefreshWindow)
+        {
+            return;
+        }
+
+        await RefreshAsync();
     }
 
     public ObservableCollection<DownloadVersionItemViewModel> Versions { get; } = [];
@@ -145,6 +164,7 @@ public sealed partial class DownloadPageViewModel : ObservableObject
             var settings = _settingsService.Load();
             _installedIds = GetInstalledIds(settings);
             var manifest = await _manifestService.GetManifestAsync(settings.DownloadSource);
+            _lastRefreshedAt = DateTimeOffset.UtcNow;
             _allVersions.Clear();
             foreach (var entry in manifest.Versions
                          .Where(entry => !string.IsNullOrWhiteSpace(entry.Id))

@@ -3,6 +3,7 @@ namespace PCL.Avalonia.Services;
 public sealed class JavaService : IJavaService
 {
     private readonly Func<string, string?> _environmentVariableProvider;
+    private MacJavaLocator? _macJavaLocator;
 
     public JavaService(Func<string, string?>? environmentVariableProvider = null)
     {
@@ -23,6 +24,17 @@ public sealed class JavaService : IJavaService
             if (candidate is not null && File.Exists(candidate))
             {
                 return candidate;
+            }
+        }
+
+        // macOS 的 GUI 应用拿不到 shell 的 JAVA_HOME，系统 JDK 又在 .jdk/Contents/Home 里，单独查一次。
+        if (OperatingSystem.IsMacOS())
+        {
+            _macJavaLocator ??= new MacJavaLocator();
+            var macJava = _macJavaLocator.LocateJavaExecutables().FirstOrDefault();
+            if (macJava is not null)
+            {
+                return macJava;
             }
         }
 

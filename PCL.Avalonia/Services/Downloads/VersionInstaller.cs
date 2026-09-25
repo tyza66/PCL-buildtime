@@ -5,6 +5,9 @@ namespace PCL.Avalonia.Services.Downloads;
 
 public sealed class VersionInstaller : IVersionInstaller
 {
+    /// <summary>支持库和资源都是大量小文件，串行下载会被单连接延迟拖死，这里并发抓取。</summary>
+    private const int MaxConcurrentDownloads = 8;
+
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private readonly IDownloadClient _downloadClient;
     private readonly IVersionCatalogService _catalog;
@@ -231,44 +234,52 @@ public sealed class VersionInstaller : IVersionInstaller
     {
         var total = libraries.Count;
         progress?.Report(new InstallProgress(InstallStage.Libraries, null, 0, total, 0, null));
-        for (var index = 0; index < libraries.Count; index++)
-        {
-            var library = libraries[index];
-            cancellationToken.ThrowIfCancellationRequested();
-            if (FileIsValid(library.Path, library.ExpectedSize, library.ExpectedSha1))
+        var completed = 0;
+        await Parallel.ForEachAsync(
+            libraries,
+            new ParallelOptions
             {
-                progress?.Report(new InstallProgress(InstallStage.Libraries, library.Name, index + 1, total, 0, null));
-                continue;
-            }
+                MaxDegreeOfParallelism = MaxConcurrentDownloads,
+                CancellationToken = cancellationToken,
+            },
+            async (library, token) =>
+            {
+                if (FileIsValid(library.Path, library.ExpectedSize, library.ExpectedSha1))
+                {
+                    ReportProgress(progress, InstallStage.Libraries, library.Name, Interlocked.Increment(ref completed), total);
+                    return;
+                }
 
-            try
-            {
-                var relativePath = Path.GetRelativePath(minecraftFolder, library.Path)
-                    .Replace(Path.DirectorySeparatorChar, '/');
-                var artifactPath = relativePath.StartsWith("libraries/", StringComparison.OrdinalIgnoreCase)
-                    ? relativePath["libraries/".Length..]
-                    : relativePath;
-                var urls = _urlResolver.GetLibraryUrls(source, library.OriginalUrl, artifactPath);
-                var request = new DownloadRequest(
-                    urls,
-                    library.Path,
-                    library.Name,
-                    library.ExpectedSize,
-                    library.ExpectedSha1);
-                await DownloadFileAsync(request, InstallStage.Libraries, progress, cancellationToken)
-                    .ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                errors.Add($"支持库 {library.Name} 下载失败：{ex.Message}");
-            }
+                try
+                {
+                    var relativePath = Path.GetRelativePath(minecraftFolder, library.Path)
+                        .Replace(Path.DirectorySeparatorChar, '/');
+                    var artifactPath = relativePath.StartsWith("libraries/", StringComparison.OrdinalIgnoreCase)
+                        ? relativePath["libraries/".Length..]
+                        : relativePath;
+                    var urls = _urlResolver.GetLibraryUrls(source, library.OriginalUrl, artifactPath);
+                    var request = new DownloadRequest(
+                        urls,
+                        library.Path,
+                        library.Name,
+                        library.ExpectedSize,
+                        library.ExpectedSha1);
+                    await DownloadFileAsync(request, InstallStage.Libraries, progress, token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    lock (errors)
+                    {
+                        errors.Add($"支持库 {library.Name} 下载失败：{ex.Message}");
+                    }
+                }
 
-            progress?.Report(new InstallProgress(InstallStage.Libraries, library.Name, index + 1, total, 0, null));
-        }
+                ReportProgress(progress, InstallStage.Libraries, library.Name, Interlocked.Increment(ref completed), total);
+            }).ConfigureAwait(false);
     }
 
     private static ChainEntry? ResolveAssetIndexOwner(IReadOnlyList<ChainEntry> chain)
@@ -365,10 +376,16 @@ public sealed class VersionInstaller : IVersionInstaller
             .ToList();
         var total = objects.Count;
         progress?.Report(new InstallProgress(InstallStage.Assets, null, 0, total, 0, null));
-        for (var index = 0; index < objects.Count; index++)
-        {
-            var asset = objects[index];
-            cancellationToken.ThrowIfCancellationRequested();
+        var completed = 0;
+        await Parallel.ForEachAsync(
+            objects,
+            new ParallelOptions
+            {
+                MaxDegreeOfParallelism = MaxConcurrentDownloads,
+                CancellationToken = cancellationToken,
+            },
+            async (asset, token) =>
+            {
             var hash = asset.Hash;
             var destination = Path.Combine(
                 minecraftFolder,
@@ -378,8 +395,8 @@ public sealed class VersionInstaller : IVersionInstaller
                 hash);
             if (FileIsValid(destination, asset.Size, asset.Hash))
             {
-                progress?.Report(new InstallProgress(InstallStage.Assets, asset.Name, index + 1, total, 0, null));
-                continue;
+                ReportProgress(progress, InstallStage.Assets, asset.Name, Interlocked.Increment(ref completed), total);
+                return;
             }
 
             try
@@ -391,8 +408,7 @@ public sealed class VersionInstaller : IVersionInstaller
                     asset.Name,
                     asset.Size,
                     asset.Hash);
-                await DownloadFileAsync(request, InstallStage.Assets, progress, cancellationToken)
-                    .ConfigureAwait(false);
+                await DownloadFileAsync(request, InstallStage.Assets, progress, token).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -400,11 +416,24 @@ public sealed class VersionInstaller : IVersionInstaller
             }
             catch (Exception ex)
             {
-                errors.Add($"资源 {asset.Name} 下载失败：{ex.Message}");
+                lock (errors)
+                {
+                    errors.Add($"资源 {asset.Name} 下载失败：{ex.Message}");
+                }
             }
 
-            progress?.Report(new InstallProgress(InstallStage.Assets, asset.Name, index + 1, total, 0, null));
-        }
+            ReportProgress(progress, InstallStage.Assets, asset.Name, Interlocked.Increment(ref completed), total);
+        }).ConfigureAwait(false);
+    }
+
+    private static void ReportProgress(
+        IProgress<InstallProgress>? progress,
+        InstallStage stage,
+        string? itemName,
+        int completedItems,
+        int totalItems)
+    {
+        progress?.Report(new InstallProgress(stage, itemName, completedItems, totalItems, 0, null));
     }
 
     private async Task DownloadFileAsync(

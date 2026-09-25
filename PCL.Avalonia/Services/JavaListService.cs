@@ -99,17 +99,10 @@ public sealed class JavaListService : IJavaListService
         }
         else if (OperatingSystem.IsMacOS())
         {
-            foreach (var candidate in ProbeDirectory(Path.Combine(home, "Library", "Java", "JavaVirtualMachines")))
+            // macOS 的 JDK 在 *.jdk/Contents/Home、Homebrew 在 libexec 下，直接按 Home 布局展开。
+            foreach (var candidate in new MacJavaLocator().LocateJavaExecutables())
             {
                 yield return candidate;
-            }
-
-            if (Directory.Exists("/Library/Java/JavaVirtualMachines"))
-            {
-                foreach (var candidate in ProbeDirectory("/Library/Java/JavaVirtualMachines"))
-                {
-                    yield return candidate;
-                }
             }
         }
         else

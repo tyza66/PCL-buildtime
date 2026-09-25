@@ -22,6 +22,8 @@ public sealed class DownloadPageViewModelTests
 
         public DownloadSource? LastSource { get; private set; }
 
+        public int CallCount { get; private set; }
+
         public Exception? Exception { get; set; }
 
         public Task<VersionManifest> GetManifestAsync(
@@ -29,6 +31,7 @@ public sealed class DownloadPageViewModelTests
             CancellationToken cancellationToken = default)
         {
             LastSource = source;
+            CallCount++;
             return Exception is null
                 ? Task.FromResult(Manifest)
                 : Task.FromException<VersionManifest>(Exception);
@@ -251,5 +254,94 @@ public sealed class DownloadPageViewModelTests
 
         Assert.StartsWith("获取版本清单失败", viewModel.StatusMessage);
         Assert.Empty(viewModel.Versions);
+    }
+
+    [Fact]
+    public async Task OnActivatedAsync_LoadsManifest_WhenListIsEmpty()
+    {
+        var manifest = new FakeManifestService
+        {
+            Manifest = new VersionManifest
+            {
+                Versions = [new VersionManifestEntry { Id = "1.20.1" }],
+            },
+        };
+        var viewModel = CreateViewModel(new FakeSettingsService(), manifest, new FakeInstaller(), new FakeCatalog());
+
+        await viewModel.OnActivatedAsync();
+
+        Assert.Equal(1, manifest.CallCount);
+        var version = Assert.Single(viewModel.Versions);
+        Assert.Equal("1.20.1", version.Id);
+    }
+
+    [Fact]
+    public async Task OnActivatedAsync_SkipsRefresh_WhenListIsFresh()
+    {
+        var manifest = new FakeManifestService
+        {
+            Manifest = new VersionManifest
+            {
+                Versions = [new VersionManifestEntry { Id = "1.20.1" }],
+            },
+        };
+        var viewModel = CreateViewModel(new FakeSettingsService(), manifest, new FakeInstaller(), new FakeCatalog());
+
+        await viewModel.OnActivatedAsync();
+        await viewModel.OnActivatedAsync();
+
+        Assert.Equal(1, manifest.CallCount);
+    }
+
+    [Fact]
+    public async Task OnActivatedAsync_Retries_WhenRefreshFailed()
+    {
+        var manifest = new FakeManifestService
+        {
+            Manifest = new VersionManifest
+            {
+                Versions = [new VersionManifestEntry { Id = "1.20.1" }],
+            },
+            Exception = new InvalidOperationException("network down"),
+        };
+        var viewModel = CreateViewModel(new FakeSettingsService(), manifest, new FakeInstaller(), new FakeCatalog());
+
+        await viewModel.OnActivatedAsync();
+        Assert.StartsWith("获取版本清单失败", viewModel.StatusMessage);
+
+        manifest.Exception = null;
+        await viewModel.OnActivatedAsync();
+
+        Assert.Equal(2, manifest.CallCount);
+        var version = Assert.Single(viewModel.Versions);
+        Assert.Equal("1.20.1", version.Id);
+    }
+
+    [Fact]
+    public async Task OnActivatedAsync_SkipsRefresh_WhileInstalling()
+    {
+        var manifest = new FakeManifestService
+        {
+            Manifest = new VersionManifest
+            {
+                Versions = [new VersionManifestEntry { Id = "1.20.1" }],
+            },
+        };
+        var installer = new FakeInstaller
+        {
+            Gate = new TaskCompletionSource(),
+            Result = new VersionInstallResult("1.20.1", []),
+        };
+        var viewModel = CreateViewModel(new FakeSettingsService(), manifest, installer, new FakeCatalog());
+        var item = new DownloadVersionItemViewModel(new VersionManifestEntry { Id = "1.20.1" }, isInstalled: false);
+        viewModel.Versions.Add(item);
+        viewModel.SelectedVersion = item;
+
+        var installTask = viewModel.InstallCommand.ExecuteAsync(null);
+        await viewModel.OnActivatedAsync();
+
+        Assert.Equal(0, manifest.CallCount);
+        viewModel.CancelCommand.Execute(null);
+        await installTask;
     }
 }
