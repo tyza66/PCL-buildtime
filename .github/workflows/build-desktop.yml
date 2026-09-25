@@ -142,25 +142,48 @@ jobs:
           cp PCL.Avalonia/Assets/Info.plist "$app/Contents/Info.plist"
           cp -R publish/. "$app/Contents/MacOS/"
 
-          # Generate .icns from PNG
+          # Generate .icns from the PCL icon
           iconset="$name.iconset"
+          src_base="PCL.Avalonia/Assets/pcl2-avalonia.png"
+          src_hi="PCL.Avalonia/Assets/pcl2-avalonia@2x.png"
           mkdir -p "$iconset"
-          sips -z 16 16 --out "$iconset/icon_16x16.png" PCL.Avalonia/Assets/pcl2-avalonia.png
-          sips -z 32 32 --out "$iconset/icon_16x16@2x.png" PCL.Avalonia/Assets/pcl2-avalonia@2x.png
-          sips -z 32 32 --out "$iconset/icon_32x32.png" PCL.Avalonia/Assets/pcl2-avalonia.png
-          sips -z 64 64 --out "$iconset/icon_32x32@2x.png" PCL.Avalonia/Assets/pcl2-avalonia@2x.png
-          sips -z 128 128 --out "$iconset/icon_128x128.png" PCL.Avalonia/Assets/pcl2-avalonia@2x.png
-          sips -z 256 256 --out "$iconset/icon_256x256.png" PCL.Avalonia/Assets/pcl2-avalonia@2x.png
-          sips -z 512 512 --out "$iconset/icon_512x512.png" PCL.Avalonia/Assets/pcl2-avalonia@2x.png
-          sips -z 1024 1024 --out "$iconset/icon_512x512@2x.png" PCL.Avalonia/Assets/pcl2-avalonia@2x.png
+          for size in 16 32 128 256 512; do
+            for scale in 1 2; do
+              px=$((size * scale))
+              if [ "$px" -le 256 ]; then src="$src_base"; else src="$src_hi"; fi
+              sips -z "$px" "$px" --out "$iconset/icon_${size}x${size}@${scale}x.png" "$src"
+            done
+          done
           iconutil -c icns "$iconset" -o "$app/Contents/Resources/PCL2Avalonia.icns"
           rm -rf "$iconset"
 
           # Ad-hoc sign the .app bundle
           codesign --sign - --force --deep --timestamp=none "$app"
-          # Create DMG
-          hdiutil create -volname "PCL2 Avalonia" -srcfolder "$app" -ov -format UDZO "$dmg_name"
+          # Stage the DMG volume with the /Applications drag-to-install alias
+          stage="dmg-stage"
+          rm -rf "$stage"
+          mkdir -p "$stage"
+          cp -R "$app" "$stage/"
+          ln -s /Applications "$stage/Applications"
+          hdiutil create -volname "PCL2 Avalonia" -srcfolder "$stage" -ov -format UDZO "$dmg_name"
+          rm -rf "$stage"
           shasum -a 256 "$dmg_name" > "${dmg_name}.sha256"
+          # Verify the DMG contents: /Applications alias and the icon resource
+          mount_dir="$PWD/dmg-mount"
+          rm -rf "$mount_dir"
+          mkdir -p "$mount_dir"
+          hdiutil attach "$dmg_name" -mountpoint "$mount_dir" -nobrowse > /dev/null
+          ls -l "$mount_dir"
+          if [ ! -L "$mount_dir/Applications" ]; then
+            echo "::error::DMG is missing the /Applications alias"
+            exit 1
+          fi
+          if [ ! -f "$mount_dir/$app/Contents/Resources/PCL2Avalonia.icns" ]; then
+            echo "::error::App bundle is missing PCL2Avalonia.icns"
+            exit 1
+          fi
+          hdiutil detach "$mount_dir" > /dev/null
+          rm -rf "$mount_dir"
 
       - name: Package Linux (AppImage)
         if: runner.os == 'Linux'

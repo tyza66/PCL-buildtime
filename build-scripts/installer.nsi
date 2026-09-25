@@ -4,6 +4,9 @@
 ; Script lives in build-scripts/, but publish output is at repo root
 !cd ".."
 
+!define MUI_ICON "Plain Craft Launcher 2/Images/icon.ico"
+!define MUI_UNICON "Plain Craft Launcher 2/Images/icon.ico"
+
 Name "PCL2 Avalonia"
 OutFile "@OUTFILE@"
 InstallDir "$PROGRAMFILES\PCL2 Avalonia"
@@ -30,6 +33,7 @@ Section "Install"
   CreateShortcut "$SMPROGRAMS\PCL2 Avalonia\PCL2 Avalonia.lnk" "$INSTDIR\PCL2.Avalonia.exe"
   CreateShortcut "$DESKTOP\PCL2 Avalonia.lnk" "$INSTDIR\PCL2.Avalonia.exe"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\PCL2Avalonia" "DisplayName" "PCL2 Avalonia"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\PCL2Avalonia" "DisplayIcon" '"$INSTDIR\PCL2.Avalonia.exe"'
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\PCL2Avalonia" "UninstallString" '"$INSTDIR\uninstall.exe"'
   ${GetSize} "$INSTDIR" "/S=0K" $0 $1 $2
   IntFmt $0 "0x%08X" $0
