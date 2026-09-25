@@ -30,6 +30,7 @@ public sealed class JsonSettingsServiceTests : IDisposable
         var settings = service.Load();
 
         Assert.True(settings.UseDarkTheme);
+        Assert.Equal(DownloadSource.Bmclapi, settings.DownloadSource);
     }
 
     [Fact]
@@ -43,6 +44,7 @@ public sealed class JsonSettingsServiceTests : IDisposable
             JavaPath = "/opt/java/bin/java",
             UserName = "Steve",
             MaxMemoryMb = 8192,
+            DownloadSource = DownloadSource.Mojang,
         });
 
         var loaded = service.Load();
@@ -52,6 +54,7 @@ public sealed class JsonSettingsServiceTests : IDisposable
         Assert.Equal("/opt/java/bin/java", loaded.JavaPath);
         Assert.Equal("Steve", loaded.UserName);
         Assert.Equal(8192, loaded.MaxMemoryMb);
+        Assert.Equal(DownloadSource.Mojang, loaded.DownloadSource);
     }
 
     [Fact]

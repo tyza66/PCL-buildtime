@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using PCL.Avalonia.Services;
+using PCL.Avalonia.Services.Downloads;
 using PCL.Avalonia.Services.Minecraft;
 using PCL.Avalonia.ViewModels;
 
@@ -24,6 +25,7 @@ public partial class MainWindow : Window
         var settings = new JsonSettingsService(Path.Combine(platform.GetConfigDirectory(), "settings.json"));
         var session = new SessionState();
         var catalog = new VersionCatalogService();
+        var downloadClient = new HttpDownloadClient();
         return new MainWindowViewModel(
             settings,
             new AvaloniaThemeService(),
@@ -31,6 +33,8 @@ public partial class MainWindow : Window
             catalog,
             new GameLauncher(catalog),
             new JavaService(),
-            platform);
+            platform,
+            new VersionManifestService(downloadClient),
+            new VersionInstaller(downloadClient, catalog));
     }
 }

@@ -4,15 +4,104 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="clr-namespace:PCL.Avalonia.ViewModels.Pages;assembly=PCL2.Avalonia"
     x:DataType="vm:DownloadPageViewModel">
-    <StackPanel Margin="32" Spacing="6">
-        <TextBlock
-            Text="下载"
-            FontSize="26"
-            FontWeight="SemiBold"
-            Foreground="{DynamicResource TextPrimaryBrush}" />
-        <TextBlock
-            Text="占位页"
-            FontSize="14"
-            Foreground="{DynamicResource TextSecondaryBrush}" />
-    </StackPanel>
+    <DockPanel Margin="32">
+        <Grid
+            DockPanel.Dock="Top"
+            ColumnDefinitions="*,240,Auto,Auto"
+            ColumnSpacing="8"
+            Margin="0,0,0,14">
+            <StackPanel Spacing="2">
+                <TextBlock
+                    Text="下载"
+                    FontSize="26"
+                    FontWeight="SemiBold"
+                    Foreground="{DynamicResource TextPrimaryBrush}" />
+                <TextBlock
+                    Text="{Binding StatusMessage}"
+                    FontSize="13"
+                    TextWrapping="Wrap"
+                    Foreground="{DynamicResource TextSecondaryBrush}" />
+            </StackPanel>
+            <TextBox
+                Grid.Column="1"
+                Text="{Binding SearchText}"
+                Watermark="搜索版本"
+                VerticalAlignment="Top"
+                Foreground="{DynamicResource TextPrimaryBrush}" />
+            <Button
+                Grid.Column="2"
+                Content="安装所选"
+                VerticalAlignment="Top"
+                Command="{Binding InstallCommand}"
+                Background="{DynamicResource AccentBrush}"
+                Foreground="White" />
+            <Button
+                Grid.Column="3"
+                Content="刷新"
+                VerticalAlignment="Top"
+                Command="{Binding RefreshCommand}"
+                Background="{DynamicResource ButtonBackgroundBrush}"
+                Foreground="{DynamicResource TextPrimaryBrush}" />
+        </Grid>
+        <StackPanel
+            DockPanel.Dock="Bottom"
+            Spacing="6"
+            Margin="0,14,0,0"
+            IsVisible="{Binding IsProgressVisible}">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock
+                    Text="{Binding ProgressText}"
+                    FontSize="13"
+                    TextTrimming="CharacterEllipsis"
+                    Foreground="{DynamicResource TextSecondaryBrush}" />
+                <Button
+                    Grid.Column="1"
+                    Content="取消"
+                    Command="{Binding CancelCommand}"
+                    Background="{DynamicResource ButtonBackgroundBrush}"
+                    Foreground="{DynamicResource TextPrimaryBrush}" />
+            </Grid>
+            <ProgressBar
+                Minimum="0"
+                Maximum="100"
+                Value="{Binding ProgressPercent}" />
+        </StackPanel>
+        <Border
+            Background="{DynamicResource CardBackgroundBrush}"
+            CornerRadius="8">
+            <ListBox
+                ItemsSource="{Binding Versions}"
+                SelectedItem="{Binding SelectedVersion}"
+                Background="Transparent"
+                BorderThickness="0">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:DownloadVersionItemViewModel">
+                        <StackPanel Margin="14,10" Spacing="3">
+                            <TextBlock
+                                Text="{Binding Id}"
+                                FontSize="15"
+                                FontWeight="SemiBold"
+                                Foreground="{DynamicResource TextPrimaryBrush}" />
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <TextBlock
+                                    Text="{Binding TypeText}"
+                                    FontSize="12"
+                                    Foreground="{DynamicResource TextSecondaryBrush}" />
+                                <TextBlock
+                                    Text="{Binding ReleaseTimeText}"
+                                    FontSize="12"
+                                    Foreground="{DynamicResource TextSecondaryBrush}" />
+                                <TextBlock
+                                    Text="已安装"
+                                    FontSize="12"
+                                    FontWeight="SemiBold"
+                                    IsVisible="{Binding IsInstalled}"
+                                    Foreground="{DynamicResource AccentBrush}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Border>
+    </DockPanel>
 </UserControl>

@@ -1,10 +1,14 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace PCL.Avalonia.Services;
 
 public sealed class JsonSettingsService : ISettingsService
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        Converters = { new JsonStringEnumConverter(allowIntegerValues: true) },
+    };
     private readonly string _settingsPath;
 
     public JsonSettingsService(string settingsPath)

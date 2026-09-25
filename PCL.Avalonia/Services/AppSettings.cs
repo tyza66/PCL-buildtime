@@ -4,6 +4,8 @@ public sealed record AppSettings
 {
     public bool UseDarkTheme { get; init; } = true;
 
+    public DownloadSource DownloadSource { get; init; } = DownloadSource.Bmclapi;
+
     public string MinecraftFolder { get; init; } = "";
 
     public string JavaPath { get; init; } = "";

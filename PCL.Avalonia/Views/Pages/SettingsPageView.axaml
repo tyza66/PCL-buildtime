@@ -3,6 +3,7 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="clr-namespace:PCL.Avalonia.ViewModels.Pages;assembly=PCL2.Avalonia"
+    xmlns:pages="clr-namespace:PCL.Avalonia.ViewModels.Pages;assembly=PCL2.Avalonia"
     x:DataType="vm:SettingsPageViewModel">
     <ScrollViewer>
         <StackPanel Margin="32" Spacing="12">
@@ -51,6 +52,25 @@
                 Text="{Binding MaxMemoryMb}"
                 Watermark="4096"
                 Foreground="{DynamicResource TextPrimaryBrush}" />
+            <TextBlock
+                Text="下载源"
+                FontSize="13"
+                FontWeight="SemiBold"
+                Margin="0,14,0,0"
+                Foreground="{DynamicResource TextPrimaryBrush}" />
+            <ComboBox
+                ItemsSource="{Binding DownloadSources}"
+                SelectedItem="{Binding DownloadSource}"
+                Background="{DynamicResource CardBackgroundBrush}"
+                Foreground="{DynamicResource TextPrimaryBrush}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="pages:DownloadSourceOption">
+                        <TextBlock
+                            Text="{Binding Label}"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
             <StackPanel
                 Orientation="Horizontal"
                 Spacing="12"

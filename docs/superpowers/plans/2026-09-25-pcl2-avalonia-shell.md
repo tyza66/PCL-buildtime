@@ -86,3 +86,34 @@
 - 本地 `dotnet test` 全绿。
 - GitHub Actions 三平台测试通过。
 - 有本地 Minecraft 安装时，选择版本后能生成可执行启动命令并启动离线游戏。
+
+## Phase 3：版本下载与安装
+
+### 目标
+
+- 下载页从 Mojang / BMCLAPI 拉取官方版本清单，展示可安装的正式版与快照。
+- 安装指定版本：写入版本 JSON、主 jar、当前平台所需的 libraries 与 assets，校验大小/SHA-1，已存在文件跳过。
+- 设置页新增下载源（Mojang / BMCLAPI），下载页支持搜索、进度、取消与已安装标记。
+- 保持单元测试可验证，不依赖真实网络；原 WPF 工程零改动。
+
+### 新增服务
+
+- `IDownloadClient` / `HttpDownloadClient`：流式下载到 `.tmp` 后原子落盘，支持进度、取消、期望大小校验。
+- `IVersionManifestService` / `VersionManifestService`：解析 `version_manifest_v2.json`。
+- `DownloadSource` + `DownloadUrlResolver`：统一解析清单、版本 JSON、主 jar、libraries、assets 的 Mojang/BMCLAPI 地址。
+- `IVersionInstaller` / `VersionInstaller`：构建下载清单并安装版本。
+- `MinecraftRules`：把规则判定抽成共享逻辑，启动器与安装器复用。
+
+### 测试
+
+- `DownloadUrlResolverTests`：Mojang/BMCLAPI 地址映射。
+- `VersionManifestServiceTests`：用假下载客户端解析清单。
+- `VersionInstallerTests`：假下载客户端下验证 JSON、jar、libraries、assets 落盘、跳过已存在、进度与失败汇总。
+- `DownloadPageViewModelTests`：刷新清单、过滤、安装选中版本、取消。
+- 更新设置相关测试覆盖下载源字段。
+
+### 验收
+
+- 本地 `dotnet test` 全绿。
+- GitHub Actions 三平台测试通过。
+- 下载页能从真实网络源刷新并安装一个官方版本，安装后版本页可选中并离线启动。

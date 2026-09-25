@@ -1,11 +1,9 @@
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 
 namespace PCL.Avalonia.Services.Minecraft;
 
@@ -200,14 +198,16 @@ public sealed class GameLauncher : IGameLauncher
         {
             foreach (var library in json.Libraries)
             {
-                if (!RulesMatch(library.Rules))
+                if (!MinecraftRules.RulesMatch(library.Rules))
                 {
                     continue;
                 }
 
-                var nativeTemplate = ResolveNativeTemplate(library);
+                var nativeTemplate = MinecraftRules.ResolveNativeTemplate(library);
                 var isNatives = nativeTemplate is not null;
-                var classifier = nativeTemplate is null ? null : ResolveNativeClassifier(nativeTemplate);
+                var classifier = nativeTemplate is null
+                    ? null
+                    : MinecraftRules.ResolveNativeClassifier(nativeTemplate);
                 var artifact = isNatives
                     ? library.Downloads?.Classifiers?.GetValueOrDefault(classifier ?? "")
                     : library.Downloads?.Artifact;
@@ -233,28 +233,6 @@ public sealed class GameLauncher : IGameLauncher
         }
 
         return [.. byKey.Values];
-    }
-
-    private static string? ResolveNativeTemplate(LibraryJson library)
-    {
-        if (library.Natives is null)
-        {
-            return null;
-        }
-
-        return CurrentOsName() switch
-        {
-            "windows" => library.Natives.GetValueOrDefault("windows"),
-            "osx" => library.Natives.GetValueOrDefault("osx"),
-            _ => library.Natives.GetValueOrDefault("linux"),
-        };
-    }
-
-    private static string ResolveNativeClassifier(string template)
-    {
-        return template
-            .Replace("${arch}", Environment.Is64BitProcess ? "64" : "32")
-            .Trim();
     }
 
     private static string ResolveLibraryPath(
@@ -474,7 +452,7 @@ public sealed class GameLauncher : IGameLauncher
             {
             }
 
-            if (argument is null || (argument.Rules is not null && !RulesMatch(argument.Rules)))
+            if (argument is null || (argument.Rules is not null && !MinecraftRules.RulesMatch(argument.Rules)))
             {
                 continue;
             }
@@ -494,69 +472,6 @@ public sealed class GameLauncher : IGameLauncher
                 }
             }
         }
-    }
-
-    private static bool RulesMatch(IReadOnlyList<RuleJson>? rules)
-    {
-        if (rules is null || rules.Count == 0)
-        {
-            return true;
-        }
-
-        var required = false;
-        foreach (var rule in rules)
-        {
-            if (!MatchRule(rule))
-            {
-                continue;
-            }
-
-            required = !string.Equals(rule.Action, "disallow", StringComparison.OrdinalIgnoreCase);
-        }
-
-        return required;
-    }
-
-    private static bool MatchRule(RuleJson rule)
-    {
-        if (rule.Os is not null)
-        {
-            if (!string.IsNullOrWhiteSpace(rule.Os.Name)
-                && !string.Equals(rule.Os.Name, CurrentOsName(), StringComparison.OrdinalIgnoreCase))
-            {
-                return false;
-            }
-
-            if (!string.IsNullOrWhiteSpace(rule.Os.Arch)
-                && !string.Equals(rule.Os.Arch, CurrentArchName(), StringComparison.OrdinalIgnoreCase))
-            {
-                return false;
-            }
-
-            if (!string.IsNullOrWhiteSpace(rule.Os.Version)
-                && !Regex.IsMatch(Environment.OSVersion.VersionString, rule.Os.Version))
-            {
-                return false;
-            }
-        }
-
-        if (rule.Features is not null)
-        {
-            foreach (var (name, required) in rule.Features)
-            {
-                if (name == "is_demo_user" || name.Contains("quick_play", StringComparison.Ordinal))
-                {
-                    return false;
-                }
-
-                if (name == "has_custom_resolution" || required)
-                {
-                    return false;
-                }
-            }
-        }
-
-        return true;
     }
 
     private IReadOnlyDictionary<string, string> BuildReplacements(
@@ -715,33 +630,6 @@ public sealed class GameLauncher : IGameLauncher
         bytes[6] = (byte)((bytes[6] & 0x0F) | 0x30);
         bytes[8] = (byte)((bytes[8] & 0x3F) | 0x80);
         return new Guid(bytes).ToString();
-    }
-
-    private static string CurrentOsName()
-    {
-        if (OperatingSystem.IsWindows())
-        {
-            return "windows";
-        }
-
-        if (OperatingSystem.IsMacOS())
-        {
-            return "osx";
-        }
-
-        return "linux";
-    }
-
-    private static string CurrentArchName()
-    {
-        return RuntimeInformation.ProcessArchitecture switch
-        {
-            Architecture.X64 => "x64",
-            Architecture.X86 => "x86",
-            Architecture.Arm64 => "arm64",
-            Architecture.Arm => "arm",
-            _ => "unknown",
-        };
     }
 
     private static void ForwardLines(StreamReader reader, IProgress<string> output)

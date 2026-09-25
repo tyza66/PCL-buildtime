@@ -37,6 +37,7 @@ public sealed class SettingsPageViewModelTests
                 JavaPath = "/opt/java/bin/java",
                 UserName = "Alex",
                 MaxMemoryMb = 6144,
+                DownloadSource = DownloadSource.Mojang,
             },
         };
 
@@ -46,6 +47,7 @@ public sealed class SettingsPageViewModelTests
         Assert.Equal("/opt/java/bin/java", viewModel.JavaPath);
         Assert.Equal("Alex", viewModel.UserName);
         Assert.Equal(6144, viewModel.MaxMemoryMb);
+        Assert.Equal(DownloadSource.Mojang, viewModel.DownloadSource.Source);
     }
 
     [Fact]
@@ -70,6 +72,8 @@ public sealed class SettingsPageViewModelTests
         viewModel.JavaPath = "/new/java";
         viewModel.UserName = "Steve";
         viewModel.MaxMemoryMb = 8192;
+        viewModel.DownloadSource = viewModel.DownloadSources.Single(
+            option => option.Source == DownloadSource.Mojang);
 
         viewModel.SaveCommand.Execute(null);
 
@@ -77,6 +81,7 @@ public sealed class SettingsPageViewModelTests
         Assert.Equal("/new/java", settings.Settings.JavaPath);
         Assert.Equal("Steve", settings.Settings.UserName);
         Assert.Equal(8192, settings.Settings.MaxMemoryMb);
+        Assert.Equal(DownloadSource.Mojang, settings.Settings.DownloadSource);
         Assert.False(settings.Settings.UseDarkTheme);
         Assert.Equal("设置已保存", viewModel.StatusMessage);
     }

@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PCL.Avalonia.Services;
+using PCL.Avalonia.Services.Downloads;
 using PCL.Avalonia.Services.Minecraft;
 using PCL.Avalonia.ViewModels.Pages;
 
@@ -19,7 +20,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
         IVersionCatalogService versionCatalogService,
         IGameLauncher gameLauncher,
         IJavaService javaService,
-        IPlatformService platformService)
+        IPlatformService platformService,
+        IVersionManifestService versionManifestService,
+        IVersionInstaller versionInstaller)
     {
         _settingsService = settingsService;
         _themeService = themeService;
@@ -31,7 +34,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         Items =
         [
             new NavItemViewModel("启动", new LaunchPageViewModel(settingsService, javaService, gameLauncher, session)),
-            new NavItemViewModel("下载", new DownloadPageViewModel()),
+            new NavItemViewModel("下载", new DownloadPageViewModel(settingsService, versionManifestService, versionInstaller, versionCatalogService, platformService)),
             new NavItemViewModel("版本", new VersionPageViewModel(settingsService, versionCatalogService, session, platformService)),
             new NavItemViewModel("设置", new SettingsPageViewModel(settingsService, platformService)),
             new NavItemViewModel("其他", new OtherPageViewModel()),

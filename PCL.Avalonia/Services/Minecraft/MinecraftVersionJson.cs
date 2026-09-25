@@ -37,12 +37,24 @@ public sealed class MinecraftVersionJson
 
     [JsonPropertyName("libraries")]
     public List<LibraryJson> Libraries { get; set; } = [];
+
+    [JsonPropertyName("downloads")]
+    public VersionDownloadsJson? Downloads { get; set; }
 }
 
 public sealed class AssetIndexJson
 {
     [JsonPropertyName("id")]
     public string? Id { get; set; }
+
+    [JsonPropertyName("url")]
+    public string? Url { get; set; }
+
+    [JsonPropertyName("sha1")]
+    public string? Sha1 { get; set; }
+
+    [JsonPropertyName("size")]
+    public long? Size { get; set; }
 }
 
 public sealed class ArgumentsJson
@@ -97,6 +109,27 @@ public sealed class ArtifactJson
 
     [JsonPropertyName("url")]
     public string? Url { get; set; }
+
+    [JsonPropertyName("sha1")]
+    public string? Sha1 { get; set; }
+
+    [JsonPropertyName("size")]
+    public long? Size { get; set; }
+}
+
+public sealed class VersionDownloadsJson
+{
+    [JsonPropertyName("client")]
+    public ArtifactJson? Client { get; set; }
+
+    [JsonPropertyName("server")]
+    public ArtifactJson? Server { get; set; }
+
+    [JsonPropertyName("client_mappings")]
+    public ArtifactJson? ClientMappings { get; set; }
+
+    [JsonPropertyName("server_mappings")]
+    public ArtifactJson? ServerMappings { get; set; }
 }
 
 public sealed class LibraryExtractJson

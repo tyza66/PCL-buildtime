@@ -1,4 +1,5 @@
 using PCL.Avalonia.Services;
+using PCL.Avalonia.Services.Downloads;
 using PCL.Avalonia.Services.Minecraft;
 using PCL.Avalonia.ViewModels;
 using PCL.Avalonia.ViewModels.Pages;
@@ -56,6 +57,26 @@ public sealed class MainWindowViewModelTests
         public string? ResolveJavaExecutable(AppSettings settings) => settings.JavaPath;
     }
 
+    private sealed class FakeManifestService : IVersionManifestService
+    {
+        public Task<VersionManifest> GetManifestAsync(
+            DownloadSource source,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(new VersionManifest());
+    }
+
+    private sealed class FakeInstaller : IVersionInstaller
+    {
+        public Task<VersionInstallResult> InstallAsync(
+            string versionId,
+            VersionManifestEntry? entry,
+            DownloadSource source,
+            string minecraftFolder,
+            IProgress<InstallProgress>? progress = null,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(new VersionInstallResult(versionId, []));
+    }
+
     private static (FakeSettingsService Settings, FakeThemeService Theme, MainWindowViewModel ViewModel) CreateViewModel(
         bool useDarkTheme)
     {
@@ -68,7 +89,9 @@ public sealed class MainWindowViewModelTests
             new FakeVersionCatalogService(),
             new FakeGameLauncher(),
             new FakeJavaService(),
-            new FakePlatformService());
+            new FakePlatformService(),
+            new FakeManifestService(),
+            new FakeInstaller());
         return (settings, theme, viewModel);
     }
 
@@ -95,6 +118,10 @@ public sealed class MainWindowViewModelTests
         viewModel.SelectedItem = viewModel.Items.Single(item => item.Title == "设置");
 
         Assert.IsType<SettingsPageViewModel>(viewModel.CurrentPage);
+
+        viewModel.SelectedItem = viewModel.Items.Single(item => item.Title == "下载");
+
+        Assert.IsType<DownloadPageViewModel>(viewModel.CurrentPage);
     }
 
     [Fact]
@@ -112,7 +139,9 @@ public sealed class MainWindowViewModelTests
             new FakeVersionCatalogService(),
             new FakeGameLauncher(),
             new FakeJavaService(),
-            new FakePlatformService());
+            new FakePlatformService(),
+            new FakeManifestService(),
+            new FakeInstaller());
 
         viewModel.ToggleThemeCommand.Execute(null);
 
