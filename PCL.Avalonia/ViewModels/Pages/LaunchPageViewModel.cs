@@ -70,6 +70,12 @@ public sealed partial class LaunchPageViewModel : ObservableObject
             IsLaunching = true;
             StatusMessage = $"正在启动 {version.Id}";
             var settings = _settingsService.Load();
+            settings = settings with
+            {
+                UserName = _session.SelectedAccount?.Name is { Length: > 0 } accountName
+                    ? accountName
+                    : settings.UserName,
+            };
             var java = _javaService.ResolveJavaExecutable(settings);
             if (java is null)
             {

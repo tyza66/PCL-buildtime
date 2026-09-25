@@ -1,4 +1,5 @@
 using PCL.Avalonia.Services;
+using PCL.Avalonia.Services.Accounts;
 using PCL.Avalonia.Services.Minecraft;
 using PCL.Avalonia.ViewModels.Pages;
 
@@ -46,8 +47,12 @@ public sealed class LaunchPageViewModelTests
 
         public int LaunchCount { get; private set; }
 
+        public AppSettings? LastBuildSettings { get; private set; }
+
         public LaunchPlan BuildLaunchPlan(MinecraftVersion version, AppSettings settings, string javaExecutable)
-            => new()
+        {
+            LastBuildSettings = settings;
+            return new()
             {
                 JavaExecutable = javaExecutable,
                 WorkingDirectory = settings.MinecraftFolder,
@@ -57,6 +62,7 @@ public sealed class LaunchPageViewModelTests
                 Arguments = [],
                 Version = version,
             };
+        }
 
         public IGameLaunch Launch(LaunchPlan plan, IProgress<string>? output = null)
         {
@@ -124,6 +130,23 @@ public sealed class LaunchPageViewModelTests
         Assert.Equal(1, launch.KillCount);
         Assert.Equal(1, launch.DisposeCount);
         Assert.False(viewModel.IsRunning);
+    }
+
+    [Fact]
+    public async Task LaunchAsync_UsesSelectedAccountName_OverSettingsUserName()
+    {
+        var launcher = new FakeLauncher();
+        var session = new SessionState
+        {
+            SelectedVersion = SelectedVersion(),
+            SelectedAccount = new Account { Id = Guid.NewGuid(), Name = "SteveAccount" },
+        };
+        var viewModel = CreateViewModel(launcher, session, new SyncDispatcher());
+
+        await viewModel.LaunchCommand.ExecuteAsync(null);
+
+        Assert.NotNull(launcher.LastBuildSettings);
+        Assert.Equal("SteveAccount", launcher.LastBuildSettings!.UserName);
     }
 
     private static async Task WaitUntilAsync(Func<bool> condition, int timeoutMilliseconds = 5000)

@@ -243,3 +243,48 @@
 
 - 本地 `dotnet test` 全绿，构建 0 警告。
 - “Mod管理”页可搜索、启用/禁用、删除本地 `mods` 目录中的 Mod，文件系统状态与列表同步。
+
+## Phase 7：离线账号管理
+
+### 目标
+
+- 新增“账号”导航页，管理本地离线账号：添加、删除、设为默认，并持久化到配置目录 `accounts.json`。
+- `SessionState` 持有当前选中账号，启动页优先使用账号名，无账号时回退到设置页的用户名。
+- 保持单元测试可验证，不依赖真实网络；原 WPF 工程零改动。
+
+### 修改文件
+
+- Create: `PCL.Avalonia/Services/Accounts/Account.cs`
+- Create: `PCL.Avalonia/Services/Accounts/IAccountService.cs`
+- Create: `PCL.Avalonia/Services/Accounts/JsonAccountService.cs`
+- Create: `PCL.Avalonia/ViewModels/Pages/AccountsPageViewModel.cs`
+- Create: `PCL.Avalonia/Views/Pages/AccountsPageView.axaml` / `.axaml.cs`
+- Modify: `PCL.Avalonia/Services/SessionState.cs`
+- Modify: `PCL.Avalonia/ViewModels/Pages/LaunchPageViewModel.cs`
+- Modify: `PCL.Avalonia/ViewModels/MainWindowViewModel.cs`
+- Modify: `PCL.Avalonia/Views/MainWindow.axaml` / `.axaml.cs`
+- Create: `PCL.Avalonia.Tests/AccountServiceTests.cs`
+- Create: `PCL.Avalonia.Tests/AccountsPageViewModelTests.cs`
+- Modify: `PCL.Avalonia.Tests/LaunchPageViewModelTests.cs`
+- Modify: `PCL.Avalonia.Tests/MainWindowViewModelTests.cs`
+
+### 任务 1：先写失败测试
+
+- [x] 新建 `AccountServiceTests`：文件缺失返回空；添加离线账号持久化并成为默认；删除默认账号回退到剩余账号；`SetDefaultAccount` 持久化选择。
+- [x] 新建 `AccountsPageViewModelTests`：构造加载账号并把默认账号写入 `SessionState`；添加账号；设为默认；删除账号后会话默认同步。
+- [x] 修改 `LaunchPageViewModelTests`：`FakeLauncher` 记录最后一次 `BuildLaunchPlan` 的 `AppSettings`；新增用例断言选中账号名覆盖设置用户名。
+- [x] 修改 `MainWindowViewModelTests`：注入假 `IAccountService`，导航用例断言“账号”页。
+- [x] 运行 `~/.dotnet/dotnet test PCL.Avalonia.sln --filter "FullyQualifiedName~AccountServiceTests|FullyQualifiedName~AccountsPageViewModelTests|FullyQualifiedName~LaunchPageViewModelTests|FullyQualifiedName~MainWindowViewModelTests"`，确认先红。
+
+### 任务 2：实现账号服务与页面
+
+- [x] `Account`：`Id`、`Name`、`Type`（`offline`）、`CreatedAt`；`JsonAccountService` 原子读写 `accounts.json`。
+- [x] `SessionState` 增加 `SelectedAccount`；`LaunchPageViewModel` 启动时用账号名覆盖 `AppSettings.UserName`。
+- [x] `AccountsPageViewModel`：加载、添加、删除、设为默认，并把默认账号同步到会话。
+- [x] `MainWindowViewModel` 注入 `IAccountService` 并新增“账号”导航项；`MainWindow.axaml` 注册页面模板。
+- [x] 运行 `~/.dotnet/dotnet test PCL.Avalonia.sln`，确认全绿。
+
+### 验收
+
+- 本地 `dotnet test` 全绿，构建 0 警告。
+- 账号页可添加、删除、切换默认离线账号；启动页使用默认账号名离线启动。

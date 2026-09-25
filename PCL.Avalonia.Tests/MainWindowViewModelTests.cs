@@ -1,4 +1,5 @@
 using PCL.Avalonia.Services;
+using PCL.Avalonia.Services.Accounts;
 using PCL.Avalonia.Services.Downloads;
 using PCL.Avalonia.Services.Minecraft;
 using PCL.Avalonia.Services.Mods;
@@ -94,6 +95,23 @@ public sealed class MainWindowViewModelTests
         public void Post(Action action) => action();
     }
 
+    private sealed class FakeAccountService : IAccountService
+    {
+        public IReadOnlyList<Account> Load() => [];
+
+        public Account AddOfflineAccount(string name) => new() { Id = Guid.NewGuid(), Name = name };
+
+        public void RemoveAccount(Guid id)
+        {
+        }
+
+        public void SetDefaultAccount(Guid id)
+        {
+        }
+
+        public Account? GetDefaultAccount() => null;
+    }
+
     private static (FakeSettingsService Settings, FakeThemeService Theme, MainWindowViewModel ViewModel) CreateViewModel(
         bool useDarkTheme)
     {
@@ -110,7 +128,8 @@ public sealed class MainWindowViewModelTests
             new FakePlatformService(),
             new FakeManifestService(),
             new FakeInstaller(),
-            new FakeModsService());
+            new FakeModsService(),
+            new FakeAccountService());
         return (settings, theme, viewModel);
     }
 
@@ -145,6 +164,10 @@ public sealed class MainWindowViewModelTests
         viewModel.SelectedItem = viewModel.Items.Single(item => item.Title == "Mod管理");
 
         Assert.IsType<ModsPageViewModel>(viewModel.CurrentPage);
+
+        viewModel.SelectedItem = viewModel.Items.Single(item => item.Title == "账号");
+
+        Assert.IsType<AccountsPageViewModel>(viewModel.CurrentPage);
     }
 
     [Fact]
@@ -166,7 +189,8 @@ public sealed class MainWindowViewModelTests
             new FakePlatformService(),
             new FakeManifestService(),
             new FakeInstaller(),
-            new FakeModsService());
+            new FakeModsService(),
+            new FakeAccountService());
 
         viewModel.ToggleThemeCommand.Execute(null);
 

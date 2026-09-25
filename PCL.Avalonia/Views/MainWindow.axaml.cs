@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using PCL.Avalonia.Services;
+using PCL.Avalonia.Services.Accounts;
 using PCL.Avalonia.Services.Downloads;
 using PCL.Avalonia.Services.Minecraft;
 using PCL.Avalonia.Services.Mods;
@@ -28,6 +29,7 @@ public partial class MainWindow : Window
         var dispatcher = new AvaloniaUiDispatcher();
         var catalog = new VersionCatalogService();
         var downloadClient = new HttpDownloadClient();
+        var accountService = new JsonAccountService(Path.Combine(platform.GetConfigDirectory(), "accounts.json"));
         return new MainWindowViewModel(
             settings,
             new AvaloniaThemeService(),
@@ -39,6 +41,7 @@ public partial class MainWindow : Window
             platform,
             new VersionManifestService(downloadClient),
             new VersionInstaller(downloadClient, catalog),
-            new ModsService());
+            new ModsService(),
+            accountService);
     }
 }
