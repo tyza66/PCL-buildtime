@@ -109,6 +109,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: bash
         run: |
+          export PATH="/c/Program Files (x86)/NSIS:$PATH"
           name="PCL2.Avalonia-${describe}-${{ matrix.rid }}"
           outfile="${name}-setup.exe"
           sed "s|@OUTFILE@|${outfile}|g" build-scripts/installer.nsi > build-scripts/installer-final.nsi
@@ -162,7 +163,7 @@ jobs:
             chmod +x /tmp/appimagetool
           fi
           # Create AppDir structure
-          mkdir -p "AppDir/usr/bin" "AppDir/usr/lib" "AppDir/usr/share/applications" "AppDir/usr/share/icons/hicolor/256x256/apps"
+          mkdir -p "AppDir/usr/bin" "AppDir/usr/lib" "AppDir/usr/share/icons/hicolor/256x256/apps"
           cp -r publish/. "AppDir/usr/lib/"
           cat > "AppDir/usr/bin/pcl2-avalonia" << 'EOF'
           #!/bin/bash
@@ -170,7 +171,8 @@ jobs:
           exec "$HERE/../lib/PCL2.Avalonia" "$@"
           EOF
           chmod +x "AppDir/usr/bin/pcl2-avalonia"
-          cat > "AppDir/usr/share/applications/pcl2-avalonia.desktop" << 'EOF'
+          # Desktop file MUST be at AppDir root for appimagetool to detect it
+          cat > "AppDir/pcl2-avalonia.desktop" << 'EOF'
           [Desktop Entry]
           Name=PCL2 Avalonia
           Exec=pcl2-avalonia
@@ -178,6 +180,9 @@ jobs:
           Type=Application
           Categories=Game;
           EOF
+          # Also place in usr/share for the AppImage runtime
+          mkdir -p "AppDir/usr/share/applications"
+          cp "AppDir/pcl2-avalonia.desktop" "AppDir/usr/share/applications/pcl2-avalonia.desktop"
           cp PCL.Avalonia/Assets/pcl2-avalonia.png "AppDir/usr/share/icons/hicolor/256x256/apps/pcl2-avalonia.png"
           /tmp/appimagetool --appimage-extract-and-run AppDir "${name}.AppImage"
           sha256sum "${name}.AppImage" > "${name}.AppImage.sha256"
