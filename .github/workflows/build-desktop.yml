@@ -113,7 +113,7 @@ jobs:
           name="PCL2.Avalonia-${describe}-${{ matrix.rid }}"
           outfile="${name}-setup.exe"
           # Use absolute path for publish dir since NSIS resolves relative to script location
-          publish_abs="$(pwd)/publish"
+          publish_abs="$(cygpath -w "$(pwd)/publish")"
           sed -e "s|@OUTFILE@|${outfile}|g" \
               -e "s|@PUBLISH_DIR@|${publish_abs}|g" \
               build-scripts/installer.nsi > build-scripts/installer-final.nsi
