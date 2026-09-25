@@ -536,3 +536,41 @@
 - 设置页可保存自定义 JVM/游戏启动参数。
 - 启动时自定义参数进入实际命令行并替换占位符。
 - 全量测试连续多轮稳定通过。
+
+## Phase 14：Fabric 加载器安装
+
+### 目标
+
+- 新增“Fabric”导航页，输入游戏版本后从 BMCL/官方 Fabric meta 获取加载器版本列表。
+- 选择加载器后自动补齐原版版本、写入 Fabric profile JSON，并按 Maven 坐标下载全部支持库到 `libraries` 目录。
+- 支持库下载失败逐项汇总并继续，库名做路径穿越过滤；安装成功后通知版本目录刷新。
+- 保持单元测试可验证，不依赖真实网络；原 WPF 工程零改动。
+
+### 修改文件
+
+- Create: `PCL.Avalonia/Services/Minecraft/IFabricLoaderService.cs` / `FabricLoaderService.cs`
+- Create: `PCL.Avalonia/ViewModels/Pages/FabricLoaderPageViewModel.cs`
+- Create: `PCL.Avalonia/Views/Pages/FabricLoaderPageView.axaml` / `.axaml.cs`
+- Modify: `PCL.Avalonia/ViewModels/MainWindowViewModel.cs` / `Views/MainWindow.axaml` / `Views/MainWindow.axaml.cs`
+- Create: `PCL.Avalonia.Tests/FabricLoaderServiceTests.cs`
+- Create: `PCL.Avalonia.Tests/FabricLoaderPageViewModelTests.cs`
+- Modify: `PCL.Avalonia.Tests/MainWindowViewModelTests.cs`
+
+### 任务 1：先写失败测试
+
+- [x] `FabricLoaderServiceTests`：meta 列表解析并按稳定版优先排序；安装时补齐原版、写 profile JSON、按 Maven 坐标下载库；已装原版跳过；单库失败继续并汇总；非法库名拒绝。
+- [x] `FabricLoaderPageViewModelTests`：刷新加载版本列表；安装调用服务并通知 `SessionState`；失败显示中文摘要。
+- [x] `MainWindowViewModelTests`：注入假 `IFabricLoaderService`，新增“Fabric”导航断言。
+
+### 任务 2：实现加载器安装服务与页面
+
+- [x] `FabricLoaderService`：BMCL + 官方 meta 双源获取版本；profile JSON 落盘到 `versions/<id>`；库下载走 BMCL Maven 镜像 + 原地址；路径穿越拒绝。
+- [x] `FabricLoaderPageViewModel`：游戏版本输入、加载器列表、安装/取消、分阶段进度与中文状态。
+- [x] 主窗口注入真实服务并注册页面模板。
+- [x] 本地 `dotnet build` 0 警告，`dotnet test` 全绿（118 个测试）。
+
+### 验收
+
+- Fabric 页可按游戏版本列出稳定版优先的加载器并一键安装。
+- 安装产物包含 profile JSON 与完整支持库，安装成功后在版本页可见。
+- GitHub Actions 三平台测试与 7 RID 打包通过。

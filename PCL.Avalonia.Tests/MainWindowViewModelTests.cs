@@ -237,6 +237,23 @@ public sealed class MainWindowViewModelTests
             => Task.FromResult(new ModpackInstallResult("pack", "1.20.1", [], []));
     }
 
+    private sealed class FakeFabricLoaderService : IFabricLoaderService
+    {
+        public Task<IReadOnlyList<FabricLoaderVersion>> GetVersionsAsync(
+            string gameVersion,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<FabricLoaderVersion>>([]);
+
+        public Task<FabricInstallResult> InstallAsync(
+            string gameVersion,
+            string loaderVersion,
+            string minecraftFolder,
+            DownloadSource source,
+            IProgress<FabricInstallProgress>? progress = null,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(new FabricInstallResult("fabric-loader", gameVersion, loaderVersion, []));
+    }
+
     private static (FakeSettingsService Settings, FakeThemeService Theme, MainWindowViewModel ViewModel) CreateViewModel(
         bool useDarkTheme)
     {
@@ -261,7 +278,8 @@ public sealed class MainWindowViewModelTests
             new FakeCurseForgeApi(),
             new FakeCurseForgeDownloadService(),
             new FakeCurseForgeModpackService(),
-            new FakeModpackInstaller());
+            new FakeModpackInstaller(),
+            new FakeFabricLoaderService());
         return (settings, theme, viewModel);
     }
 
@@ -292,6 +310,10 @@ public sealed class MainWindowViewModelTests
         viewModel.SelectedItem = viewModel.Items.Single(item => item.Title == "下载");
 
         Assert.IsType<DownloadPageViewModel>(viewModel.CurrentPage);
+
+        viewModel.SelectedItem = viewModel.Items.Single(item => item.Title == "Fabric");
+
+        Assert.IsType<FabricLoaderPageViewModel>(viewModel.CurrentPage);
 
         viewModel.SelectedItem = viewModel.Items.Single(item => item.Title == "Mod管理");
 
@@ -337,7 +359,8 @@ public sealed class MainWindowViewModelTests
             new FakeCurseForgeApi(),
             new FakeCurseForgeDownloadService(),
             new FakeCurseForgeModpackService(),
-            new FakeModpackInstaller());
+            new FakeModpackInstaller(),
+            new FakeFabricLoaderService());
 
         viewModel.ToggleThemeCommand.Execute(null);
 

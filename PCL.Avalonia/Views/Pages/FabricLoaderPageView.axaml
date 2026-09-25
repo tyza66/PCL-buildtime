@@ -1,0 +1,103 @@
+<UserControl
+    x:Class="PCL.Avalonia.Views.Pages.FabricLoaderPageView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="clr-namespace:PCL.Avalonia.ViewModels.Pages;assembly=PCL2.Avalonia"
+    x:DataType="vm:FabricLoaderPageViewModel">
+    <DockPanel Margin="32">
+        <Grid
+            DockPanel.Dock="Top"
+            ColumnDefinitions="*,240,100,100"
+            ColumnSpacing="8"
+            Margin="0,0,0,14">
+            <StackPanel Spacing="2">
+                <TextBlock
+                    Text="Fabric"
+                    FontSize="26"
+                    FontWeight="SemiBold"
+                    Foreground="{DynamicResource TextPrimaryBrush}" />
+                <TextBlock
+                    Text="{Binding StatusMessage}"
+                    FontSize="13"
+                    TextWrapping="Wrap"
+                    Foreground="{DynamicResource TextSecondaryBrush}" />
+            </StackPanel>
+            <TextBox
+                Grid.Column="1"
+                Text="{Binding GameVersionText}"
+                Watermark="游戏版本，如 1.20.1"
+                Foreground="{DynamicResource TextPrimaryBrush}" />
+            <Button
+                Grid.Column="2"
+                Content="安装所选"
+                Command="{Binding InstallCommand}"
+                Background="{DynamicResource AccentBrush}"
+                Foreground="White" />
+            <Button
+                Grid.Column="3"
+                Content="刷新"
+                Command="{Binding RefreshCommand}"
+                Background="{DynamicResource ButtonBackgroundBrush}"
+                Foreground="{DynamicResource TextPrimaryBrush}" />
+        </Grid>
+        <StackPanel
+            DockPanel.Dock="Bottom"
+            Spacing="6"
+            Margin="0,14,0,0"
+            IsVisible="{Binding IsProgressVisible}">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock
+                    Text="{Binding ProgressText}"
+                    FontSize="13"
+                    TextTrimming="CharacterEllipsis"
+                    Foreground="{DynamicResource TextSecondaryBrush}" />
+                <Button
+                    Grid.Column="1"
+                    Content="取消"
+                    Command="{Binding CancelCommand}"
+                    Background="{DynamicResource ButtonBackgroundBrush}"
+                    Foreground="{DynamicResource TextPrimaryBrush}" />
+            </Grid>
+            <ProgressBar
+                Minimum="0"
+                Maximum="100"
+                Value="{Binding ProgressPercent}" />
+        </StackPanel>
+        <Border
+            Background="{DynamicResource CardBackgroundBrush}"
+            CornerRadius="8">
+            <ListBox
+                ItemsSource="{Binding Versions}"
+                SelectedItem="{Binding SelectedLoader}"
+                Background="Transparent"
+                BorderThickness="0">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:FabricLoaderVersionItemViewModel">
+                        <StackPanel Margin="14,10" Spacing="3">
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <TextBlock
+                                    Text="{Binding VersionText}"
+                                    FontSize="15"
+                                    FontWeight="SemiBold"
+                                    Foreground="{DynamicResource TextPrimaryBrush}" />
+                                <TextBlock
+                                    Text="{Binding MinecraftVersionText}"
+                                    FontSize="13"
+                                    Foreground="{DynamicResource TextSecondaryBrush}" />
+                                <TextBlock
+                                    Text="{Binding StabilityText}"
+                                    FontSize="13"
+                                    FontWeight="SemiBold"
+                                    Foreground="{DynamicResource AccentBrush}" />
+                            </StackPanel>
+                            <TextBlock
+                                Text="{Binding JavaText}"
+                                FontSize="12"
+                                Foreground="{DynamicResource TextSecondaryBrush}" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Border>
+    </DockPanel>
+</UserControl>

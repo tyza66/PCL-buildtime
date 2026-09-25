@@ -37,6 +37,7 @@ public partial class MainWindow : Window
         var curseForgeApi = new CurseForgeApi(downloadClient);
         var curseForgeDownloadService = new CurseForgeDownloadService(downloadClient);
         var versionInstaller = new VersionInstaller(downloadClient, catalog);
+        var fabricLoaderService = new FabricLoaderService(downloadClient, versionInstaller);
         var curseForgeModpackService = new CurseForgeModpackService(curseForgeApi, downloadClient);
         var modpackInstaller = new ModpackInstallerService(curseForgeApi, downloadClient, versionInstaller);
         return new MainWindowViewModel(
@@ -58,6 +59,7 @@ public partial class MainWindow : Window
             curseForgeApi,
             curseForgeDownloadService,
             curseForgeModpackService,
-            modpackInstaller);
+            modpackInstaller,
+            fabricLoaderService);
     }
 }
