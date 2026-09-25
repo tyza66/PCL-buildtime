@@ -12,17 +12,20 @@ public sealed class ResourceSearcherServiceTests
 
         public List<(string Query, string GameVersion, string Loader, string ProjectType)> Calls { get; } = [];
 
-        public Task<IReadOnlyList<ModrinthProject>> SearchProjectsAsync(
+        public Task<ModrinthSearchPage> SearchProjectsAsync(
             string query,
             string gameVersion,
             string loader,
             string projectType = "mod",
+            int offset = 0,
+            int limit = 40,
+            string tag = "",
             CancellationToken cancellationToken = default)
         {
             Calls.Add((query, gameVersion, loader, projectType));
             return Exception is null
-                ? Task.FromResult(Projects)
-                : Task.FromException<IReadOnlyList<ModrinthProject>>(Exception);
+                ? Task.FromResult(new CurseForgeSearchPage(Projects, Projects.Count))
+                : Task.FromException<ModrinthSearchPage>(Exception);
         }
 
         public Task<IReadOnlyList<ModrinthProjectVersion>> GetVersionsAsync(
@@ -41,15 +44,20 @@ public sealed class ResourceSearcherServiceTests
 
         public List<(string Query, int ClassId)> Calls { get; } = [];
 
-        public Task<IReadOnlyList<CurseForgeProject>> SearchProjectsAsync(
+        public Task<CurseForgeSearchPage> SearchProjectsAsync(
             string query,
             int classId = 6,
+            string gameVersion = "",
+            string loader = "",
+            string categoryId = "",
+            int index = 0,
+            int pageSize = 40,
             CancellationToken cancellationToken = default)
         {
             Calls.Add((query, classId));
             return Exception is null
-                ? Task.FromResult(Projects)
-                : Task.FromException<IReadOnlyList<CurseForgeProject>>(Exception);
+                ? Task.FromResult(new CurseForgeSearchPage(Projects, Projects.Count))
+                : Task.FromException<CurseForgeSearchPage>(Exception);
         }
 
         public Task<IReadOnlyList<CurseForgeModFile>> GetFilesAsync(

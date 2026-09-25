@@ -31,15 +31,18 @@ public sealed class ModsDownloadPageViewModelTests
 
         public List<string> SearchQueries { get; } = [];
 
-        public Task<IReadOnlyList<ModrinthProject>> SearchProjectsAsync(
+        public Task<ModrinthSearchPage> SearchProjectsAsync(
             string query,
             string gameVersion,
             string loader,
             string projectType = "mod",
+            int offset = 0,
+            int limit = 40,
+            string tag = "",
             CancellationToken cancellationToken = default)
         {
             SearchQueries.Add($"{query}|{gameVersion}|{loader}");
-            return Task.FromResult<IReadOnlyList<ModrinthProject>>(Projects);
+            return Task.FromResult(new ModrinthSearchPage(Projects, Projects.Count));
         }
 
         public Task<IReadOnlyList<ModrinthProjectVersion>> GetVersionsAsync(
@@ -76,13 +79,18 @@ public sealed class ModsDownloadPageViewModelTests
 
         public List<string> SearchQueries { get; } = [];
 
-        public Task<IReadOnlyList<CurseForgeProject>> SearchProjectsAsync(
+        public Task<CurseForgeSearchPage> SearchProjectsAsync(
             string query,
             int classId = 6,
+            string gameVersion = "",
+            string loader = "",
+            string categoryId = "",
+            int index = 0,
+            int pageSize = 40,
             CancellationToken cancellationToken = default)
         {
             SearchQueries.Add(query);
-            return Task.FromResult<IReadOnlyList<CurseForgeProject>>(Projects);
+            return Task.FromResult(new CurseForgeSearchPage(Projects, Projects.Count));
         }
 
         public Task<IReadOnlyList<CurseForgeModFile>> GetFilesAsync(

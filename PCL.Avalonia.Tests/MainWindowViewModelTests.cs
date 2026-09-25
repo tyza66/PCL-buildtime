@@ -151,13 +151,16 @@ public sealed class MainWindowViewModelTests
 
     private sealed class FakeModrinthApi : IModrinthApi
     {
-        public Task<IReadOnlyList<ModrinthProject>> SearchProjectsAsync(
+        public Task<ModrinthSearchPage> SearchProjectsAsync(
             string query,
             string gameVersion,
             string loader,
             string projectType = "mod",
+            int offset = 0,
+            int limit = 40,
+            string tag = "",
             CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<ModrinthProject>>([]);
+            => Task.FromResult(new ModrinthSearchPage([], 0));
 
         public Task<IReadOnlyList<ModrinthProjectVersion>> GetVersionsAsync(
             string projectId,
@@ -169,14 +172,14 @@ public sealed class MainWindowViewModelTests
 
     private sealed class FakeResourceSearchService : IResourceSearchService
     {
-        public Task<IReadOnlyList<ResourceProjectItem>> SearchAsync(
+        public Task<ResourceSearchResult> SearchAsync(
             ResourceType type,
             string query,
             string gameVersion,
             string loader,
             ResourceSource source,
             CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<ResourceProjectItem>>([]);
+            => Task.FromResult(new ResourceSearchResult([], 0));
     }
 
     private sealed class FakeResourceDownloadService : IResourceDownloadService
@@ -202,11 +205,16 @@ public sealed class MainWindowViewModelTests
 
     private sealed class FakeCurseForgeApi : ICurseForgeApi
     {
-        public Task<IReadOnlyList<CurseForgeProject>> SearchProjectsAsync(
+        public Task<CurseForgeSearchPage> SearchProjectsAsync(
             string query,
             int classId = 6,
+            string gameVersion = "",
+            string loader = "",
+            string categoryId = "",
+            int index = 0,
+            int pageSize = 40,
             CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<CurseForgeProject>>([]);
+            => Task.FromResult(new CurseForgeSearchPage([], 0));
 
         public Task<IReadOnlyList<CurseForgeModFile>> GetFilesAsync(
             int projectId,
@@ -243,7 +251,7 @@ public sealed class MainWindowViewModelTests
         public Task<IReadOnlyList<CurseForgeProject>> SearchAsync(
             string query,
             CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<CurseForgeProject>>([]);
+            => Task.FromResult(new CurseForgeSearchPage([], 0));
 
         public Task<string> InstallAsync(
             CurseForgeProject project,

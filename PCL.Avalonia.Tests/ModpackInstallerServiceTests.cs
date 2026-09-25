@@ -30,9 +30,14 @@ public sealed class ModpackInstallerServiceTests : IDisposable
     {
         public Dictionary<(int ProjectId, int FileId), CurseForgeModFile> Files { get; set; } = [];
 
-        public Task<IReadOnlyList<CurseForgeProject>> SearchProjectsAsync(
+        public Task<CurseForgeSearchPage> SearchProjectsAsync(
             string query,
             int classId = 6,
+            string gameVersion = "",
+            string loader = "",
+            string categoryId = "",
+            int index = 0,
+            int pageSize = 40,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 

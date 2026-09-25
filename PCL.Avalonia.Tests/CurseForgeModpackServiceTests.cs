@@ -29,13 +29,18 @@ public sealed class CurseForgeModpackServiceTests : IDisposable
 
         public List<int> SearchClassIds { get; } = [];
 
-        public Task<IReadOnlyList<CurseForgeProject>> SearchProjectsAsync(
+        public Task<CurseForgeSearchPage> SearchProjectsAsync(
             string query,
             int classId = 6,
+            string gameVersion = "",
+            string loader = "",
+            string categoryId = "",
+            int index = 0,
+            int pageSize = 40,
             CancellationToken cancellationToken = default)
         {
             SearchClassIds.Add(classId);
-            return Task.FromResult<IReadOnlyList<CurseForgeProject>>(Projects);
+            return Task.FromResult(new CurseForgeSearchPage(Projects, Projects.Count));
         }
 
         public Task<IReadOnlyList<CurseForgeModFile>> GetFilesAsync(

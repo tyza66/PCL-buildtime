@@ -29,20 +29,22 @@ public sealed class ResourceDownloadPageViewModelTests
 
         public Exception? Exception { get; set; }
 
-        public List<(ResourceType Type, string Query, string GameVersion, string Loader, ResourceSource Source)> Calls { get; } = [];
+        public List<(ResourceType Type, string Query, string GameVersion, string Loader, string Tag, ResourceSource Source)> Calls { get; } = [];
 
-        public Task<IReadOnlyList<ResourceProjectItem>> SearchAsync(
+        public Task<ResourceSearchResult> SearchAsync(
             ResourceType type,
             string query,
             string gameVersion,
             string loader,
+            string tag,
             ResourceSource source,
+            int page = 0,
             CancellationToken cancellationToken = default)
         {
-            Calls.Add((type, query, gameVersion, loader, source));
+            Calls.Add((type, query, gameVersion, loader, tag, source));
             return Exception is null
-                ? Task.FromResult(Results)
-                : Task.FromException<IReadOnlyList<ResourceProjectItem>>(Exception);
+                ? Task.FromResult(new ResourceSearchResult(Results, Results.Count))
+                : Task.FromException<ResourceSearchResult>(Exception);
         }
     }
 
@@ -52,13 +54,16 @@ public sealed class ResourceDownloadPageViewModelTests
 
         public List<(string ProjectId, string GameVersion, string Loader)> VersionCalls { get; } = [];
 
-        public Task<IReadOnlyList<ModrinthProject>> SearchProjectsAsync(
+        public Task<ModrinthSearchPage> SearchProjectsAsync(
             string query,
             string gameVersion,
             string loader,
             string projectType = "mod",
+            int offset = 0,
+            int limit = 40,
+            string tag = "",
             CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<ModrinthProject>>([]);
+            => Task.FromResult(new ModrinthSearchPage([], 0));
 
         public Task<IReadOnlyList<ModrinthProjectVersion>> GetVersionsAsync(
             string projectId,
@@ -77,11 +82,16 @@ public sealed class ResourceDownloadPageViewModelTests
 
         public List<(int ProjectId, string GameVersion, string Loader)> FileCalls { get; } = [];
 
-        public Task<IReadOnlyList<CurseForgeProject>> SearchProjectsAsync(
+        public Task<CurseForgeSearchPage> SearchProjectsAsync(
             string query,
             int classId = 6,
+            string gameVersion = "",
+            string loader = "",
+            string categoryId = "",
+            int index = 0,
+            int pageSize = 40,
             CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<CurseForgeProject>>([]);
+            => Task.FromResult(new CurseForgeSearchPage([], 0));
 
         public Task<IReadOnlyList<CurseForgeModFile>> GetFilesAsync(
             int projectId,
