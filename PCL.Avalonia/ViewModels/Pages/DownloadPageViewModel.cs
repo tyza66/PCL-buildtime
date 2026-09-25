@@ -14,6 +14,7 @@ public sealed partial class DownloadPageViewModel : ObservableObject
     private readonly IVersionInstaller _installer;
     private readonly IVersionCatalogService _catalog;
     private readonly IPlatformService _platform;
+    private readonly SessionState _session;
     private readonly List<DownloadVersionItemViewModel> _allVersions = [];
     private HashSet<string> _installedIds = new(StringComparer.OrdinalIgnoreCase);
     private CancellationTokenSource? _cancellationTokenSource;
@@ -23,13 +24,15 @@ public sealed partial class DownloadPageViewModel : ObservableObject
         IVersionManifestService manifestService,
         IVersionInstaller installer,
         IVersionCatalogService catalog,
-        IPlatformService platform)
+        IPlatformService platform,
+        SessionState session)
     {
         _settingsService = settingsService;
         _manifestService = manifestService;
         _installer = installer;
         _catalog = catalog;
         _platform = platform;
+        _session = session;
     }
 
     public ObservableCollection<DownloadVersionItemViewModel> Versions { get; } = [];
@@ -97,6 +100,7 @@ public sealed partial class DownloadPageViewModel : ObservableObject
                 _installedIds.Add(selected.Id);
                 selected.IsInstalled = true;
                 StatusMessage = $"已安装 {selected.Id}";
+                _session.NotifyVersionInstalled(selected.Id);
             }
             else
             {

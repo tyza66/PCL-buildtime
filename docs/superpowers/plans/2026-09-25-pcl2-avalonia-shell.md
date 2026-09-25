@@ -117,3 +117,41 @@
 - 本地 `dotnet test` 全绿。
 - GitHub Actions 三平台测试通过。
 - 下载页能从真实网络源刷新并安装一个官方版本，安装后版本页可选中并离线启动。
+
+## Phase 4：安装后自动联动版本页与启动页
+
+### 目标
+
+- 下载页安装成功时通过 `SessionState` 广播版本 ID。
+- 版本页收到广播后自动刷新本地版本列表，并选中新安装的版本。
+- 启动页通过既有 `SelectedVersion` 订阅自动显示新版本，形成“下载 → 版本 → 启动”闭环。
+
+### 修改文件
+
+- Modify: `PCL.Avalonia/Services/SessionState.cs`
+- Modify: `PCL.Avalonia/ViewModels/Pages/DownloadPageViewModel.cs`
+- Modify: `PCL.Avalonia/ViewModels/Pages/VersionPageViewModel.cs`
+- Modify: `PCL.Avalonia/ViewModels/MainWindowViewModel.cs`
+- Create: `PCL.Avalonia.Tests/SessionStateTests.cs`
+- Create: `PCL.Avalonia.Tests/VersionPageViewModelTests.cs`
+- Modify: `PCL.Avalonia.Tests/DownloadPageViewModelTests.cs`
+
+### 任务 1：先写失败测试
+
+- [ ] 新建 `PCL.Avalonia.Tests/SessionStateTests.cs`，断言 `NotifyVersionInstalled("1.20.1")` 以 `"1.20.1"` 触发 `VersionInstalled` 事件。
+- [ ] 新建 `PCL.Avalonia.Tests/VersionPageViewModelTests.cs`，用假设置、假目录扫描器和共享 `SessionState` 构造版本页；先断言 `Refresh` 会选中列表首项，再断言收到 `NotifyVersionInstalled("1.20.1")` 后自动刷新并选中 `1.20.1`。
+- [ ] 修改 `PCL.Avalonia.Tests/DownloadPageViewModelTests.cs` 的 helper，为 `DownloadPageViewModel` 传共享 `SessionState`；安装成功用例断言事件收到 `"1.20.1"`。
+- [ ] 运行 `~/.dotnet/dotnet test PCL.Avalonia.sln --filter "FullyQualifiedName~VersionPageViewModelTests|FullyQualifiedName~SessionStateTests|FullyQualifiedName~DownloadPageViewModelTests"`，确认因缺失构造参数/事件先红。
+
+### 任务 2：实现联动
+
+- [ ] `SessionState` 增加 `public event EventHandler<string>? VersionInstalled;` 与 `public void NotifyVersionInstalled(string versionId)`，方法校验非空后触发事件。
+- [ ] `DownloadPageViewModel` 构造参数增加 `SessionState session` 并保存；`InstallAsync` 成功分支调用 `_session.NotifyVersionInstalled(selected.Id)`。
+- [ ] `VersionPageViewModel` 订阅 `_session.VersionInstalled`；事件处理中先 `Refresh()`，再按 ID 不区分大小写选中新版本。
+- [ ] `MainWindowViewModel` 的下载页构造调用传入已有 `session`。
+- [ ] 运行 `~/.dotnet/dotnet test PCL.Avalonia.sln`，确认全绿。
+
+### 验收
+
+- 本地 `dotnet test` 全绿，构建 0 警告。
+- 下载页安装成功后，切到版本页无需手动刷新即能看到并选中该版本；切到启动页可直接看到“当前版本：<id>”。

@@ -81,8 +81,9 @@ public sealed class DownloadPageViewModelTests
         FakeSettingsService settings,
         FakeManifestService manifest,
         FakeInstaller installer,
-        FakeCatalog catalog)
-        => new(settings, manifest, installer, catalog, new FakePlatformService());
+        FakeCatalog catalog,
+        SessionState? session = null)
+        => new(settings, manifest, installer, catalog, new FakePlatformService(), session ?? new SessionState());
 
     [Fact]
     public async Task RefreshAsync_LoadsManifestAndMarksInstalled()
@@ -176,7 +177,10 @@ public sealed class DownloadPageViewModelTests
         {
             Result = new VersionInstallResult("1.20.1", []),
         };
-        var viewModel = CreateViewModel(settings, new FakeManifestService(), installer, new FakeCatalog());
+        var session = new SessionState();
+        string? installedVersionId = null;
+        session.VersionInstalled += (_, versionId) => installedVersionId = versionId;
+        var viewModel = CreateViewModel(settings, new FakeManifestService(), installer, new FakeCatalog(), session);
         var item = new DownloadVersionItemViewModel(
             new VersionManifestEntry { Id = "1.20.1" },
             isInstalled: false);
@@ -189,6 +193,7 @@ public sealed class DownloadPageViewModelTests
         Assert.Equal(("1.20.1", DownloadSource.Bmclapi, "/games/mc"), (call.VersionId, call.Source, call.Folder));
         Assert.True(item.IsInstalled);
         Assert.Equal("已安装 1.20.1", viewModel.StatusMessage);
+        Assert.Equal("1.20.1", installedVersionId);
     }
 
     [Fact]

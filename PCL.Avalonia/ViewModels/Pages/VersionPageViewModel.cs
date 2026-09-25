@@ -23,6 +23,7 @@ public sealed partial class VersionPageViewModel : ObservableObject
         _catalog = catalog;
         _session = session;
         _platform = platform;
+        _session.VersionInstalled += OnVersionInstalled;
         Refresh();
     }
 
@@ -62,5 +63,12 @@ public sealed partial class VersionPageViewModel : ObservableObject
     partial void OnSelectedVersionChanged(MinecraftVersion? value)
     {
         _session.SelectedVersion = value;
+    }
+
+    private void OnVersionInstalled(object? sender, string versionId)
+    {
+        Refresh();
+        SelectedVersion = Versions.FirstOrDefault(
+            version => string.Equals(version.Id, versionId, StringComparison.OrdinalIgnoreCase));
     }
 }
