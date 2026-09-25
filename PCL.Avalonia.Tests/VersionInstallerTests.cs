@@ -349,6 +349,12 @@ public sealed class VersionInstallerTests : IDisposable
             IReadOnlyList<string> urls,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
+
+        public Task<string> PostJsonAsync(
+            IReadOnlyList<string> urls,
+            string json,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
     }
 
     private sealed class ListProgress<T> : IProgress<T>

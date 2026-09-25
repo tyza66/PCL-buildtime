@@ -67,6 +67,48 @@ public sealed class ModsDownloadPageViewModelTests
         }
     }
 
+    private sealed class FakeCurseForgeApi : ICurseForgeApi
+    {
+        public List<CurseForgeProject> Projects { get; set; } = [];
+
+        public List<CurseForgeModFile> Files { get; set; } = [];
+
+        public List<string> SearchQueries { get; } = [];
+
+        public Task<IReadOnlyList<CurseForgeProject>> SearchProjectsAsync(
+            string query,
+            CancellationToken cancellationToken = default)
+        {
+            SearchQueries.Add(query);
+            return Task.FromResult<IReadOnlyList<CurseForgeProject>>(Projects);
+        }
+
+        public Task<IReadOnlyList<CurseForgeModFile>> GetFilesAsync(
+            int projectId,
+            string gameVersion,
+            string loader,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<CurseForgeModFile>>(Files);
+    }
+
+    private sealed class FakeCurseForgeInstaller : ICurseForgeDownloadService
+    {
+        public CurseForgeModFile? LastFile { get; private set; }
+
+        public string? LastFolder { get; private set; }
+
+        public Task<string> InstallAsync(
+            CurseForgeModFile file,
+            string modsFolder,
+            IProgress<DownloadProgress>? progress = null,
+            CancellationToken cancellationToken = default)
+        {
+            LastFile = file;
+            LastFolder = modsFolder;
+            return Task.FromResult(Path.Combine(modsFolder, "installed.jar"));
+        }
+    }
+
     private static ModrinthProject Project() => new()
     {
         ProjectId = "abc",
@@ -84,6 +126,27 @@ public sealed class ModsDownloadPageViewModelTests
         Files = [new ModrinthFile { Url = "https://cdn.modrinth.com/data/jei.jar", Filename = "jei.jar", Primary = true }],
     };
 
+    private static CurseForgeProject CurseProject() => new()
+    {
+        Id = 123,
+        Slug = "jei",
+        Name = "Just Enough Items",
+        Summary = "物品与配方查看",
+        Authors = [new CurseForgeAuthor { Name = "mezz" }],
+        DownloadCount = 654321,
+    };
+
+    private static CurseForgeModFile CurseFile() => new()
+    {
+        Id = 456,
+        DisplayName = "JEI 15.2.0.27",
+        FileName = "jei-15.2.0.27.jar",
+        DownloadUrl = "https://edge.forgecdn.net/files/jei.jar",
+        FileLength = 12345,
+        FileHashes = [new CurseForgeFileHash { Algo = 1, Value = "abc123" }],
+        FileDate = DateTimeOffset.Parse("2024-02-01T00:00:00Z"),
+    };
+
     [Fact]
     public async Task SearchCommand_LoadsProjects()
     {
@@ -97,6 +160,23 @@ public sealed class ModsDownloadPageViewModelTests
         Assert.Equal("Just Enough Items", item.Title);
         Assert.Contains("JEI|1.20.1|fabric", api.SearchQueries);
         Assert.Contains("找到", viewModel.StatusMessage);
+    }
+
+    [Fact]
+    public async Task SearchCommand_CurseForgeSource_LoadsProjects()
+    {
+        var api = new FakeCurseForgeApi { Projects = [CurseProject()] };
+        var viewModel = CreateViewModel(new FakeApi(), new FakeInstaller(), api, new FakeCurseForgeInstaller());
+        viewModel.SearchText = "JEI";
+        viewModel.Source = ModDownloadSource.CurseForge;
+
+        await viewModel.SearchCommand.ExecuteAsync(null);
+
+        var item = Assert.Single(viewModel.Projects);
+        Assert.Equal("Just Enough Items", item.Title);
+        Assert.Equal("654.3K 下载", item.DownloadsText);
+        Assert.Contains("JEI", api.SearchQueries);
+        Assert.Contains("CurseForge", viewModel.StatusMessage);
     }
 
     [Fact]
@@ -117,6 +197,25 @@ public sealed class ModsDownloadPageViewModelTests
     }
 
     [Fact]
+    public async Task InstallCommand_CurseForgeSource_InstallsLatestFile()
+    {
+        var installer = new FakeCurseForgeInstaller();
+        var api = new FakeCurseForgeApi { Projects = [CurseProject()], Files = [CurseFile()] };
+        var viewModel = CreateViewModel(new FakeApi(), new FakeInstaller(), api, installer);
+        viewModel.SearchText = "JEI";
+        viewModel.Source = ModDownloadSource.CurseForge;
+        await viewModel.SearchCommand.ExecuteAsync(null);
+
+        await viewModel.Projects[0].InstallCommand.ExecuteAsync(null);
+
+        Assert.NotNull(installer.LastFile);
+        Assert.Equal(456, installer.LastFile?.Id);
+        Assert.Equal(Path.Combine("/games/mc", "mods"), installer.LastFolder);
+        Assert.True(viewModel.Projects[0].IsInstalled);
+        Assert.Contains("已安装", viewModel.StatusMessage);
+    }
+
+    [Fact]
     public async Task InstallCommand_NoCompatibleVersion_ShowsMessage()
     {
         var viewModel = CreateViewModel(new FakeApi { Projects = [Project()] }, new FakeInstaller());
@@ -129,6 +228,16 @@ public sealed class ModsDownloadPageViewModelTests
         Assert.Contains("没有适配", viewModel.StatusMessage);
     }
 
-    private static ModsDownloadPageViewModel CreateViewModel(FakeApi api, FakeInstaller installer)
-        => new(new FakeSettingsService(), api, installer, new FakePlatformService());
+    private static ModsDownloadPageViewModel CreateViewModel(
+        FakeApi api,
+        FakeInstaller installer,
+        FakeCurseForgeApi? curseForgeApi = null,
+        FakeCurseForgeInstaller? curseForgeInstaller = null)
+        => new(
+            new FakeSettingsService(),
+            api,
+            installer,
+            new FakePlatformService(),
+            curseForgeApi,
+            curseForgeInstaller);
 }

@@ -29,7 +29,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
         IModsService modsService,
         IAccountService accountService,
         IModrinthApi modrinthApi,
-        IModsDownloadService modsDownloadService)
+        IModsDownloadService modsDownloadService,
+        ICurseForgeApi curseForgeApi,
+        ICurseForgeDownloadService curseForgeDownloadService)
     {
         _settingsService = settingsService;
         _themeService = themeService;
@@ -43,7 +45,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             new NavItemViewModel("启动", new LaunchPageViewModel(settingsService, javaService, gameLauncher, session, dispatcher)),
             new NavItemViewModel("账号", new AccountsPageViewModel(accountService, session)),
             new NavItemViewModel("下载", new DownloadPageViewModel(settingsService, versionManifestService, versionInstaller, versionCatalogService, platformService, session)),
-            new NavItemViewModel("Mod下载", new ModsDownloadPageViewModel(settingsService, modrinthApi, modsDownloadService, platformService)),
+            new NavItemViewModel("Mod下载", new ModsDownloadPageViewModel(settingsService, modrinthApi, modsDownloadService, platformService, curseForgeApi, curseForgeDownloadService)),
             new NavItemViewModel("版本", new VersionPageViewModel(settingsService, versionCatalogService, session, platformService)),
             new NavItemViewModel("Mod管理", new ModsPageViewModel(settingsService, modsService, platformService)),
             new NavItemViewModel("设置", new SettingsPageViewModel(settingsService, platformService)),

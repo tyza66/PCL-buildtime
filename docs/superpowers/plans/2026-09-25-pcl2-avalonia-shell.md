@@ -330,3 +330,50 @@
 - 本地 `dotnet test` 全绿，构建 0 警告。
 - Mod 下载页可按版本/加载器搜索并安装 Mod；安装后 Mod 管理页可见。
 - GitHub Actions 三平台测试与 7 RID 打包通过。
+
+## Phase 9：CurseForge Mod 下载
+
+### 目标
+
+- 在“Mod下载”页增加来源切换：Modrinth / CurseForge。
+- 通过 CurseForge API 搜索 Mod、按游戏版本与加载器过滤文件，并安装到当前游戏目录的 `mods` 文件夹。
+- 复用现有 `IDownloadClient` 下载与校验能力；CurseForge 搜索接口需要新增 POST JSON 支持。
+- 保持单元测试可验证，不依赖真实网络；原 WPF 工程零改动。
+
+### 修改文件
+
+- Create: `PCL.Avalonia/Services/Mods/CurseForgeProject.cs` / `CurseForgeModFile.cs`
+- Create: `PCL.Avalonia/Services/Mods/ICurseForgeApi.cs` / `CurseForgeApi.cs`
+- Create: `PCL.Avalonia/Services/Mods/ICurseForgeDownloadService.cs` / `CurseForgeDownloadService.cs`
+- Modify: `PCL.Avalonia/Services/Downloads/IDownloadClient.cs` / `HttpDownloadClient.cs`
+- Modify: `PCL.Avalonia/ViewModels/Pages/ModsDownloadPageViewModel.cs`
+- Modify: `PCL.Avalonia/Views/Pages/ModsDownloadPageView.axaml`
+- Modify: `PCL.Avalonia/ViewModels/MainWindowViewModel.cs`
+- Modify: `PCL.Avalonia/Views/MainWindow.axaml.cs`
+- Create: `PCL.Avalonia.Tests/CurseForgeApiTests.cs` / `CurseForgeDownloadServiceTests.cs`
+- Modify: `PCL.Avalonia.Tests/ModsDownloadPageViewModelTests.cs` / `MainWindowViewModelTests.cs`
+- Modify: 既有测试中的假 `IDownloadClient` 实现 `PostJsonAsync`
+
+### 任务 1：先写失败测试
+
+- [x] 扩展 `IDownloadClient`：新增 `PostJsonAsync(urls, json, cancellationToken)`。
+- [x] 新建 `CurseForgeApiTests`：用假 `IDownloadClient` 验证搜索 POST 的 JSON body 含 `gameId=432`、`classId=6` 与搜索词；验证文件列表 GET 的 `gameVersion` 与 `modLoaderType` 参数；验证 camelCase JSON 解析。
+- [x] 新建 `CurseForgeDownloadServiceTests`：下载主文件到 `mods` 目录并带大小/SHA-1 校验；已存在跳过；过滤路径穿越文件名。
+- [x] 修改 `ModsDownloadPageViewModelTests`：构造新增 CurseForge API/下载服务参数；新增来源切换后搜索走 CurseForge、安装 CurseForge 文件的用例。
+- [x] 修改 `MainWindowViewModelTests`：注入假 `ICurseForgeApi` / `ICurseForgeDownloadService`。
+- [x] 运行 `~/.dotnet/dotnet test PCL.Avalonia.sln --filter "FullyQualifiedName~CurseForgeApiTests|FullyQualifiedName~CurseForgeDownloadServiceTests|FullyQualifiedName~ModsDownloadPageViewModelTests|FullyQualifiedName~MainWindowViewModelTests"`，确认先红。
+
+### 任务 2：实现 CurseForge 客户端与下载服务
+
+- [x] `CurseForgeApi`：搜索走 `PostJsonAsync` 到 `/v1/mods/search`；文件列表走 `GetStringAsync` 到 `/v1/mods/{id}/files`；加载器映射 Fabric/Forge/NeoForge/Quilt/Paper/Spigot 的 `modLoaderType`。
+- [x] `CurseForgeDownloadService`：选择最新文件下载到 `<mc>/mods`，已存在跳过，文件名经 `Path.GetFileName` 清理。
+- [x] `ModsDownloadPageViewModel` 增加来源属性，按来源调用对应 API 并共享进度/取消/状态逻辑。
+- [x] `MainWindow.axaml` 注册不变（同一页面 VM），`ModsDownloadPageView` 增加来源选择控件。
+- [x] `MainWindow.axaml.cs` 注入真实 CurseForge 服务。
+- [x] 运行 `~/.dotnet/dotnet test PCL.Avalonia.sln`，确认全绿。
+
+### 验收
+
+- 本地 `dotnet test` 全绿，构建 0 警告。
+- Mod 下载页可在 Modrinth / CurseForge 之间切换并搜索、安装 Mod。
+- GitHub Actions 三平台测试与 7 RID 打包通过。

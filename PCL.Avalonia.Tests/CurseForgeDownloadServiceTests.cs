@@ -3,13 +3,13 @@ using PCL.Avalonia.Services.Mods;
 
 namespace PCL.Avalonia.Tests;
 
-public sealed class ModsDownloadServiceTests : IDisposable
+public sealed class CurseForgeDownloadServiceTests : IDisposable
 {
     private readonly string _folder;
 
-    public ModsDownloadServiceTests()
+    public CurseForgeDownloadServiceTests()
     {
-        _folder = Path.Combine(Path.GetTempPath(), "PCL2AvaloniaMods", Guid.NewGuid().ToString("N"));
+        _folder = Path.Combine(Path.GetTempPath(), "PCL2AvaloniaCurseForge", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(_folder);
     }
 
@@ -47,43 +47,32 @@ public sealed class ModsDownloadServiceTests : IDisposable
             => throw new NotSupportedException();
     }
 
-    private static ModrinthProjectVersion Version(
+    private static CurseForgeModFile CurseFile(
         string filename = "jei-15.2.0.27.jar",
-        string url = "https://cdn.modrinth.com/data/jei.jar",
-        bool primary = true,
-        string? sha1 = "abc123")
+        string url = "https://edge.forgecdn.net/files/jei.jar")
         => new()
         {
-            Id = "v1",
-            ProjectId = "abc",
-            Name = "JEI 15.2.0.27",
-            Files =
-            [
-                new ModrinthFile
-                {
-                    Url = url,
-                    Filename = filename,
-                    Primary = primary,
-                    Size = 12345,
-                    Sha1 = sha1,
-                },
-            ],
+            Id = 456,
+            DisplayName = "JEI 15.2.0.27",
+            FileName = filename,
+            DownloadUrl = url,
+            FileLength = 12345,
+            FileHashes = [new CurseForgeFileHash { Algo = 1, Value = "abc123" }],
         };
 
     [Fact]
-    public async Task InstallAsync_DownloadsPrimaryFile_ToModsFolder()
+    public async Task InstallAsync_DownloadsFile_ToModsFolder()
     {
         var client = new FakeDownloadClient();
-        var service = new ModsDownloadService(client);
-        var version = Version();
+        var service = new CurseForgeDownloadService(client);
 
-        var path = await service.InstallAsync(version, _folder);
+        var path = await service.InstallAsync(CurseFile(), _folder);
 
         var request = Assert.Single(client.Requests);
         Assert.Equal(Path.Combine(_folder, "jei-15.2.0.27.jar"), request.DestinationPath);
         Assert.Equal(12345, request.ExpectedSize);
         Assert.Equal("abc123", request.ExpectedSha1);
-        Assert.Equal("https://cdn.modrinth.com/data/jei.jar", request.Urls.Single());
+        Assert.Equal("https://edge.forgecdn.net/files/jei.jar", request.Urls.Single());
         Assert.True(File.Exists(path));
     }
 
@@ -93,9 +82,9 @@ public sealed class ModsDownloadServiceTests : IDisposable
         var destination = Path.Combine(_folder, "jei-15.2.0.27.jar");
         File.WriteAllText(destination, "exists");
         var client = new FakeDownloadClient();
-        var service = new ModsDownloadService(client);
+        var service = new CurseForgeDownloadService(client);
 
-        var path = await service.InstallAsync(Version(), _folder);
+        var path = await service.InstallAsync(CurseFile(), _folder);
 
         Assert.Equal(destination, path);
         Assert.Empty(client.Requests);
@@ -106,9 +95,9 @@ public sealed class ModsDownloadServiceTests : IDisposable
     public async Task InstallAsync_FiltersPathTraversalFilename()
     {
         var client = new FakeDownloadClient();
-        var service = new ModsDownloadService(client);
+        var service = new CurseForgeDownloadService(client);
 
-        var path = await service.InstallAsync(Version(filename: "../../evil.jar"), _folder);
+        var path = await service.InstallAsync(CurseFile(filename: "../../evil.jar"), _folder);
 
         Assert.Equal("evil.jar", Path.GetFileName(path));
         Assert.StartsWith(Path.GetFullPath(_folder), Path.GetFullPath(path));

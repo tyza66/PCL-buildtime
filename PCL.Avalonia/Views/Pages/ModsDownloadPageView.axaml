@@ -8,7 +8,7 @@
         <Grid
             DockPanel.Dock="Top"
             RowDefinitions="Auto,Auto"
-            ColumnDefinitions="*,160,140,96"
+            ColumnDefinitions="*,116,150,132,96"
             RowSpacing="8"
             ColumnSpacing="8"
             Margin="0,0,0,14">
@@ -49,8 +49,16 @@
                 VerticalAlignment="Top"
                 Foreground="{DynamicResource TextPrimaryBrush}"
                 Background="{DynamicResource ButtonBackgroundBrush}" />
-            <Button
+            <ComboBox
                 Grid.Column="3"
+                Grid.Row="1"
+                ItemsSource="{Binding Sources}"
+                SelectedItem="{Binding Source}"
+                VerticalAlignment="Top"
+                Foreground="{DynamicResource TextPrimaryBrush}"
+                Background="{DynamicResource ButtonBackgroundBrush}" />
+            <Button
+                Grid.Column="4"
                 Grid.Row="1"
                 Content="搜索"
                 VerticalAlignment="Top"
@@ -89,7 +97,7 @@
                 Background="Transparent"
                 BorderThickness="0">
                 <ListBox.ItemTemplate>
-                    <DataTemplate x:DataType="vm:ModProjectItemViewModel">
+                    <DataTemplate x:DataType="vm:DownloadProjectItemViewModel">
                         <Grid
                             ColumnDefinitions="*,Auto"
                             ColumnSpacing="8"

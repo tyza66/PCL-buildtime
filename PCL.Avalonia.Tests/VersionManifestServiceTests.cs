@@ -24,6 +24,12 @@ public sealed class VersionManifestServiceTests
             LastUrls = urls;
             return Task.FromResult(Json);
         }
+
+        public Task<string> PostJsonAsync(
+            IReadOnlyList<string> urls,
+            string json,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
     }
 
     [Fact]

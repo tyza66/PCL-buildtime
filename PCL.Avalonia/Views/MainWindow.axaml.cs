@@ -32,6 +32,8 @@ public partial class MainWindow : Window
         var accountService = new JsonAccountService(Path.Combine(platform.GetConfigDirectory(), "accounts.json"));
         var modrinthApi = new ModrinthApi(downloadClient);
         var modsDownloadService = new ModsDownloadService(downloadClient);
+        var curseForgeApi = new CurseForgeApi(downloadClient);
+        var curseForgeDownloadService = new CurseForgeDownloadService(downloadClient);
         return new MainWindowViewModel(
             settings,
             new AvaloniaThemeService(),
@@ -46,6 +48,8 @@ public partial class MainWindow : Window
             new ModsService(),
             accountService,
             modrinthApi,
-            modsDownloadService);
+            modsDownloadService,
+            curseForgeApi,
+            curseForgeDownloadService);
     }
 }

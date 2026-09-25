@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
+using System.Text;
 
 namespace PCL.Avalonia.Services.Downloads;
 
@@ -60,6 +61,43 @@ public sealed class HttpDownloadClient : IDownloadClient
             {
                 using var response = await _httpClient
                     .GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+                    .ConfigureAwait(false);
+                response.EnsureSuccessStatusCode();
+                return await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                lastError = ex;
+            }
+        }
+
+        throw lastError ?? new InvalidOperationException("没有可用的下载地址");
+    }
+
+    public async Task<string> PostJsonAsync(
+        IReadOnlyList<string> urls,
+        string json,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(urls);
+        ArgumentException.ThrowIfNullOrWhiteSpace(json);
+        if (urls.Count == 0)
+        {
+            throw new ArgumentException("至少需要一个下载地址", nameof(urls));
+        }
+
+        using var content = new StringContent(json, Encoding.UTF8, "application/json");
+        Exception? lastError = null;
+        foreach (var url in urls)
+        {
+            try
+            {
+                using var response = await _httpClient
+                    .PostAsync(url, content, cancellationToken)
                     .ConfigureAwait(false);
                 response.EnsureSuccessStatusCode();
                 return await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);

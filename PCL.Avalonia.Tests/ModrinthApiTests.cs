@@ -24,6 +24,12 @@ public sealed class ModrinthApiTests
             Urls.AddRange(urls);
             return Task.FromResult(Response);
         }
+
+        public Task<string> PostJsonAsync(
+            IReadOnlyList<string> urls,
+            string json,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
     }
 
     [Fact]

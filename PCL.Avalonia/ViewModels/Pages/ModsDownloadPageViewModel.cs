@@ -7,27 +7,41 @@ using PCL.Avalonia.Services.Mods;
 
 namespace PCL.Avalonia.ViewModels.Pages;
 
+public enum ModDownloadSource
+{
+    Modrinth,
+    CurseForge,
+}
+
 public sealed partial class ModsDownloadPageViewModel : ObservableObject
 {
     private readonly ISettingsService _settingsService;
-    private readonly IModrinthApi _api;
-    private readonly IModsDownloadService _installer;
+    private readonly IModrinthApi _modrinthApi;
+    private readonly ICurseForgeApi _curseForgeApi;
+    private readonly IModsDownloadService _modrinthInstaller;
+    private readonly ICurseForgeDownloadService _curseForgeInstaller;
     private readonly IPlatformService _platform;
     private CancellationTokenSource? _cancellationTokenSource;
 
     public ModsDownloadPageViewModel(
         ISettingsService settingsService,
-        IModrinthApi api,
-        IModsDownloadService installer,
-        IPlatformService platform)
+        IModrinthApi modrinthApi,
+        IModsDownloadService modrinthInstaller,
+        IPlatformService platform,
+        ICurseForgeApi? curseForgeApi = null,
+        ICurseForgeDownloadService? curseForgeInstaller = null)
     {
         _settingsService = settingsService;
-        _api = api;
-        _installer = installer;
+        _modrinthApi = modrinthApi;
+        _curseForgeApi = curseForgeApi ?? new UnavailableCurseForgeApi();
+        _curseForgeInstaller = curseForgeInstaller ?? new UnavailableCurseForgeInstaller();
+        _modrinthInstaller = modrinthInstaller;
         _platform = platform;
     }
 
-    public ObservableCollection<ModProjectItemViewModel> Projects { get; } = [];
+    public ObservableCollection<DownloadProjectItemViewModel> Projects { get; } = [];
+
+    public IReadOnlyList<ModDownloadSource> Sources { get; } = [ModDownloadSource.Modrinth, ModDownloadSource.CurseForge];
 
     public IReadOnlyList<string> GameVersions { get; } =
         ["1.21.4", "1.21", "1.20.1", "1.19.4", "1.18.2", "1.17.1", "1.16.5", "1.12.2"];
@@ -45,6 +59,9 @@ public sealed partial class ModsDownloadPageViewModel : ObservableObject
     private string _loader = "fabric";
 
     [ObservableProperty]
+    private ModDownloadSource _source = ModDownloadSource.Modrinth;
+
+    [ObservableProperty]
     private bool _isBusy;
 
     [ObservableProperty]
@@ -59,6 +76,12 @@ public sealed partial class ModsDownloadPageViewModel : ObservableObject
     [ObservableProperty]
     private double _progressPercent;
 
+    partial void OnSourceChanged(ModDownloadSource value)
+    {
+        Projects.Clear();
+        StatusMessage = "";
+    }
+
     [RelayCommand]
     private async Task SearchAsync()
     {
@@ -71,14 +94,14 @@ public sealed partial class ModsDownloadPageViewModel : ObservableObject
         StatusMessage = "";
         try
         {
-            var results = await _api.SearchProjectsAsync(SearchText, GameVersion, EffectiveLoader);
-            Projects.Clear();
-            foreach (var project in results)
+            if (Source == ModDownloadSource.CurseForge)
             {
-                Projects.Add(new ModProjectItemViewModel(project, InstallAsync));
+                await SearchCurseForgeAsync();
             }
-
-            StatusMessage = $"找到 {Projects.Count} 个 Mod（{GameVersion} / {Loader}）";
+            else
+            {
+                await SearchModrinthAsync();
+            }
         }
         catch (Exception ex)
         {
@@ -91,7 +114,7 @@ public sealed partial class ModsDownloadPageViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task InstallAsync(ModProjectItemViewModel item)
+    private async Task InstallAsync(DownloadProjectItemViewModel item)
     {
         if (IsBusy)
         {
@@ -105,24 +128,15 @@ public sealed partial class ModsDownloadPageViewModel : ObservableObject
         _cancellationTokenSource = new CancellationTokenSource();
         try
         {
-            var versions = await _api.GetVersionsAsync(
-                item.Project.ProjectId,
-                GameVersion,
-                EffectiveLoader,
-                _cancellationTokenSource.Token);
-            var selected = versions
-                .OrderByDescending(version => version.DatePublished ?? DateTimeOffset.MinValue)
-                .FirstOrDefault();
-            if (selected is null)
+            if (item.Source == ModDownloadSource.CurseForge)
             {
-                StatusMessage = "没有适配当前版本的下载";
-                return;
+                await InstallCurseForgeAsync(item);
+            }
+            else
+            {
+                await InstallModrinthAsync(item);
             }
 
-            var settings = _settingsService.Load();
-            var folder = Path.Combine(GetMinecraftFolder(settings), "mods");
-            var progress = new Progress<DownloadProgress>(OnDownloadProgress);
-            await _installer.InstallAsync(selected, folder, progress, _cancellationTokenSource.Token);
             item.IsInstalled = true;
             StatusMessage = $"已安装 {item.Title}";
         }
@@ -149,6 +163,75 @@ public sealed partial class ModsDownloadPageViewModel : ObservableObject
         _cancellationTokenSource?.Cancel();
     }
 
+    private async Task SearchModrinthAsync()
+    {
+        var results = await _modrinthApi.SearchProjectsAsync(
+            SearchText,
+            GameVersion,
+            EffectiveLoader);
+        Projects.Clear();
+        foreach (var project in results)
+        {
+            Projects.Add(DownloadProjectItemViewModel.FromModrinth(project, InstallAsync));
+        }
+
+        StatusMessage = $"找到 {Projects.Count} 个 Mod（Modrinth / {GameVersion} / {Loader}）";
+    }
+
+    private async Task SearchCurseForgeAsync()
+    {
+        var results = await _curseForgeApi.SearchProjectsAsync(SearchText);
+        Projects.Clear();
+        foreach (var project in results)
+        {
+            Projects.Add(DownloadProjectItemViewModel.FromCurseForge(project, InstallAsync));
+        }
+
+        StatusMessage = $"找到 {Projects.Count} 个 Mod（CurseForge / {GameVersion} / {Loader}）";
+    }
+
+    private async Task InstallModrinthAsync(DownloadProjectItemViewModel item)
+    {
+        var versions = await _modrinthApi.GetVersionsAsync(
+            item.ProjectId,
+            GameVersion,
+            EffectiveLoader,
+            _cancellationTokenSource!.Token);
+        var selected = versions
+            .OrderByDescending(version => version.DatePublished ?? DateTimeOffset.MinValue)
+            .FirstOrDefault();
+        if (selected is null)
+        {
+            throw new InvalidOperationException("没有适配当前版本的下载");
+        }
+
+        var settings = _settingsService.Load();
+        var folder = Path.Combine(GetMinecraftFolder(settings), "mods");
+        var progress = new Progress<DownloadProgress>(OnDownloadProgress);
+        await _modrinthInstaller.InstallAsync(selected, folder, progress, _cancellationTokenSource.Token);
+    }
+
+    private async Task InstallCurseForgeAsync(DownloadProjectItemViewModel item)
+    {
+        var files = await _curseForgeApi.GetFilesAsync(
+            int.Parse(item.ProjectId),
+            GameVersion,
+            EffectiveLoader,
+            _cancellationTokenSource!.Token);
+        var selected = files
+            .OrderByDescending(file => file.FileDate ?? DateTimeOffset.MinValue)
+            .FirstOrDefault();
+        if (selected is null)
+        {
+            throw new InvalidOperationException("没有适配当前版本的下载");
+        }
+
+        var settings = _settingsService.Load();
+        var folder = Path.Combine(GetMinecraftFolder(settings), "mods");
+        var progress = new Progress<DownloadProgress>(OnDownloadProgress);
+        await _curseForgeInstaller.InstallAsync(selected, folder, progress, _cancellationTokenSource.Token);
+    }
+
     private string EffectiveLoader => Loader == "any" ? "" : Loader.Trim();
 
     private string GetMinecraftFolder(AppSettings settings)
@@ -170,26 +253,96 @@ public sealed partial class ModsDownloadPageViewModel : ObservableObject
             ProgressText = $"下载中 {value.Received / (1024.0 * 1024.0):F1} MB";
         }
     }
+
+    private sealed class UnavailableCurseForgeApi : ICurseForgeApi
+    {
+        public Task<IReadOnlyList<CurseForgeProject>> SearchProjectsAsync(
+            string query,
+            CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException("CurseForge 服务不可用");
+
+        public Task<IReadOnlyList<CurseForgeModFile>> GetFilesAsync(
+            int projectId,
+            string gameVersion,
+            string loader,
+            CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException("CurseForge 服务不可用");
+    }
+
+    private sealed class UnavailableCurseForgeInstaller : ICurseForgeDownloadService
+    {
+        public Task<string> InstallAsync(
+            CurseForgeModFile file,
+            string modsFolder,
+            IProgress<DownloadProgress>? progress = null,
+            CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException("CurseForge 服务不可用");
+    }
 }
 
-public sealed partial class ModProjectItemViewModel : ObservableObject
+public sealed partial class DownloadProjectItemViewModel : ObservableObject
 {
-    private readonly Func<ModProjectItemViewModel, Task> _install;
+    private readonly Func<DownloadProjectItemViewModel, Task> _install;
 
-    public ModProjectItemViewModel(ModrinthProject project, Func<ModProjectItemViewModel, Task> install)
+    private DownloadProjectItemViewModel(
+        ModDownloadSource source,
+        string projectId,
+        string title,
+        string description,
+        string authorText,
+        string downloadsText,
+        string categoriesText,
+        Func<DownloadProjectItemViewModel, Task> install)
     {
-        Project = project;
-        Title = project.Title;
-        Description = project.Description;
-        AuthorText = string.IsNullOrWhiteSpace(project.Author)
-            ? (string.IsNullOrWhiteSpace(project.Slug) ? project.ProjectId : project.Slug)
-            : project.Author;
-        DownloadsText = FormatDownloads(project.Downloads);
-        CategoriesText = string.Join(" · ", project.Categories);
+        Source = source;
+        ProjectId = projectId;
+        Title = title;
+        Description = description;
+        AuthorText = authorText;
+        DownloadsText = downloadsText;
+        CategoriesText = categoriesText;
         _install = install;
     }
 
-    public ModrinthProject Project { get; }
+    public static DownloadProjectItemViewModel FromModrinth(
+        ModrinthProject project,
+        Func<DownloadProjectItemViewModel, Task> install)
+    {
+        var author = string.IsNullOrWhiteSpace(project.Author)
+            ? (string.IsNullOrWhiteSpace(project.Slug) ? project.ProjectId : project.Slug)
+            : project.Author;
+        return new DownloadProjectItemViewModel(
+            ModDownloadSource.Modrinth,
+            project.ProjectId,
+            project.Title,
+            project.Description,
+            author,
+            FormatDownloads(project.Downloads),
+            string.Join(" · ", project.Categories),
+            install);
+    }
+
+    public static DownloadProjectItemViewModel FromCurseForge(
+        CurseForgeProject project,
+        Func<DownloadProjectItemViewModel, Task> install)
+    {
+        var author = project.Authors.Count > 0
+            ? project.Authors[0].Name
+            : (string.IsNullOrWhiteSpace(project.Slug) ? project.Id.ToString() : project.Slug);
+        return new DownloadProjectItemViewModel(
+            ModDownloadSource.CurseForge,
+            project.Id.ToString(),
+            project.Name,
+            project.Summary,
+            author,
+            FormatDownloads(project.DownloadCount),
+            string.Join(" · ", project.Categories),
+            install);
+    }
+
+    public ModDownloadSource Source { get; }
+
+    public string ProjectId { get; }
 
     public string Title { get; }
 

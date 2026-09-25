@@ -10,4 +10,9 @@ public interface IDownloadClient
     Task<string> GetStringAsync(
         IReadOnlyList<string> urls,
         CancellationToken cancellationToken = default);
+
+    Task<string> PostJsonAsync(
+        IReadOnlyList<string> urls,
+        string json,
+        CancellationToken cancellationToken = default);
 }

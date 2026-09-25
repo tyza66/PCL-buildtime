@@ -139,6 +139,31 @@ public sealed class MainWindowViewModelTests
             => Task.FromResult("");
     }
 
+    private sealed class FakeCurseForgeApi : ICurseForgeApi
+    {
+        public Task<IReadOnlyList<CurseForgeProject>> SearchProjectsAsync(
+            string query,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<CurseForgeProject>>([]);
+
+        public Task<IReadOnlyList<CurseForgeModFile>> GetFilesAsync(
+            int projectId,
+            string gameVersion,
+            string loader,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<CurseForgeModFile>>([]);
+    }
+
+    private sealed class FakeCurseForgeDownloadService : ICurseForgeDownloadService
+    {
+        public Task<string> InstallAsync(
+            CurseForgeModFile file,
+            string modsFolder,
+            IProgress<DownloadProgress>? progress = null,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult("");
+    }
+
     private static (FakeSettingsService Settings, FakeThemeService Theme, MainWindowViewModel ViewModel) CreateViewModel(
         bool useDarkTheme)
     {
@@ -158,7 +183,9 @@ public sealed class MainWindowViewModelTests
             new FakeModsService(),
             new FakeAccountService(),
             new FakeModrinthApi(),
-            new FakeModsDownloadService());
+            new FakeModsDownloadService(),
+            new FakeCurseForgeApi(),
+            new FakeCurseForgeDownloadService());
         return (settings, theme, viewModel);
     }
 
@@ -225,7 +252,9 @@ public sealed class MainWindowViewModelTests
             new FakeModsService(),
             new FakeAccountService(),
             new FakeModrinthApi(),
-            new FakeModsDownloadService());
+            new FakeModsDownloadService(),
+            new FakeCurseForgeApi(),
+            new FakeCurseForgeDownloadService());
 
         viewModel.ToggleThemeCommand.Execute(null);
 
