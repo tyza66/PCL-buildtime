@@ -77,6 +77,59 @@ public sealed class PageClusterLayoutTests
     }
 
     [AvaloniaFact]
+    public void VersionCardsPutTheirNameRowAboveEqualWidthActionRows()
+    {
+        var version = FakeVersion("1.20.1");
+        var viewModel = CreateVersionPageViewModel(new StubVersionCatalogService(version));
+        var view = new VersionPageView { DataContext = viewModel };
+        viewModel.RefreshCommand.Execute(null);
+        var window = Show(view);
+
+        // "选择" only exists on a version card, so the row holding it is that card's first action row.
+        var firstRow = (Grid)window.GetVisualDescendants().OfType<Button>()
+            .First(button => button.Content as string == "选择")
+            .GetVisualParent()!;
+        // firstRow -> StackPanel -> Border: the card root is one level further up.
+        var card = (Border)firstRow.GetVisualParent()!.GetVisualParent()!;
+        var name = card.GetVisualDescendants().OfType<TextBlock>()
+            .First(text => text.Text == version.Id);
+        var stamped = card.GetVisualDescendants().OfType<TextBlock>()
+            .First(text => text.Text == $"{version.Type} · {version.ReleaseTimeText}");
+        var secondRow = (Grid)card.GetVisualDescendants().OfType<Button>()
+            .First(button => button.Content as string == "删除")
+            .GetVisualParent()!;
+
+        // The old card shared one grid line between the info column and the action buttons, which
+        // starved the version id and its release stamp down to a couple of glyphs. The info rows
+        // now own the card's full inner width, with two equal-width action rows below them.
+        var innerWidth = card.Bounds.Width - 20; // 10px of padding on each side
+        Assert.Equal(innerWidth, name.Bounds.Width, 1);
+        Assert.Equal(innerWidth, stamped.Bounds.Width, 1);
+        Assert.True(
+            Top(name, card) + name.Bounds.Height <= Top(firstRow, card) + 1,
+            "the version name shares the row with the action buttons");
+        Assert.True(
+            Top(stamped, card) + stamped.Bounds.Height <= Top(firstRow, card) + 1,
+            "the release stamp shares the row with the action buttons");
+        Assert.True(
+            Top(secondRow, card) >= Top(firstRow, card) + firstRow.Bounds.Height - 1,
+            "the two action rows overlap");
+
+        foreach (var row in new[] { firstRow, secondRow })
+        {
+            var buttons = row.Children.OfType<Button>().ToList();
+            Assert.True(buttons.Count >= 2, "an action row needs at least two buttons");
+            Assert.Single(buttons.Select(button => button.Bounds.Top).Distinct());
+            Assert.Single(buttons.Select(button => button.Bounds.Width).Distinct());
+            Assert.Single(buttons.Select(button => button.Bounds.Height).Distinct());
+            for (var i = 1; i < buttons.Count; i++)
+            {
+                Assert.Equal(6, buttons[i].Bounds.Left - buttons[i - 1].Bounds.Right, 2);
+            }
+        }
+    }
+
+    [AvaloniaFact]
     public void LaunchPageLeftColumnKeepsItsThreeRowsApart()
     {
         var window = Show(new LaunchPageView());
@@ -201,9 +254,12 @@ public sealed class PageClusterLayoutTests
         return window;
     }
 
-    private static VersionPageViewModel CreateVersionPageViewModel() => new(
+    private static VersionPageViewModel CreateVersionPageViewModel()
+        => CreateVersionPageViewModel(new StubVersionCatalogService());
+
+    private static VersionPageViewModel CreateVersionPageViewModel(IVersionCatalogService catalog) => new(
         new StubSettingsService(),
-        new StubVersionCatalogService(),
+        catalog,
         new InstanceClassifier(),
         new SessionState(),
         new StubPlatformService(),
@@ -214,6 +270,14 @@ public sealed class PageClusterLayoutTests
         new StubScriptExporter(),
         new InstancePackExporter(),
         new StubModsService());
+
+    private static MinecraftVersion FakeVersion(string id) => new()
+    {
+        Id = id,
+        Folder = $"/games/mc/versions/{id}",
+        JsonPath = $"/games/mc/versions/{id}/{id}.json",
+        ReleaseTime = new DateTimeOffset(2026, 9, 15, 19, 23, 0, TimeSpan.Zero)
+    };
 
     private sealed class StubSettingsService : ISettingsService
     {
@@ -226,7 +290,11 @@ public sealed class PageClusterLayoutTests
 
     private sealed class StubVersionCatalogService : IVersionCatalogService
     {
-        public IReadOnlyList<MinecraftVersion> Scan(string minecraftFolder) => [];
+        private readonly MinecraftVersion[] _versions;
+
+        public StubVersionCatalogService(params MinecraftVersion[] versions) => _versions = versions;
+
+        public IReadOnlyList<MinecraftVersion> Scan(string minecraftFolder) => _versions;
 
         public MinecraftVersionJson? LoadJson(string minecraftFolder, string id) => null;
     }

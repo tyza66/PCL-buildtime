@@ -901,6 +901,10 @@ public sealed partial class VersionItemViewModel : ObservableObject
 
     public string ReleaseTimeText => Version.ReleaseTimeText;
 
+    public string TypeAndTimeText => string.IsNullOrWhiteSpace(ReleaseTimeText)
+        ? Type
+        : $"{Type} · {ReleaseTimeText}";
+
     public string? InheritsFrom => Version.InheritsFrom;
 
     public string FavoriteButtonText => IsFavorite ? "取消收藏" : "收藏";

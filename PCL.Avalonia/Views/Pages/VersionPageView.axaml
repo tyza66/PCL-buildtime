@@ -50,6 +50,10 @@
             <Setter Property="CornerRadius" Value="6" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
         </Style>
+        <Style Selector="Button.cardaction">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="CornerRadius" Value="6" />
+        </Style>
     </UserControl.Styles>
     <DockPanel Margin="28">
         <Grid
@@ -175,114 +179,108 @@
                     </ListBox>
                 </DockPanel>
             </Border>
-            <Panel>
-                <Border
-                    Grid.Column="1"
-                    Background="{DynamicResource CardBackgroundBrush}"
-                    CornerRadius="8">
-                    <ScrollViewer>
-                        <ItemsControl
-                            ItemsSource="{Binding Groups}"
-                            Margin="10">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="vm:InstanceGroupViewModel">
-                                    <StackPanel Margin="0,0,0,12">
-                                        <TextBlock
-                                            Text="{Binding HeaderText}"
-                                            IsVisible="{Binding IsVisible}"
-                                            FontSize="13"
-                                            FontWeight="SemiBold"
-                                            Margin="2,0,0,4"
-                                            Foreground="{DynamicResource AccentBrush}" />
-                                        <ItemsControl
-                                            ItemsSource="{Binding Items}"
-                                            IsVisible="{Binding IsVisible}">
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate x:DataType="vm:VersionItemViewModel">
-                                                    <Border
-                                                        Margin="0,0,0,6"
-                                                        CornerRadius="6"
-                                                        Background="{DynamicResource PageBackgroundBrush}"
-                                                        Padding="10">
-                                                        <StackPanel Spacing="6">
-                                                            <Grid
-                                                                ColumnDefinitions="*,Auto,Auto,Auto"
-                                                                ColumnSpacing="6">
-                                                                <StackPanel Spacing="2">
-                                                                    <TextBlock
-                                                                        Text="{Binding Id}"
-                                                                        FontSize="13"
-                                                                        FontWeight="SemiBold"
-                                                                        TextTrimming="CharacterEllipsis"
-                                                                        Foreground="{DynamicResource TextPrimaryBrush}" />
-                                                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                                                        <TextBlock
-                                                                            Text="{Binding Type}"
-                                                                            FontSize="10"
-                                                                            Foreground="{DynamicResource TextSecondaryBrush}" />
-                                                                        <TextBlock
-                                                                            Text="{Binding ReleaseTimeText}"
-                                                                            FontSize="10"
-                                                                            Foreground="{DynamicResource TextSecondaryBrush}" />
-                                                                    </StackPanel>
-                                                                </StackPanel>
-                                                                <Button
-                                                                    Grid.Column="1"
-                                                                    Content="{Binding FavoriteButtonText}"
-                                                                    MinWidth="52"
-                                                                    FontSize="11"
-                                                                    Command="{Binding FavoriteCommand}"
-                                                                    Background="{DynamicResource ButtonBackgroundBrush}"
-                                                                    Foreground="{DynamicResource TextPrimaryBrush}" />
-                                                                <Button
-                                                                    Grid.Column="2"
-                                                                    Content="打开"
-                                                                    MinWidth="48"
-                                                                    FontSize="11"
-                                                                    Command="{Binding OpenFolderCommand}"
-                                                                    Background="{DynamicResource ButtonBackgroundBrush}"
-                                                                    Foreground="{DynamicResource TextPrimaryBrush}" />
-                                                                <Button
-                                                                    Grid.Column="3"
-                                                                    Content="选择"
-                                                                    MinWidth="48"
-                                                                    FontSize="11"
-                                                                    Command="{Binding SelectCommand}"
-                                                                    Background="{DynamicResource AccentBrush}"
-                                                                    Foreground="{DynamicResource TextOnAccentBrush}" />
-                                                            </Grid>
-                                                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                                                <Button
-                                                                    Content="{Binding HiddenButtonText}"
-                                                                    MinWidth="64"
-                                                                    FontSize="11"
-                                                                    Command="{Binding HiddenCommand}"
-                                                                    Background="{DynamicResource ButtonBackgroundBrush}"
-                                                                    Foreground="{DynamicResource TextPrimaryBrush}" />
-                                                                <Button
-                                                                    Content="删除"
-                                                                    MinWidth="64"
-                                                                    FontSize="11"
-                                                                    Command="{Binding DeleteCommand}"
-                                                                    Background="{DynamicResource DangerBrush}"
-                                                                    Foreground="{DynamicResource TextOnAccentBrush}" />
-                                                            </StackPanel>
+            <Border
+                Grid.Column="1"
+                Background="{DynamicResource CardBackgroundBrush}"
+                CornerRadius="8">
+                <ScrollViewer>
+                    <ItemsControl
+                        ItemsSource="{Binding Groups}"
+                        Margin="10">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:InstanceGroupViewModel">
+                                <StackPanel Margin="0,0,0,12">
+                                    <TextBlock
+                                        Text="{Binding HeaderText}"
+                                        IsVisible="{Binding IsVisible}"
+                                        FontSize="13"
+                                        FontWeight="SemiBold"
+                                        Margin="2,0,0,4"
+                                        Foreground="{DynamicResource AccentBrush}" />
+                                    <ItemsControl
+                                        ItemsSource="{Binding Items}"
+                                        IsVisible="{Binding IsVisible}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:VersionItemViewModel">
+                                                <Border
+                                                    Margin="0,0,0,6"
+                                                    CornerRadius="6"
+                                                    Background="{DynamicResource PageBackgroundBrush}"
+                                                Padding="10">
+                                                    <StackPanel Spacing="8">
+                                                        <StackPanel Spacing="2">
+                                                            <TextBlock
+                                                                Text="{Binding Id}"
+                                                                FontSize="13"
+                                                                FontWeight="SemiBold"
+                                                                TextTrimming="CharacterEllipsis"
+                                                                Foreground="{DynamicResource TextPrimaryBrush}" />
+                                                            <TextBlock
+                                                                FontSize="10"
+                                                                TextTrimming="CharacterEllipsis"
+                                                                Foreground="{DynamicResource TextSecondaryBrush}"
+                                                                Text="{Binding TypeAndTimeText}" />
                                                         </StackPanel>
-                                                    </Border>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </StackPanel>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
-                </Border>
-                <ctl:EmptyState
-                    IsVisible="{Binding Versions.Count, Converter={StaticResource IsEmptyCount}}"
-                    Title="还没有安装任何版本"
-                    Description="去下载页安装一个版本，或把已有的游戏目录添加到左侧" />
-            </Panel>
+                                                        <Grid ColumnDefinitions="*,*,*" ColumnSpacing="6">
+                                                            <Button
+                                                                Classes="cardaction"
+                                                                Grid.Column="0"
+                                                                Content="{Binding FavoriteButtonText}"
+                                                                FontSize="11"
+                                                                Command="{Binding FavoriteCommand}"
+                                                                Background="{DynamicResource ButtonBackgroundBrush}"
+                                                                Foreground="{DynamicResource TextPrimaryBrush}" />
+                                                            <Button
+                                                                Classes="cardaction"
+                                                                Grid.Column="1"
+                                                                Content="打开"
+                                                                FontSize="11"
+                                                                Command="{Binding OpenFolderCommand}"
+                                                                Background="{DynamicResource ButtonBackgroundBrush}"
+                                                                Foreground="{DynamicResource TextPrimaryBrush}" />
+                                                            <Button
+                                                                Classes="cardaction"
+                                                                Grid.Column="2"
+                                                                Content="选择"
+                                                                FontSize="11"
+                                                                Command="{Binding SelectCommand}"
+                                                                Background="{DynamicResource AccentBrush}"
+                                                                Foreground="{DynamicResource TextOnAccentBrush}" />
+                                                        </Grid>
+                                                        <Grid ColumnDefinitions="*,*" ColumnSpacing="6">
+                                                            <Button
+                                                                Classes="cardaction"
+                                                                Grid.Column="0"
+                                                                Content="{Binding HiddenButtonText}"
+                                                                FontSize="11"
+                                                                Command="{Binding HiddenCommand}"
+                                                                Background="{DynamicResource ButtonBackgroundBrush}"
+                                                                Foreground="{DynamicResource TextPrimaryBrush}" />
+                                                            <Button
+                                                                Classes="cardaction"
+                                                                Grid.Column="1"
+                                                                Content="删除"
+                                                                FontSize="11"
+                                                                Command="{Binding DeleteCommand}"
+                                                                Background="{DynamicResource DangerBrush}"
+                                                                Foreground="{DynamicResource TextOnAccentBrush}" />
+                                                        </Grid>
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Border>
+            <ctl:EmptyState
+                Grid.Column="1"
+                IsVisible="{Binding Versions.Count, Converter={StaticResource IsEmptyCount}}"
+                Title="还没有安装任何版本"
+                Description="去下载页安装一个版本，或把已有的游戏目录添加到左侧" />
             <Border
                 Grid.Column="2"
                 Background="{DynamicResource CardBackgroundBrush}"
