@@ -670,7 +670,8 @@ public sealed class LaunchPageViewModelTests
 
         viewModel.InstalledVersions[0].OpenFolderCommand.Execute(null);
 
-        Assert.Equal(new[] { "/games/mc/versions/1.20.1" }, opener.Opened);
+        // 用 Path.Combine 拼期望值，Windows 上是反斜杠，写死斜杠会让 CI 在 windows-latest 上挂掉。
+        Assert.Equal(new[] { Path.Combine("/games/mc", "versions", "1.20.1") }, opener.Opened);
     }
 
     [Fact]
