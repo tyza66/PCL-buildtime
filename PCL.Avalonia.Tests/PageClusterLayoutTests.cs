@@ -122,11 +122,111 @@ public sealed class PageClusterLayoutTests
             Assert.Single(buttons.Select(button => button.Bounds.Top).Distinct());
             Assert.Single(buttons.Select(button => button.Bounds.Width).Distinct());
             Assert.Single(buttons.Select(button => button.Bounds.Height).Distinct());
+            // A label that wraps onto two lines grows its button, so this keeps them one line tall.
+            Assert.Equal(FormControlHeight, buttons[0].Bounds.Height, 3);
             for (var i = 1; i < buttons.Count; i++)
             {
                 Assert.Equal(6, buttons[i].Bounds.Left - buttons[i - 1].Bounds.Right, 2);
             }
         }
+    }
+
+    [AvaloniaFact]
+    public void VersionPageFolderButtonsSitInTwoRowsWithoutOverlap()
+    {
+        var version = FakeVersion("1.20.1");
+        var viewModel = CreateVersionPageViewModel(new StubVersionCatalogService(version));
+        var view = new VersionPageView { DataContext = viewModel };
+        viewModel.RefreshCommand.Execute(null);
+        var window = Show(view);
+
+        var labels = new[] { "打开版本目录", "打开存档", "打开 Mod 目录", "打开截图" };
+        var buttons = labels
+            .Select(label => window.GetVisualDescendants().OfType<Button>()
+                .First(button => button.Content as string == label))
+            .ToList();
+        var rows = buttons.Select(button => (Grid)button.GetVisualParent()!).Distinct().ToList();
+
+        // The grid used to declare Grid.Row without RowDefinitions, so all four buttons landed on
+        // one line and the later two covered the first two outright.
+        Assert.Single(rows);
+        Assert.Equal(2, rows[0].RowDefinitions.Count);
+        Assert.Single(buttons.Select(button => button.Bounds.Width).Distinct());
+        Assert.Single(buttons.Select(button => button.Bounds.Height).Distinct());
+        Assert.Equal(8, buttons[1].Bounds.Left - buttons[0].Bounds.Right, 2);
+        Assert.Equal(8, buttons[3].Bounds.Left - buttons[2].Bounds.Right, 2);
+        Assert.Equal(buttons[0].Bounds.Top, buttons[1].Bounds.Top, 1);
+        Assert.Equal(buttons[2].Bounds.Top, buttons[3].Bounds.Top, 1);
+        Assert.True(
+            buttons[2].Bounds.Top >= buttons[0].Bounds.Bottom - 1,
+            "the second row of folder buttons overlaps the first");
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void VersionDetailTabsStayInsideTheDetailCardAtNarrowWidths()
+    {
+        // Window width minus the 220px sidebar, 56px of page margins and 24px of column gaps is
+        // what the detail column gets: 1090 is the minimum window, so this is its worst case.
+        foreach (var windowWidth in new[] { 1110d, 1300d, 1420d, 1720d })
+        {
+            var view = new VersionPageView { DataContext = CreateVersionPageViewModel() };
+            var window = new Window { Width = windowWidth, Height = 820, Content = view };
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            window.UpdateLayout();
+            Dispatcher.UIThread.RunJobs();
+
+            var strip = window.GetVisualDescendants().OfType<Grid>()
+                .First(grid => grid.Children.OfType<ToggleButton>().Count() == 4);
+            var segments = strip.Children.OfType<ToggleButton>().ToList();
+            var card = (Border)strip.GetVisualParent()!.GetVisualParent()!;
+
+            // Four labels with fixed widths used to overflow the card at 1090, pushing the last
+            // segment under the card edge; the strip now shares the width evenly instead.
+            foreach (var segment in segments)
+            {
+                var right = segment.TranslatePoint(new Point(segment.Bounds.Width, 0), card)!.Value.X;
+                Assert.True(
+                    right <= card.Bounds.Width + 1,
+                    $"a tab segment runs {right - card.Bounds.Width:0.#}px past the detail card at width {windowWidth}");
+                Assert.True(
+                    segment.Bounds.Width > 0,
+                    $"a tab segment collapsed to nothing at width {windowWidth}");
+            }
+
+            for (var i = 1; i < segments.Count; i++)
+            {
+                Assert.True(
+                    segments[i].Bounds.Left >= segments[i - 1].Bounds.Right,
+                    $"tab segments overlap at width {windowWidth}");
+            }
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public void HiddenVersionGroupsLeaveNoGapInTheList()
+    {
+        var version = FakeVersion("1.20.1");
+        var viewModel = CreateVersionPageViewModel(new StubVersionCatalogService(version));
+        var view = new VersionPageView { DataContext = viewModel };
+        viewModel.RefreshCommand.Execute(null);
+        var window = Show(view);
+
+        var emptyGroups = viewModel.Groups.Where(group => group.Items.Count == 0).ToList();
+        Assert.NotEmpty(emptyGroups);
+
+        foreach (var group in emptyGroups)
+        {
+            var panel = window.GetVisualDescendants().OfType<StackPanel>()
+                .FirstOrDefault(panel => ReferenceEquals(panel.DataContext, group));
+            Assert.True(panel is not null, $"no panel rendered for the empty {group.HeaderText} group");
+            // IsVisible used to sit on the header only, so an empty group kept its 12px margin.
+            Assert.Equal(0, panel!.Bounds.Height, 1);
+            Assert.False(panel.IsVisible);
+        }
+        window.Close();
     }
 
     [AvaloniaFact]

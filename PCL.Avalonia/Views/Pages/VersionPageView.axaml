@@ -11,7 +11,7 @@
         <Style Selector="ToggleButton.tabsegment">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="MinWidth" Value="76" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
             <Setter Property="FontSize" Value="12" />
             <Setter Property="Height" Value="32" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
@@ -139,44 +139,72 @@
                             Background="{DynamicResource ButtonBackgroundBrush}"
                             Foreground="{DynamicResource TextPrimaryBrush}" />
                     </StackPanel>
-                    <ListBox
-                        ItemsSource="{Binding Folders}"
-                        SelectedItem="{Binding SelectedFolder}"
-                        Background="Transparent"
-                        BorderThickness="0">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate x:DataType="vm:FolderItemViewModel">
-                                <Grid
-                                    RowDefinitions="Auto,Auto"
-                                    Margin="12,8">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <TextBlock
-                                            Text="{Binding Name}"
-                                            FontSize="13"
-                                            FontWeight="SemiBold"
-                                            TextTrimming="CharacterEllipsis"
-                                            Foreground="{DynamicResource TextPrimaryBrush}" />
-                                        <Border
-                                            IsVisible="{Binding IsDefault}"
-                                            CornerRadius="4"
-                                            Background="{DynamicResource AccentBrush}"
-                                            Padding="5,1">
+                    <Border
+                        DockPanel.Dock="Top"
+                        Height="1"
+                        Margin="12,0"
+                        Background="{DynamicResource HoverBrush}" />
+                    <Panel>
+                        <ListBox
+                            ItemsSource="{Binding Folders}"
+                            SelectedItem="{Binding SelectedFolder}"
+                            Background="Transparent"
+                            BorderThickness="0">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:FolderItemViewModel">
+                                    <Grid
+                                        RowDefinitions="Auto,Auto"
+                                        Margin="12,8">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
                                             <TextBlock
-                                                Text="默认"
-                                                FontSize="10"
-                                                Foreground="White" />
-                                        </Border>
-                                    </StackPanel>
-                                    <TextBlock
-                                        Grid.Row="1"
-                                        Text="{Binding Path}"
-                                        FontSize="11"
-                                        TextTrimming="CharacterEllipsis"
-                                        Foreground="{DynamicResource TextSecondaryBrush}" />
-                                </Grid>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
+                                                Text="{Binding Name}"
+                                                ToolTip.Tip="{Binding Name}"
+                                                FontSize="13"
+                                                FontWeight="SemiBold"
+                                                TextTrimming="CharacterEllipsis"
+                                                Foreground="{DynamicResource TextPrimaryBrush}" />
+                                            <Border
+                                                IsVisible="{Binding IsDefault}"
+                                                CornerRadius="4"
+                                                Background="{DynamicResource AccentBrush}"
+                                                Padding="5,1">
+                                                <TextBlock
+                                                    Text="默认"
+                                                    FontSize="10"
+                                                    Foreground="White" />
+                                            </Border>
+                                        </StackPanel>
+                                        <TextBlock
+                                            Grid.Row="1"
+                                            Text="{Binding Path}"
+                                            ToolTip.Tip="{Binding Path}"
+                                            FontSize="11"
+                                            TextTrimming="CharacterEllipsis"
+                                            Foreground="{DynamicResource TextSecondaryBrush}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <StackPanel
+                            IsVisible="{Binding Folders.Count, Converter={StaticResource IsEmptyCount}}"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Margin="18"
+                            Spacing="2">
+                            <TextBlock
+                                Text="还没有添加目录"
+                                FontSize="12"
+                                FontWeight="SemiBold"
+                                TextAlignment="Center"
+                                Foreground="{DynamicResource TextPrimaryBrush}" />
+                            <TextBlock
+                                Text="填写上方的路径后点击添加目录"
+                                FontSize="11"
+                                TextAlignment="Center"
+                                TextWrapping="Wrap"
+                                Foreground="{DynamicResource TextSecondaryBrush}" />
+                        </StackPanel>
+                    </Panel>
                 </DockPanel>
             </Border>
             <Border
@@ -189,17 +217,18 @@
                         Margin="10">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:InstanceGroupViewModel">
-                                <StackPanel Margin="0,0,0,12">
+                                <!-- IsVisible goes on the group panel itself: a hidden group must not
+                                     keep its 12px margin as an empty gap in the list. -->
+                                <StackPanel Margin="0,0,0,12" IsVisible="{Binding IsVisible}">
                                     <TextBlock
                                         Text="{Binding HeaderText}"
-                                        IsVisible="{Binding IsVisible}"
                                         FontSize="13"
                                         FontWeight="SemiBold"
                                         Margin="2,0,0,4"
                                         Foreground="{DynamicResource AccentBrush}" />
                                     <ItemsControl
                                         ItemsSource="{Binding Items}"
-                                        IsVisible="{Binding IsVisible}">
+                                        Margin="0,0,0,2">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate x:DataType="vm:VersionItemViewModel">
                                                 <Border
@@ -211,11 +240,13 @@
                                                         <StackPanel Spacing="2">
                                                             <TextBlock
                                                                 Text="{Binding Id}"
+                                                                ToolTip.Tip="{Binding Id}"
                                                                 FontSize="13"
                                                                 FontWeight="SemiBold"
                                                                 TextTrimming="CharacterEllipsis"
                                                                 Foreground="{DynamicResource TextPrimaryBrush}" />
                                                             <TextBlock
+                                                                ToolTip.Tip="{Binding TypeAndTimeText}"
                                                                 FontSize="10"
                                                                 TextTrimming="CharacterEllipsis"
                                                                 Foreground="{DynamicResource TextSecondaryBrush}"
@@ -289,8 +320,7 @@
                     <Grid
                         DockPanel.Dock="Top"
                         Margin="8,8,8,0"
-                        ColumnDefinitions="Auto,Auto,Auto,Auto"
-                        HorizontalAlignment="Left"
+                        ColumnDefinitions="*,*,*,*"
                         ColumnSpacing="4">
                         <ToggleButton
                             Grid.Column="0"
@@ -376,8 +406,10 @@
                                 <Grid
                                     ColumnDefinitions="*,*"
                                     ColumnSpacing="8"
+                                    RowDefinitions="Auto,Auto"
                                     RowSpacing="8">
                                     <Button
+                                        Classes="formaction"
                                         Grid.Row="0"
                                         Grid.Column="0"
                                         Content="打开版本目录"
@@ -385,6 +417,7 @@
                                         Background="{DynamicResource ButtonBackgroundBrush}"
                                         Foreground="{DynamicResource TextPrimaryBrush}" />
                                     <Button
+                                        Classes="formaction"
                                         Grid.Row="0"
                                         Grid.Column="1"
                                         Content="打开存档"
@@ -392,6 +425,7 @@
                                         Background="{DynamicResource ButtonBackgroundBrush}"
                                         Foreground="{DynamicResource TextPrimaryBrush}" />
                                     <Button
+                                        Classes="formaction"
                                         Grid.Row="1"
                                         Grid.Column="0"
                                         Content="打开 Mod 目录"
@@ -399,6 +433,7 @@
                                         Background="{DynamicResource ButtonBackgroundBrush}"
                                         Foreground="{DynamicResource TextPrimaryBrush}" />
                                     <Button
+                                        Classes="formaction"
                                         Grid.Row="1"
                                         Grid.Column="1"
                                         Content="打开截图"
@@ -542,12 +577,14 @@
                                     ColumnSpacing="8"
                                     Margin="0,6,0,0">
                                     <Button
+                                        Classes="formaction"
                                         Grid.Column="0"
                                         Content="保存设置"
                                         Command="{Binding SaveInstanceSettingsCommand}"
                                         Background="{DynamicResource AccentBrush}"
                                         Foreground="{DynamicResource TextOnAccentBrush}" />
                                     <Button
+                                        Classes="formaction"
                                         Grid.Column="1"
                                         Content="重置独立设置"
                                         Command="{Binding ResetInstanceSettingsCommand}"
