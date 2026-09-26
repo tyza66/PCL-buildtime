@@ -3,6 +3,7 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="clr-namespace:PCL.Avalonia.ViewModels.Pages;assembly=PCL2.Avalonia"
+    xmlns:ctl="clr-namespace:PCL.Avalonia.Controls;assembly=PCL2.Avalonia"
     x:DataType="vm:ModsDownloadPageViewModel">
     <DockPanel Margin="32">
         <Grid
@@ -92,6 +93,7 @@
         <Border
             Background="{DynamicResource CardBackgroundBrush}"
             CornerRadius="8">
+            <Panel>
             <ListBox
                 ItemsSource="{Binding Projects}"
                 Background="Transparent"
@@ -149,6 +151,11 @@
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
+            <ctl:EmptyState
+                IsVisible="{Binding Projects.Count, Converter={StaticResource IsEmptyCount}}"
+                Title="没有找到 Mod"
+                Description="调整搜索词、游戏版本或加载器后重试" />
+            </Panel>
         </Border>
     </DockPanel>
 </UserControl>

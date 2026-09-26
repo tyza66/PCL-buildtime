@@ -164,7 +164,7 @@ public sealed class JavaListService : IJavaListService
 
         var version = ParseVersion(versionOutput);
         var architecture = ParseArchitecture(versionOutput);
-        return new JavaInfo(executable, version, architecture, IsValid: true);
+        return new JavaInfo(executable, version, architecture, ParseMajorVersion(version), IsValid: true);
     }
 
     private static string? RunJavaVersion(string executable)
@@ -200,6 +200,24 @@ public sealed class JavaListService : IJavaListService
     {
         var match = System.Text.RegularExpressions.Regex.Match(output, @"version\s+""([^""]+)""");
         return match.Success ? match.Groups[1].Value : output.Trim();
+    }
+
+    // Java 8 用 1.8.0_x，现代版本直接 17.0.x / 21 / 25，这里统一抽“大版本号”供按版本匹配 Java。
+    private static int ParseMajorVersion(string version)
+    {
+        if (string.IsNullOrWhiteSpace(version))
+        {
+            return 0;
+        }
+
+        var cleaned = version.Split('-', '+')[0];
+        var parts = cleaned.Split('.', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 2 && parts[0] == "1" && int.TryParse(parts[1], out var legacyMajor))
+        {
+            return legacyMajor;
+        }
+
+        return parts.Length > 0 && int.TryParse(parts[0], out var major) ? major : 0;
     }
 
     private static string ParseArchitecture(string output)

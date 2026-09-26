@@ -4,6 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="clr-namespace:PCL.Avalonia.ViewModels.Pages;assembly=PCL2.Avalonia"
     xmlns:link="clr-namespace:PCL.Avalonia.Services.Link;assembly=PCL2.Avalonia"
+    xmlns:ctl="clr-namespace:PCL.Avalonia.Controls;assembly=PCL2.Avalonia"
     x:DataType="vm:LinkPageViewModel">
     <ScrollViewer>
         <StackPanel Margin="32" Spacing="14">
@@ -210,6 +211,10 @@
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
+                    <ctl:EmptyState
+                        IsVisible="{Binding Peers.Count, Converter={StaticResource IsEmptyCount}}"
+                        Title="房间里还没有其他玩家"
+                        Description="把房间号发给朋友，他们加入后会显示在这里" />
                 </StackPanel>
             </Border>
         </StackPanel>

@@ -3,6 +3,7 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="clr-namespace:PCL.Avalonia.ViewModels.Pages;assembly=PCL2.Avalonia"
+    xmlns:ctl="clr-namespace:PCL.Avalonia.Controls;assembly=PCL2.Avalonia"
     x:DataType="vm:AccountsPageViewModel">
     <DockPanel Margin="32">
         <Grid
@@ -46,6 +47,7 @@
         <Border
             Background="{DynamicResource CardBackgroundBrush}"
             CornerRadius="8">
+            <Panel>
             <ListBox
                 ItemsSource="{Binding Accounts}"
                 Background="Transparent"
@@ -104,6 +106,11 @@
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
+            <ctl:EmptyState
+                IsVisible="{Binding Accounts.Count, Converter={StaticResource IsEmptyCount}}"
+                Title="还没有账号"
+                Description="添加微软或离线账号后即可启动游戏" />
+            </Panel>
         </Border>
     </DockPanel>
 </UserControl>

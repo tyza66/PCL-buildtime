@@ -80,13 +80,10 @@ public sealed partial class ForgelikeLoaderPageViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void SetMode(bool useNeoForge)
-    {
-        if (useNeoForge != IsNeoForgeMode)
-        {
-            IsNeoForgeMode = useNeoForge;
-        }
-    }
+    private void SelectForge() => IsNeoForgeMode = false;
+
+    [RelayCommand]
+    private void SelectNeoForge() => IsNeoForgeMode = true;
 
     [RelayCommand(CanExecute = nameof(CanInstall))]
     private async Task InstallAsync()

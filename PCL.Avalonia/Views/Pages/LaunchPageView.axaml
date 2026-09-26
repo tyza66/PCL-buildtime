@@ -3,6 +3,7 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="clr-namespace:PCL.Avalonia.ViewModels.Pages;assembly=PCL2.Avalonia"
+    xmlns:ctl="clr-namespace:PCL.Avalonia.Controls;assembly=PCL2.Avalonia"
     x:DataType="vm:LaunchPageViewModel">
     <DockPanel Margin="32">
         <Grid
@@ -16,7 +17,7 @@
                     FontWeight="SemiBold"
                     Foreground="{DynamicResource TextPrimaryBrush}" />
                 <TextBlock
-                    Text="{Binding StatusMessage}"
+                    Text="{Binding VersionStatus}"
                     FontSize="13"
                     TextWrapping="Wrap"
                     Foreground="{DynamicResource TextSecondaryBrush}" />
@@ -25,7 +26,7 @@
                 Grid.Column="1"
                 Orientation="Horizontal"
                 Spacing="8"
-                VerticalAlignment="Top">
+                VerticalAlignment="Bottom">
                 <Button
                     Content="启动游戏"
                     Command="{Binding LaunchCommand}"
@@ -38,18 +39,108 @@
                     Foreground="{DynamicResource TextPrimaryBrush}" />
             </StackPanel>
         </Grid>
-        <Border
-            Background="{DynamicResource CardBackgroundBrush}"
-            CornerRadius="8"
-            Padding="12">
-            <TextBox
-                Text="{Binding LogText}"
-                AcceptsReturn="True"
-                IsReadOnly="True"
-                TextWrapping="Wrap"
-                Background="Transparent"
-                BorderThickness="0"
-                Foreground="{DynamicResource TextPrimaryBrush}" />
-        </Border>
+        <Grid ColumnDefinitions="300,*" ColumnSpacing="12">
+            <DockPanel Grid.Column="0">
+                <Grid
+                    DockPanel.Dock="Top"
+                    ColumnDefinitions="*,Auto"
+                    ColumnSpacing="8"
+                    Margin="0,0,0,10">
+                    <TextBlock
+                        Text="已安装的版本"
+                        FontSize="14"
+                        FontWeight="SemiBold"
+                        VerticalAlignment="Center"
+                        Foreground="{DynamicResource TextPrimaryBrush}" />
+                    <Button
+                        Grid.Column="1"
+                        Content="刷新"
+                        Command="{Binding RefreshInstalledCommand}"
+                        IsEnabled="{Binding !IsRefreshing}"
+                        Background="{DynamicResource ButtonBackgroundBrush}"
+                        Foreground="{DynamicResource TextPrimaryBrush}" />
+                </Grid>
+                <Panel>
+                    <Border
+                        Background="{DynamicResource CardBackgroundBrush}"
+                        CornerRadius="8">
+                        <ListBox
+                            ItemsSource="{Binding InstalledVersions}"
+                            SelectedItem="{Binding SelectedInstalledVersion}"
+                            Background="Transparent"
+                            BorderThickness="0">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:LaunchVersionItemViewModel">
+                                    <Grid Margin="12,9" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                        <StackPanel Spacing="2">
+                                            <TextBlock
+                                                Text="{Binding Id}"
+                                                FontSize="14"
+                                                FontWeight="SemiBold"
+                                                TextTrimming="CharacterEllipsis"
+                                                Foreground="{DynamicResource TextPrimaryBrush}" />
+                                            <TextBlock
+                                                Text="{Binding Subtitle}"
+                                                FontSize="11"
+                                                TextTrimming="CharacterEllipsis"
+                                                Foreground="{DynamicResource TextSecondaryBrush}" />
+                                        </StackPanel>
+                                        <TextBlock
+                                            Grid.Column="1"
+                                            Text="★"
+                                            FontSize="13"
+                                            VerticalAlignment="Center"
+                                            IsVisible="{Binding IsFavorite}"
+                                            Foreground="{DynamicResource AccentBrush}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Border>
+                    <ctl:EmptyState
+                        IsVisible="{Binding InstalledVersions.Count, Converter={StaticResource IsEmptyCount}}"
+                        Title="还没有已安装的版本"
+                        Description="到下载页安装一个版本，或到设置页指定已有的游戏目录" />
+                </Panel>
+                <StackPanel
+                    DockPanel.Dock="Bottom"
+                    Margin="0,10,0,0"
+                    Spacing="8">
+                    <TextBlock
+                        Text="{Binding GameFolderText}"
+                        FontSize="11"
+                        TextWrapping="Wrap"
+                        Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <Button
+                        Content="打开游戏目录"
+                        HorizontalAlignment="Stretch"
+                        Command="{Binding OpenGameFolderCommand}"
+                        Background="{DynamicResource ButtonBackgroundBrush}"
+                        Foreground="{DynamicResource TextPrimaryBrush}" />
+                </StackPanel>
+            </DockPanel>
+            <DockPanel Grid.Column="1">
+                <TextBlock
+                    DockPanel.Dock="Top"
+                    Text="{Binding StatusMessage}"
+                    FontSize="13"
+                    Margin="0,0,0,8"
+                    TextTrimming="CharacterEllipsis"
+                    Foreground="{DynamicResource TextSecondaryBrush}" />
+                <Border
+                    Background="{DynamicResource CardBackgroundBrush}"
+                    CornerRadius="8"
+                    Padding="12">
+                    <TextBox
+                        Text="{Binding LogText}"
+                        AcceptsReturn="True"
+                        IsReadOnly="True"
+                        TextWrapping="Wrap"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Foreground="{DynamicResource TextPrimaryBrush}" />
+                </Border>
+            </DockPanel>
+        </Grid>
     </DockPanel>
 </UserControl>

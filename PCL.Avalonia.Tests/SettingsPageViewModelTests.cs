@@ -44,11 +44,22 @@ public sealed class SettingsPageViewModelTests
         }
     }
 
+    private sealed class NoopDispatcher : IUiDispatcher
+    {
+        public void Post(Action action)
+        {
+        }
+
+        public void Debounce(string key, TimeSpan delay, Action action)
+        {
+        }
+    }
+
     private static SettingsPageViewModel CreateViewModel(
         FakeSettingsService settings,
         FakeThemeService? theme = null)
     {
-        return new SettingsPageViewModel(settings, new FakePlatformService(), theme ?? new FakeThemeService(), new FakeJavaListService());
+        return new SettingsPageViewModel(settings, new FakePlatformService(), theme ?? new FakeThemeService(), new FakeJavaListService(), new NoopDispatcher());
     }
 
     [Fact]

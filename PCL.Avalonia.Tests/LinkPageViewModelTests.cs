@@ -18,6 +18,10 @@ public sealed class LinkPageViewModelTests
     private sealed class FakeDispatcher : IUiDispatcher
     {
         public void Post(Action action) => action();
+
+        public void Debounce(string key, TimeSpan delay, Action action)
+        {
+        }
     }
 
     private sealed class FakeLinkService : ILinkService

@@ -718,6 +718,8 @@ public sealed partial class VersionPageViewModel : ObservableObject
         {
             SelectedItem = visible.FirstOrDefault();
         }
+
+        OnPropertyChanged(nameof(Versions));
     }
 
     private void LoadFolders()

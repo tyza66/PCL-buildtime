@@ -13,4 +13,5 @@ public sealed record JavaInfo(
     string Path,
     string Version,
     string Architecture,
+    int MajorVersion,
     bool IsValid);

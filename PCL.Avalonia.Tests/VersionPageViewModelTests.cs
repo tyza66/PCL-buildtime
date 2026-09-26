@@ -113,6 +113,9 @@ public sealed class VersionPageViewModelTests
     private sealed class FakeJavaService : IJavaService
     {
         public string? ResolveJavaExecutable(AppSettings settings) => settings.JavaPath;
+
+        public string? ResolveJavaExecutable(AppSettings settings, int? requiredMajorVersion)
+            => ResolveJavaExecutable(settings);
     }
 
     private sealed class FakeGameLauncher : IGameLauncher

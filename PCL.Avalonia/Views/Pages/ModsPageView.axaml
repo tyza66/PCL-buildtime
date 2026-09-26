@@ -3,6 +3,7 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="clr-namespace:PCL.Avalonia.ViewModels.Pages;assembly=PCL2.Avalonia"
+    xmlns:ctl="clr-namespace:PCL.Avalonia.Controls;assembly=PCL2.Avalonia"
     x:DataType="vm:ModsPageViewModel">
     <DockPanel Margin="32">
         <Grid
@@ -39,6 +40,7 @@
         <Border
             Background="{DynamicResource CardBackgroundBrush}"
             CornerRadius="8">
+            <Panel>
             <ListBox
                 ItemsSource="{Binding Mods}"
                 Background="Transparent"
@@ -89,6 +91,11 @@
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
+            <ctl:EmptyState
+                IsVisible="{Binding Mods.Count, Converter={StaticResource IsEmptyCount}}"
+                Title="这个实例没有 Mod"
+                Description="选择左侧实例后点击刷新，或去 Mod 下载页安装" />
+            </Panel>
         </Border>
     </DockPanel>
 </UserControl>

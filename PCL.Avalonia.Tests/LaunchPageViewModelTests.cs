@@ -1,6 +1,7 @@
 using PCL.Avalonia.Services;
 using PCL.Avalonia.Services.Accounts;
 using PCL.Avalonia.Services.Minecraft;
+using PCL.Avalonia.Services.Platform;
 using PCL.Avalonia.ViewModels.Pages;
 
 namespace PCL.Avalonia.Tests;
@@ -18,7 +19,15 @@ public sealed class LaunchPageViewModelTests
 
     private sealed class FakeJavaService : IJavaService
     {
+        public int? LastRequiredMajor { get; private set; }
+
         public string? ResolveJavaExecutable(AppSettings settings) => "/games/java";
+
+        public string? ResolveJavaExecutable(AppSettings settings, int? requiredMajorVersion)
+        {
+            LastRequiredMajor = requiredMajorVersion;
+            return "/games/java";
+        }
     }
 
     private sealed class FakeGameLaunch : IGameLaunch
@@ -198,6 +207,40 @@ public sealed class LaunchPageViewModelTests
             PostCount++;
             action();
         }
+
+        public void Debounce(string key, TimeSpan delay, Action action)
+        {
+        }
+    }
+
+    private sealed class FakeVersionCatalog : IVersionCatalogService
+    {
+        public int? MajorVersion { get; init; } = 17;
+
+        public IReadOnlyList<MinecraftVersion> Scan(string minecraftFolder) => [];
+
+        public MinecraftVersionJson? LoadJson(string minecraftFolder, string id)
+            => new()
+            {
+                Id = id,
+                JavaVersion = MajorVersion is null
+                    ? null
+                    : new JavaVersionJson { Component = "java-runtime-delta", MajorVersion = MajorVersion },
+            };
+    }
+
+    private sealed class FakePlatform : IPlatformService
+    {
+        public string GetConfigDirectory() => "/cfg";
+
+        public string GetDefaultMinecraftFolder() => "/default/.minecraft";
+    }
+
+    private sealed class FakeFolderOpener : IFolderOpener
+    {
+        public List<string> Opened { get; } = [];
+
+        public void Open(string path) => Opened.Add(path);
     }
 
     private static MinecraftVersion SelectedVersion(string id = "1.20.1")
@@ -213,16 +256,21 @@ public sealed class LaunchPageViewModelTests
         SessionState session,
         SyncDispatcher dispatcher,
         FakeMicrosoftAuthenticationService? microsoft = null,
-        FakeAccountService? accounts = null)
+        FakeAccountService? accounts = null,
+        FakeJavaService? java = null,
+        FakeVersionCatalog? versionCatalog = null)
         => new(
             new FakeSettingsService(),
-            new FakeJavaService(),
+            java ?? new FakeJavaService(),
             launcher,
             session,
             dispatcher,
             microsoft ?? new FakeMicrosoftAuthenticationService(),
             accounts ?? new FakeAccountService(),
-            new FakeVersionManager());
+            new FakeVersionManager(),
+            versionCatalog ?? new FakeVersionCatalog(),
+            new FakePlatform(),
+            new FakeFolderOpener());
 
     [Fact]
     public async Task LaunchAsync_StartsGameAndTracksExit()
@@ -351,5 +399,41 @@ public sealed class LaunchPageViewModelTests
 
         Assert.Equal(0, launcher.LaunchCount);
         Assert.Contains("重新登录", viewModel.StatusMessage);
+    }
+
+    [Fact]
+    public async Task LaunchAsync_PassesRequiredJavaMajorFromVersionJson()
+    {
+        var launcher = new FakeLauncher();
+        var java = new FakeJavaService();
+        var viewModel = CreateViewModel(
+            launcher,
+            new SessionState { SelectedVersion = SelectedVersion() },
+            new SyncDispatcher(),
+            java: java,
+            versionCatalog: new FakeVersionCatalog { MajorVersion = 25 });
+
+        await viewModel.LaunchCommand.ExecuteAsync(null);
+
+        Assert.Equal(25, java.LastRequiredMajor);
+        Assert.Equal(1, launcher.LaunchCount);
+    }
+
+    [Fact]
+    public async Task LaunchAsync_WhenVersionJsonHasNoJavaVersion_ResolvesWithoutRequiredMajor()
+    {
+        var launcher = new FakeLauncher();
+        var java = new FakeJavaService();
+        var viewModel = CreateViewModel(
+            launcher,
+            new SessionState { SelectedVersion = SelectedVersion() },
+            new SyncDispatcher(),
+            java: java,
+            versionCatalog: new FakeVersionCatalog { MajorVersion = null });
+
+        await viewModel.LaunchCommand.ExecuteAsync(null);
+
+        Assert.Null(java.LastRequiredMajor);
+        Assert.Equal(1, launcher.LaunchCount);
     }
 }

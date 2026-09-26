@@ -20,6 +20,9 @@ public sealed class JavaForgelikeInstallRunnerTests
 
         public string? ResolveJavaExecutable(AppSettings settings)
             => string.IsNullOrWhiteSpace(settings.JavaPath) ? Java : settings.JavaPath;
+
+        public string? ResolveJavaExecutable(AppSettings settings, int? requiredMajorVersion)
+            => ResolveJavaExecutable(settings);
     }
 
     private sealed class RecordingLauncher

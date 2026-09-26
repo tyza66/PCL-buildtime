@@ -10,16 +10,19 @@ public sealed partial class SettingsPageViewModel : ObservableObject
     private readonly ISettingsService _settingsService;
     private readonly IThemeService _themeService;
     private readonly IJavaListService _javaListService;
+    private readonly IUiDispatcher _dispatcher;
 
     public SettingsPageViewModel(
         ISettingsService settingsService,
         IPlatformService platformService,
         IThemeService themeService,
-        IJavaListService javaListService)
+        IJavaListService javaListService,
+        IUiDispatcher dispatcher)
     {
         _settingsService = settingsService;
         _themeService = themeService;
         _javaListService = javaListService;
+        _dispatcher = dispatcher;
         var settings = settingsService.Load();
         MinecraftFolder = string.IsNullOrWhiteSpace(settings.MinecraftFolder)
             ? platformService.GetDefaultMinecraftFolder()
@@ -36,8 +39,15 @@ public sealed partial class SettingsPageViewModel : ObservableObject
         OptimizeMemoryBeforeLaunch = settings.OptimizeMemoryBeforeLaunch;
         LinkLatencyMode = LinkLatencyModes.First(option => option.Mode == settings.LinkLatencyMode);
         LinkCustomPeer = settings.LinkCustomPeer;
+        _lastSaved = Snapshot();
         RefreshJavaList();
     }
+
+    /// <summary>
+    /// 设置改动必须立刻落盘：以前只有点“保存设置”才写文件，用户改完游戏目录直接去启动，
+    /// 读到的还是空目录，于是误报“未设置游戏目录”。
+    /// </summary>
+    private AppSettings _lastSaved;
 
     public IReadOnlyList<SettingsSectionOption> Sections { get; } =
     [
@@ -154,8 +164,18 @@ public sealed partial class SettingsPageViewModel : ObservableObject
     [RelayCommand]
     private void Save()
     {
+        _lastSaved = Snapshot();
+        Commit(_lastSaved);
+        StatusMessage = "设置已保存";
+    }
+
+    /// <summary>
+    /// 把当前界面值按与“保存设置”一致的收敛规则打成一条 AppSettings，自动落盘和手动保存都从这里出。
+    /// </summary>
+    private AppSettings Snapshot()
+    {
         var current = _settingsService.Load();
-        _settingsService.Save(current with
+        return current with
         {
             MinecraftFolder = MinecraftFolder.Trim(),
             JavaPath = JavaPath.Trim(),
@@ -170,9 +190,44 @@ public sealed partial class SettingsPageViewModel : ObservableObject
             OptimizeMemoryBeforeLaunch = OptimizeMemoryBeforeLaunch,
             LinkLatencyMode = LinkLatencyMode.Mode,
             LinkCustomPeer = LinkCustomPeer.Trim(),
+        };
+    }
+
+    private void Commit(AppSettings settings)
+    {
+        _settingsService.Save(settings);
+        _themeService.Apply(settings.UseDarkTheme);
+    }
+
+    // 每个要持久化的字段改动都走防抖自动落盘：用户改完即生效，不再依赖点“保存设置”。
+    partial void OnMinecraftFolderChanged(string value) => ScheduleAutoSave();
+    partial void OnJavaPathChanged(string value) => ScheduleAutoSave();
+    partial void OnUserNameChanged(string value) => ScheduleAutoSave();
+    partial void OnMaxMemoryMbChanged(int value) => ScheduleAutoSave();
+    partial void OnDownloadSourceChanged(DownloadSourceOption value) => ScheduleAutoSave();
+    partial void OnJvmArgumentsChanged(string value) => ScheduleAutoSave();
+    partial void OnGameArgumentsChanged(string value) => ScheduleAutoSave();
+    partial void OnUseDarkThemeChanged(bool value) => ScheduleAutoSave();
+    partial void OnDownloadThreadsChanged(int value) => ScheduleAutoSave();
+    partial void OnDownloadSpeedLimitKbpsChanged(int value) => ScheduleAutoSave();
+    partial void OnOptimizeMemoryBeforeLaunchChanged(bool value) => ScheduleAutoSave();
+    partial void OnLinkLatencyModeChanged(LinkLatencyModeOption value) => ScheduleAutoSave();
+    partial void OnLinkCustomPeerChanged(string value) => ScheduleAutoSave();
+
+    private void ScheduleAutoSave()
+    {
+        // 记一份已落盘快照，值没实质变化就不重复写盘；防抖避免每敲一个字都保存一次。
+        _dispatcher.Debounce("settings-autosave", TimeSpan.FromMilliseconds(400), () =>
+        {
+            var snapshot = Snapshot();
+            if (snapshot == _lastSaved)
+            {
+                return;
+            }
+
+            _lastSaved = snapshot;
+            Commit(snapshot);
         });
-        _themeService.Apply(UseDarkTheme);
-        StatusMessage = "设置已保存";
     }
 }
 

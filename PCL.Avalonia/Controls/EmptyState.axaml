@@ -1,0 +1,43 @@
+<UserControl
+    x:Class="PCL.Avalonia.Controls.EmptyState"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    x:Name="Root">
+    <Border
+        Background="{DynamicResource CardBackgroundBrush}"
+        CornerRadius="8">
+        <StackPanel
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            MaxWidth="380"
+            Margin="24"
+            Spacing="6">
+            <Panel Width="44" Height="44" Margin="0,0,0,8">
+                <Ellipse
+                    Stroke="{DynamicResource TextSecondaryBrush}"
+                    StrokeThickness="1.5"
+                    Opacity="0.5" />
+                <Path
+                    Stroke="{DynamicResource TextSecondaryBrush}"
+                    StrokeThickness="1.5"
+                    StrokeLineCap="Round"
+                    Data="M15 12h-6l-2 3h-4l-2-3H2 M5.5 5.2 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.8A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.7 1.2z"
+                    Width="24"
+                    Height="24"
+                    Stretch="Uniform" />
+            </Panel>
+            <TextBlock
+                Text="{Binding Title, ElementName=Root}"
+                FontSize="15"
+                FontWeight="SemiBold"
+                TextAlignment="Center"
+                Foreground="{DynamicResource TextPrimaryBrush}" />
+            <TextBlock
+                Text="{Binding Description, ElementName=Root}"
+                FontSize="13"
+                TextWrapping="Wrap"
+                TextAlignment="Center"
+                Foreground="{DynamicResource TextSecondaryBrush}" />
+        </StackPanel>
+    </Border>
+</UserControl>

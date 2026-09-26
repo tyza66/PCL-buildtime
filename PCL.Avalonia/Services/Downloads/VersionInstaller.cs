@@ -233,7 +233,11 @@ public sealed class VersionInstaller : IVersionInstaller
         CancellationToken cancellationToken)
     {
         var total = libraries.Count;
-        progress?.Report(new InstallProgress(InstallStage.Libraries, null, 0, total, 0, null));
+        if (total > 0)
+        {
+            progress?.Report(new InstallProgress(InstallStage.Libraries, null, 0, total, 0, null));
+        }
+
         var completed = 0;
         await Parallel.ForEachAsync(
             libraries,
@@ -264,7 +268,13 @@ public sealed class VersionInstaller : IVersionInstaller
                         library.Name,
                         library.ExpectedSize,
                         library.ExpectedSha1);
-                    await DownloadFileAsync(request, InstallStage.Libraries, progress, token).ConfigureAwait(false);
+                    await DownloadFileAsync(
+                        request,
+                        InstallStage.Libraries,
+                        progress,
+                        token,
+                        Volatile.Read(ref completed),
+                        total).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -375,7 +385,11 @@ public sealed class VersionInstaller : IVersionInstaller
             .Select(pair => new AssetDownloadEntry(pair.Key, pair.Value.Hash!, pair.Value.Size))
             .ToList();
         var total = objects.Count;
-        progress?.Report(new InstallProgress(InstallStage.Assets, null, 0, total, 0, null));
+        if (total > 0)
+        {
+            progress?.Report(new InstallProgress(InstallStage.Assets, null, 0, total, 0, null));
+        }
+
         var completed = 0;
         await Parallel.ForEachAsync(
             objects,
@@ -408,7 +422,13 @@ public sealed class VersionInstaller : IVersionInstaller
                     asset.Name,
                     asset.Size,
                     asset.Hash);
-                await DownloadFileAsync(request, InstallStage.Assets, progress, token).ConfigureAwait(false);
+                await DownloadFileAsync(
+                    request,
+                    InstallStage.Assets,
+                    progress,
+                    token,
+                    Volatile.Read(ref completed),
+                    total).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -436,11 +456,16 @@ public sealed class VersionInstaller : IVersionInstaller
         progress?.Report(new InstallProgress(stage, itemName, completedItems, totalItems, 0, null));
     }
 
+    /// <summary>
+    /// 单文件下载的字节级进度必须带上外层计数，否则下载资源时会闪一下 0/0。
+    /// </summary>
     private async Task DownloadFileAsync(
         DownloadRequest request,
         InstallStage stage,
         IProgress<InstallProgress>? progress,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        int completedItems = 0,
+        int totalItems = 0)
     {
         IProgress<DownloadProgress>? downloadProgress = progress is null
             ? null
@@ -449,8 +474,8 @@ public sealed class VersionInstaller : IVersionInstaller
                 progress.Report(new InstallProgress(
                     stage,
                     request.Name,
-                    0,
-                    0,
+                    completedItems,
+                    totalItems,
                     value.Received,
                     value.TotalLength));
             });

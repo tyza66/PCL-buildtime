@@ -3,6 +3,7 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="clr-namespace:PCL.Avalonia.ViewModels.Pages;assembly=PCL2.Avalonia"
+    xmlns:ctl="clr-namespace:PCL.Avalonia.Controls;assembly=PCL2.Avalonia"
     x:DataType="vm:ForgelikeLoaderPageViewModel">
     <DockPanel Margin="32">
         <Grid
@@ -46,18 +47,26 @@
             Orientation="Horizontal"
             Spacing="8"
             Margin="0,0,0,14">
+            <StackPanel.Styles>
+                <Style Selector="Button.mode">
+                    <Setter Property="Background" Value="{DynamicResource ButtonBackgroundBrush}" />
+                    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                </Style>
+                <Style Selector="Button.mode.active">
+                    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+                    <Setter Property="Foreground" Value="{DynamicResource TextOnAccentBrush}" />
+                </Style>
+            </StackPanel.Styles>
             <Button
                 Content="Forge"
-                Command="{Binding SetModeCommand}"
-                CommandParameter="False"
-                Background="{DynamicResource ButtonBackgroundBrush}"
-                Foreground="{DynamicResource TextPrimaryBrush}" />
+                Command="{Binding SelectForgeCommand}"
+                Classes="mode"
+                Classes.active="{Binding IsForgeMode}" />
             <Button
                 Content="NeoForge"
-                Command="{Binding SetModeCommand}"
-                CommandParameter="True"
-                Background="{DynamicResource ButtonBackgroundBrush}"
-                Foreground="{DynamicResource TextPrimaryBrush}" />
+                Command="{Binding SelectNeoForgeCommand}"
+                Classes="mode"
+                Classes.active="{Binding IsNeoForgeMode}" />
             <TextBlock
                 VerticalAlignment="Center"
                 Text="{Binding ModeTitle}"
@@ -88,41 +97,47 @@
                 Maximum="100"
                 Value="{Binding ProgressPercent}" />
         </StackPanel>
-        <Border
-            Background="{DynamicResource CardBackgroundBrush}"
-            CornerRadius="8">
-            <ListBox
-                ItemsSource="{Binding Versions}"
-                SelectedItem="{Binding SelectedLoader}"
-                Background="Transparent"
-                BorderThickness="0">
-                <ListBox.ItemTemplate>
-                    <DataTemplate x:DataType="vm:ForgelikeLoaderVersionItemViewModel">
-                        <StackPanel Margin="14,10" Spacing="3">
-                            <StackPanel Orientation="Horizontal" Spacing="12">
-                                <TextBlock
-                                    Text="{Binding VersionText}"
-                                    FontSize="15"
-                                    FontWeight="SemiBold"
-                                    Foreground="{DynamicResource TextPrimaryBrush}" />
-                                <TextBlock
-                                    Text="{Binding MinecraftVersionText}"
-                                    FontSize="13"
-                                    Foreground="{DynamicResource TextSecondaryBrush}" />
-                                <TextBlock
-                                    Text="{Binding StabilityText}"
-                                    FontSize="13"
-                                    FontWeight="SemiBold"
-                                    Foreground="{DynamicResource AccentBrush}" />
-                                <TextBlock
-                                    Text="{Binding CategoryText}"
-                                    FontSize="12"
-                                    Foreground="{DynamicResource TextSecondaryBrush}" />
+        <Panel>
+            <Border
+                Background="{DynamicResource CardBackgroundBrush}"
+                CornerRadius="8">
+                <ListBox
+                    ItemsSource="{Binding Versions}"
+                    SelectedItem="{Binding SelectedLoader}"
+                    Background="Transparent"
+                    BorderThickness="0">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ForgelikeLoaderVersionItemViewModel">
+                            <StackPanel Margin="14,10" Spacing="3">
+                                <StackPanel Orientation="Horizontal" Spacing="12">
+                                    <TextBlock
+                                        Text="{Binding VersionText}"
+                                        FontSize="15"
+                                        FontWeight="SemiBold"
+                                        Foreground="{DynamicResource TextPrimaryBrush}" />
+                                    <TextBlock
+                                        Text="{Binding MinecraftVersionText}"
+                                        FontSize="13"
+                                        Foreground="{DynamicResource TextSecondaryBrush}" />
+                                    <TextBlock
+                                        Text="{Binding StabilityText}"
+                                        FontSize="13"
+                                        FontWeight="SemiBold"
+                                        Foreground="{DynamicResource AccentBrush}" />
+                                    <TextBlock
+                                        Text="{Binding CategoryText}"
+                                        FontSize="12"
+                                        Foreground="{DynamicResource TextSecondaryBrush}" />
+                                </StackPanel>
                             </StackPanel>
-                        </StackPanel>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
-        </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Border>
+            <ctl:EmptyState
+                IsVisible="{Binding Versions.Count, Converter={StaticResource IsEmptyCount}}"
+                Title="还没有加载器版本"
+                Description="填写游戏版本，选择 Forge 或 NeoForge 后点击刷新" />
+        </Panel>
     </DockPanel>
 </UserControl>

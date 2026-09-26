@@ -3,6 +3,7 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="clr-namespace:PCL.Avalonia.ViewModels.Pages;assembly=PCL2.Avalonia"
+    xmlns:ctl="clr-namespace:PCL.Avalonia.Controls;assembly=PCL2.Avalonia"
     x:DataType="vm:ResourceDownloadPageViewModel">
     <DockPanel Margin="32">
         <Grid
@@ -108,6 +109,7 @@
         <Border
             Background="{DynamicResource CardBackgroundBrush}"
             CornerRadius="8">
+            <Panel>
             <ListBox
                 ItemsSource="{Binding Projects}"
                 Background="Transparent"
@@ -166,6 +168,11 @@
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
+            <ctl:EmptyState
+                IsVisible="{Binding Projects.Count, Converter={StaticResource IsEmptyCount}}"
+                Title="没有找到资源"
+                Description="输入关键词后点击搜索，或调整来源与版本筛选" />
+            </Panel>
         </Border>
     </DockPanel>
 </UserControl>

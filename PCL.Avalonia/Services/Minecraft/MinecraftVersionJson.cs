@@ -46,6 +46,18 @@ public sealed class MinecraftVersionJson
 
     [JsonPropertyName("downloads")]
     public VersionDownloadsJson? Downloads { get; set; }
+
+    [JsonPropertyName("javaVersion")]
+    public JavaVersionJson? JavaVersion { get; set; }
+}
+
+public sealed class JavaVersionJson
+{
+    [JsonPropertyName("component")]
+    public string? Component { get; set; }
+
+    [JsonPropertyName("majorVersion")]
+    public int? MajorVersion { get; set; }
 }
 
 public sealed class VersionPatchJson

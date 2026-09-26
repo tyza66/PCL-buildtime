@@ -13,7 +13,7 @@ namespace PCL.Avalonia.Tests;
 
 public sealed class MainWindowViewModelTests
 {
-    private sealed class FakeSettingsService : ISettingsService
+    internal sealed class FakeSettingsService : ISettingsService
     {
         public AppSettings Settings { get; set; } = new();
         public int SaveCount { get; private set; }
@@ -27,28 +27,28 @@ public sealed class MainWindowViewModelTests
         }
     }
 
-    private sealed class FakeThemeService : IThemeService
+    internal sealed class FakeThemeService : IThemeService
     {
         public bool? LastAppliedTheme { get; private set; }
 
         public void Apply(bool useDarkTheme) => LastAppliedTheme = useDarkTheme;
     }
 
-    private sealed class FakePlatformService : IPlatformService
+    internal sealed class FakePlatformService : IPlatformService
     {
         public string GetConfigDirectory() => Path.GetTempPath();
 
         public string GetDefaultMinecraftFolder() => Path.Combine(Path.GetTempPath(), ".minecraft");
     }
 
-    private sealed class FakeVersionCatalogService : IVersionCatalogService
+    internal sealed class FakeVersionCatalogService : IVersionCatalogService
     {
         public IReadOnlyList<MinecraftVersion> Scan(string minecraftFolder) => [];
 
         public MinecraftVersionJson? LoadJson(string minecraftFolder, string id) => null;
     }
 
-    private sealed class FakeGameLauncher : IGameLauncher
+    internal sealed class FakeGameLauncher : IGameLauncher
     {
         public LaunchPlan BuildLaunchPlan(
             MinecraftVersion version,
@@ -62,12 +62,15 @@ public sealed class MainWindowViewModelTests
             => throw new NotSupportedException();
     }
 
-    private sealed class FakeJavaService : IJavaService
+    internal sealed class FakeJavaService : IJavaService
     {
         public string? ResolveJavaExecutable(AppSettings settings) => settings.JavaPath;
+
+        public string? ResolveJavaExecutable(AppSettings settings, int? requiredMajorVersion)
+            => ResolveJavaExecutable(settings);
     }
 
-    private sealed class FakeManifestService : IVersionManifestService
+    internal sealed class FakeManifestService : IVersionManifestService
     {
         public Task<VersionManifest> GetManifestAsync(
             DownloadSource source,
@@ -75,7 +78,7 @@ public sealed class MainWindowViewModelTests
             => Task.FromResult(new VersionManifest());
     }
 
-    private sealed class FakeInstaller : IVersionInstaller
+    internal sealed class FakeInstaller : IVersionInstaller
     {
         public Task<VersionInstallResult> InstallAsync(
             string versionId,
@@ -87,7 +90,7 @@ public sealed class MainWindowViewModelTests
             => Task.FromResult(new VersionInstallResult(versionId, []));
     }
 
-    private sealed class FakeModsService : IModsService
+    internal sealed class FakeModsService : IModsService
     {
         public IReadOnlyList<ModInfo> Scan(string minecraftFolder) => [];
 
@@ -98,12 +101,16 @@ public sealed class MainWindowViewModelTests
         }
     }
 
-    private sealed class FakeDispatcher : IUiDispatcher
+    internal sealed class FakeDispatcher : IUiDispatcher
     {
         public void Post(Action action) => action();
+
+        public void Debounce(string key, TimeSpan delay, Action action)
+        {
+        }
     }
 
-    private sealed class FakeAccountService : IAccountService
+    internal sealed class FakeAccountService : IAccountService
     {
         public IReadOnlyList<Account> Load() => [];
 
@@ -129,7 +136,7 @@ public sealed class MainWindowViewModelTests
         public Account? GetDefaultAccount() => null;
     }
 
-    private sealed class FakeMicrosoftAuthenticationService : IMicrosoftAuthenticationService
+    internal sealed class FakeMicrosoftAuthenticationService : IMicrosoftAuthenticationService
     {
         public Task<MicrosoftAccountSession> LoginAsync(
             IProgress<string>? progress = null,
@@ -149,7 +156,7 @@ public sealed class MainWindowViewModelTests
             => Task.FromResult<MicrosoftAccountSession?>(null);
     }
 
-    private sealed class FakeModrinthApi : IModrinthApi
+    internal sealed class FakeModrinthApi : IModrinthApi
     {
         public Task<ModrinthSearchPage> SearchProjectsAsync(
             string query,
@@ -170,7 +177,7 @@ public sealed class MainWindowViewModelTests
             => Task.FromResult<IReadOnlyList<ModrinthProjectVersion>>([]);
     }
 
-    private sealed class FakeResourceSearchService : IResourceSearchService
+    internal sealed class FakeResourceSearchService : IResourceSearchService
     {
         public Task<ResourceSearchResult> SearchAsync(
             ResourceType type,
@@ -184,7 +191,7 @@ public sealed class MainWindowViewModelTests
             => Task.FromResult(new ResourceSearchResult([], 0));
     }
 
-    private sealed class FakeResourceDownloadService : IResourceDownloadService
+    internal sealed class FakeResourceDownloadService : IResourceDownloadService
     {
         public Task<string> InstallAsync(
             ResourceType type,
@@ -195,7 +202,7 @@ public sealed class MainWindowViewModelTests
             => Task.FromResult("");
     }
 
-    private sealed class FakeModsDownloadService : IModsDownloadService
+    internal sealed class FakeModsDownloadService : IModsDownloadService
     {
         public Task<string> InstallAsync(
             ModrinthProjectVersion version,
@@ -205,7 +212,7 @@ public sealed class MainWindowViewModelTests
             => Task.FromResult("");
     }
 
-    private sealed class FakeCurseForgeApi : ICurseForgeApi
+    internal sealed class FakeCurseForgeApi : ICurseForgeApi
     {
         public Task<CurseForgeSearchPage> SearchProjectsAsync(
             string query,
@@ -238,7 +245,7 @@ public sealed class MainWindowViewModelTests
             => Task.FromResult<CurseForgeModFile?>(null);
     }
 
-    private sealed class FakeCurseForgeDownloadService : ICurseForgeDownloadService
+    internal sealed class FakeCurseForgeDownloadService : ICurseForgeDownloadService
     {
         public Task<string> InstallAsync(
             CurseForgeModFile file,
@@ -248,7 +255,7 @@ public sealed class MainWindowViewModelTests
             => Task.FromResult("");
     }
 
-    private sealed class FakeCurseForgeModpackService : ICurseForgeModpackService
+    internal sealed class FakeCurseForgeModpackService : ICurseForgeModpackService
     {
         public Task<IReadOnlyList<CurseForgeProject>> SearchAsync(
             string query,
@@ -264,7 +271,7 @@ public sealed class MainWindowViewModelTests
             => Task.FromResult("");
     }
 
-    private sealed class FakeModpackInstaller : IModpackInstallerService
+    internal sealed class FakeModpackInstaller : IModpackInstallerService
     {
         public Task<ModpackInstallResult> InstallAsync(
             string modpackZipPath,
@@ -275,7 +282,7 @@ public sealed class MainWindowViewModelTests
             => Task.FromResult(new ModpackInstallResult("pack", "1.20.1", [], []));
     }
 
-    private sealed class FakeFabricLoaderService : IFabricLoaderService
+    internal sealed class FakeFabricLoaderService : IFabricLoaderService
     {
         public Task<IReadOnlyList<FabricLoaderVersion>> GetVersionsAsync(
             string gameVersion,
@@ -292,7 +299,7 @@ public sealed class MainWindowViewModelTests
             => Task.FromResult(new FabricInstallResult("fabric-loader", gameVersion, loaderVersion, []));
     }
 
-    private sealed class FakeForgelikeLoaderService : IForgelikeLoaderService
+    internal sealed class FakeForgelikeLoaderService : IForgelikeLoaderService
     {
         public Task<IReadOnlyList<ForgelikeLoaderVersion>> GetForgeVersionsAsync(
             string gameVersion,
@@ -316,7 +323,7 @@ public sealed class MainWindowViewModelTests
             []));
     }
 
-    private sealed class FakeVersionManager : IVersionManagerService
+    internal sealed class FakeVersionManager : IVersionManagerService
     {
         public VersionSettings LoadSettings(string minecraftFolder, string versionId)
             => new();
@@ -354,19 +361,19 @@ public sealed class MainWindowViewModelTests
         }
     }
 
-    private sealed class FakeFolderOpener : IFolderOpener
+    internal sealed class FakeFolderOpener : IFolderOpener
     {
         public void Open(string path)
         {
         }
     }
 
-    private sealed class FakeScriptExporter : ILaunchScriptExporter
+    internal sealed class FakeScriptExporter : ILaunchScriptExporter
     {
         public string Export(LaunchPlan plan, string filePath) => filePath;
     }
 
-    private sealed class FakeInstanceClassifier : IInstanceClassifier
+    internal sealed class FakeInstanceClassifier : IInstanceClassifier
     {
         public IReadOnlyDictionary<InstanceGroup, IReadOnlyList<VersionInstance>> Group(
             IEnumerable<VersionInstance> instances,
@@ -383,7 +390,7 @@ public sealed class MainWindowViewModelTests
             };
     }
 
-    private sealed class FakeInstancePackExporter : IInstancePackExporter
+    internal sealed class FakeInstancePackExporter : IInstancePackExporter
     {
         public string Export(
             string minecraftFolder,
@@ -393,7 +400,7 @@ public sealed class MainWindowViewModelTests
             => outputPath;
     }
 
-    private sealed class FakeOtherToolsService : IOtherToolsService
+    internal sealed class FakeOtherToolsService : IOtherToolsService
     {
         public OtherEnvironmentInfo GetEnvironmentInfo(string minecraftFolder, string configDirectory)
             => new("1.0.0", ".NET 8.0", "TestOS", minecraftFolder, configDirectory);
@@ -403,7 +410,7 @@ public sealed class MainWindowViewModelTests
         public GarbageReport CleanGarbage(IReadOnlyList<string> roots) => new(0, 0);
     }
 
-    private sealed class FakeLinkService : ILinkService
+    internal sealed class FakeLinkService : ILinkService
     {
         public LinkState State => LinkState.Waiting;
 
@@ -464,7 +471,7 @@ public sealed class MainWindowViewModelTests
         }
     }
 
-    private static (FakeSettingsService Settings, FakeThemeService Theme, MainWindowViewModel ViewModel) CreateViewModel(
+    internal static (FakeSettingsService Settings, FakeThemeService Theme, MainWindowViewModel ViewModel) CreateViewModel(
         bool useDarkTheme)
     {
         var settings = new FakeSettingsService { Settings = new AppSettings { UseDarkTheme = useDarkTheme } };

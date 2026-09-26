@@ -98,7 +98,7 @@
             </Grid>
         </Border>
         <Border Background="{DynamicResource PageBackgroundBrush}">
-            <ContentControl Content="{Binding CurrentPage}" />
+            <ContentControl x:Name="PageHost" Content="{Binding CurrentPage}" />
         </Border>
     </DockPanel>
 </Window>

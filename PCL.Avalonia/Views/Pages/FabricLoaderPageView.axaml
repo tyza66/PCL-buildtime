@@ -3,6 +3,7 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="clr-namespace:PCL.Avalonia.ViewModels.Pages;assembly=PCL2.Avalonia"
+    xmlns:ctl="clr-namespace:PCL.Avalonia.Controls;assembly=PCL2.Avalonia"
     x:DataType="vm:FabricLoaderPageViewModel">
     <DockPanel Margin="32">
         <Grid
@@ -63,41 +64,47 @@
                 Maximum="100"
                 Value="{Binding ProgressPercent}" />
         </StackPanel>
-        <Border
-            Background="{DynamicResource CardBackgroundBrush}"
-            CornerRadius="8">
-            <ListBox
-                ItemsSource="{Binding Versions}"
-                SelectedItem="{Binding SelectedLoader}"
-                Background="Transparent"
-                BorderThickness="0">
-                <ListBox.ItemTemplate>
-                    <DataTemplate x:DataType="vm:FabricLoaderVersionItemViewModel">
-                        <StackPanel Margin="14,10" Spacing="3">
-                            <StackPanel Orientation="Horizontal" Spacing="12">
+        <Panel>
+            <Border
+                Background="{DynamicResource CardBackgroundBrush}"
+                CornerRadius="8">
+                <ListBox
+                    ItemsSource="{Binding Versions}"
+                    SelectedItem="{Binding SelectedLoader}"
+                    Background="Transparent"
+                    BorderThickness="0">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:FabricLoaderVersionItemViewModel">
+                            <StackPanel Margin="14,10" Spacing="3">
+                                <StackPanel Orientation="Horizontal" Spacing="12">
+                                    <TextBlock
+                                        Text="{Binding VersionText}"
+                                        FontSize="15"
+                                        FontWeight="SemiBold"
+                                        Foreground="{DynamicResource TextPrimaryBrush}" />
+                                    <TextBlock
+                                        Text="{Binding MinecraftVersionText}"
+                                        FontSize="13"
+                                        Foreground="{DynamicResource TextSecondaryBrush}" />
+                                    <TextBlock
+                                        Text="{Binding StabilityText}"
+                                        FontSize="13"
+                                        FontWeight="SemiBold"
+                                        Foreground="{DynamicResource AccentBrush}" />
+                                </StackPanel>
                                 <TextBlock
-                                    Text="{Binding VersionText}"
-                                    FontSize="15"
-                                    FontWeight="SemiBold"
-                                    Foreground="{DynamicResource TextPrimaryBrush}" />
-                                <TextBlock
-                                    Text="{Binding MinecraftVersionText}"
-                                    FontSize="13"
+                                    Text="{Binding JavaText}"
+                                    FontSize="12"
                                     Foreground="{DynamicResource TextSecondaryBrush}" />
-                                <TextBlock
-                                    Text="{Binding StabilityText}"
-                                    FontSize="13"
-                                    FontWeight="SemiBold"
-                                    Foreground="{DynamicResource AccentBrush}" />
                             </StackPanel>
-                            <TextBlock
-                                Text="{Binding JavaText}"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextSecondaryBrush}" />
-                        </StackPanel>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
-        </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Border>
+            <ctl:EmptyState
+                IsVisible="{Binding Versions.Count, Converter={StaticResource IsEmptyCount}}"
+                Title="还没有加载器版本"
+                Description="填写游戏版本，然后点击刷新获取列表" />
+        </Panel>
     </DockPanel>
 </UserControl>
