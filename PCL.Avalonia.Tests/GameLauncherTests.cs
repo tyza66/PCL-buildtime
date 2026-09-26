@@ -422,4 +422,96 @@ public sealed class GameLauncherTests : IDisposable
 
         Assert.Contains("UUID", exception.Message);
     }
+
+    [Fact]
+    public void BuildLaunchPlan_WithoutGameFolder_TellsTheUserWhereToSetIt()
+    {
+        var version = FindForgeVersion();
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            new GameLauncher(_catalog).BuildLaunchPlan(
+                version,
+                new AppSettings { MinecraftFolder = "" },
+                _javaPath));
+
+        Assert.Contains("未设置游戏目录", exception.Message);
+        // 报错不说去哪里设置，用户只能盯着一句空文件夹干瞪眼。
+        Assert.Contains("版本页", exception.Message);
+        Assert.Contains("设置页", exception.Message);
+    }
+
+    [Fact]
+    public void BuildLaunchPlan_MissingMainClass_SuggestsARedownload()
+    {
+        var brokenFolder = Path.Combine(_minecraftFolder, "versions", "broken");
+        Directory.CreateDirectory(brokenFolder);
+        File.WriteAllText(
+            Path.Combine(brokenFolder, "broken.json"),
+            "{\"id\":\"broken\",\"type\":\"release\"}");
+        var version = _catalog.Scan(_minecraftFolder).Single(item => item.Id == "broken");
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            new GameLauncher(_catalog).BuildLaunchPlan(
+                version,
+                new AppSettings { MinecraftFolder = _minecraftFolder },
+                _javaPath));
+
+        Assert.Contains("mainClass", exception.Message);
+        Assert.Contains("重新下载", exception.Message);
+    }
+
+    [Fact]
+    public void BuildLaunchPlan_MissingAssetIndex_SuggestsCompletingTheDownload()
+    {
+        File.Delete(Path.Combine(_minecraftFolder, "assets", "indexes", "1.20.json"));
+        var version = FindForgeVersion();
+
+        var exception = Assert.Throws<FileNotFoundException>(() =>
+            new GameLauncher(_catalog).BuildLaunchPlan(
+                version,
+                new AppSettings { MinecraftFolder = _minecraftFolder },
+                _javaPath));
+
+        Assert.Contains("资源索引", exception.Message);
+        Assert.Contains("重新", exception.Message);
+    }
+
+    [Fact]
+    public void BuildLaunchPlan_MissingMainJar_SuggestsARedownload()
+    {
+        File.Delete(Path.Combine(_minecraftFolder, "versions", "1.20.1", "1.20.1.jar"));
+        var version = FindForgeVersion();
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            new GameLauncher(_catalog).BuildLaunchPlan(
+                version,
+                new AppSettings { MinecraftFolder = _minecraftFolder },
+                _javaPath));
+
+        Assert.Contains("缺少主 JAR", exception.Message);
+        Assert.Contains("重新下载", exception.Message);
+    }
+
+    [Fact]
+    public void Launch_WithMissingJavaExecutable_SpellsOutHowToInstallJava()
+    {
+        var plan = new LaunchPlan
+        {
+            JavaExecutable = Path.Combine(_minecraftFolder, "no-such-java"),
+            WorkingDirectory = _minecraftFolder,
+            NativesDirectory = _minecraftFolder,
+            ClassPath = _javaPath,
+            MainClass = "net.minecraft.client.main.Main",
+            Arguments = [],
+            Version = FindForgeVersion(),
+        };
+
+        var exception = Assert.Throws<FileNotFoundException>(() =>
+            new GameLauncher(_catalog).Launch(plan));
+
+        Assert.Contains("未找到 Java 可执行文件", exception.Message);
+        // macOS 上没装 Java 是最常见的启动失败，直接把安装命令写在报错里。
+        Assert.Contains("brew install openjdk", exception.Message);
+        Assert.Contains("设置页", exception.Message);
+    }
 }

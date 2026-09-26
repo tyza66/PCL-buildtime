@@ -219,6 +219,7 @@ public sealed class PageClusterLayoutTests
         {
             DataContext = CreateLaunchPageViewModel(
                 "/jdk25/bin/java",
+                catalog: null,
                 new JavaInfo("/jdk25/bin/java", "25.0.1", "aarch64", 25, true))
         };
         var window = Show(view);
@@ -230,6 +231,63 @@ public sealed class PageClusterLayoutTests
         Assert.Equal(ThemeBrush("TextSecondaryBrush"), status.Foreground);
         Assert.Contains("25.0.1", status.Text!);
         Assert.Contains("aarch64", status.Text!);
+    }
+
+    [AvaloniaFact]
+    public async Task InstalledVersionListOpensAChineseContextMenu()
+    {
+        var version = FakeVersion("1.20.1");
+        // 走真实的构造刷新，别在窗口 Show 之后再往列表里塞项——异步刷新会把它清掉。
+        var viewModel = CreateLaunchPageViewModel(javaPath: null, new StubVersionCatalogService(version));
+        var view = new LaunchPageView { DataContext = viewModel };
+        var window = Show(view);
+        for (var i = 0; i < 200 && viewModel.InstalledVersions.Count == 0; i++)
+        {
+            Dispatcher.UIThread.RunJobs();
+            await Task.Delay(10);
+        }
+
+        Assert.Single(viewModel.InstalledVersions);
+
+        var item = window.GetVisualDescendants().OfType<ListBoxItem>().Single();
+        // Flyout 挂在模板根 Grid 上，没打开时不在可视树里，只能顺着 ContextFlyout 属性摸过去。
+        var flyout = item.GetVisualDescendants().OfType<Grid>()
+            .Select(grid => grid.ContextFlyout)
+            .OfType<MenuFlyout>()
+            .Single();
+
+        // 模板根 Grid 必须是可命中的：右键落在卡片留白里也要能弹菜单。
+        var flyoutOwner = item.GetVisualDescendants().OfType<Grid>()
+            .Single(grid => grid.ContextFlyout is MenuFlyout);
+        Assert.NotNull(flyoutOwner.Background);
+        Assert.Equal(new Thickness(0), flyoutOwner.Margin);
+        // 12,9 的内边距改挂到子容器上，行高不变，但 Grid 自己铺满整行，右键处处都能弹菜单。
+        Assert.Equal(new Thickness(12, 9), flyoutOwner.GetVisualDescendants().OfType<StackPanel>().First().Margin);
+        Assert.Equal(item.Bounds.Height, flyoutOwner.Bounds.Height);
+        Assert.Equal(item.Bounds.Width, flyoutOwner.Bounds.Width);
+
+        // 真机上右键弹出时 Popup 会把 DataContext 接到版本实例上，测试里手动给菜单项补上，绑定才能求值。
+        foreach (var menu in flyout.Items.OfType<MenuItem>())
+        {
+            menu.DataContext = item.DataContext;
+        }
+
+        Dispatcher.UIThread.RunJobs();
+        var boundHeaders = flyout.Items.OfType<MenuItem>().Select(menu => menu.Header?.ToString()).ToList();
+        Assert.Equal(new[] { "选择该版本", "收藏", "打开版本文件夹", "删除版本" }, boundHeaders);
+        Assert.Contains(flyout.Items, entry => entry is Separator);
+
+        // 每条菜单都要接到这个实例自己的命令上，右键才点得动；英文占位说明绑定断了。
+        foreach (var menu in flyout.Items.OfType<MenuItem>())
+        {
+            Assert.NotNull(menu.Command);
+        }
+
+        // 收藏项文案跟着实例状态换：现在是「收藏」，收藏过就应该变「取消收藏」。
+        var favoriteMenu = flyout.Items.OfType<MenuItem>().ElementAt(1);
+        viewModel.InstalledVersions[0].IsFavorite = true;
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal("取消收藏", favoriteMenu.Header?.ToString());
     }
 
     private static double Top(Visual visual, Visual reference)
@@ -329,7 +387,10 @@ public sealed class PageClusterLayoutTests
         ReleaseTime = new DateTimeOffset(2026, 9, 15, 19, 23, 0, TimeSpan.Zero)
     };
 
-    private static LaunchPageViewModel CreateLaunchPageViewModel(string? javaPath, params JavaInfo[] java) => new(
+    private static LaunchPageViewModel CreateLaunchPageViewModel(
+        string? javaPath,
+        IVersionCatalogService? catalog = null,
+        params JavaInfo[] java) => new(
         new StubSettingsService(javaPath),
         // 没装 Java 时解析结果也要是空，设置页的路径和扫描列表两条路都堵上。
         new StubJavaService(javaPath),
@@ -339,7 +400,7 @@ public sealed class PageClusterLayoutTests
         new StubMicrosoftAuthentication(),
         new StubAccountService(),
         new StubVersionManagerService(),
-        new StubVersionCatalogService(),
+        catalog ?? new StubVersionCatalogService(),
         new StubPlatformService(),
         new StubFolderOpener(),
         new StubJavaListService(java));

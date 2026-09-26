@@ -188,10 +188,14 @@ public sealed class LaunchPageViewModelTests
 
     private sealed class FakeVersionManager : IVersionManagerService
     {
+        public List<(string Folder, string Id, bool IsFavorite)> Favorites { get; } = [];
+        public List<(string Folder, string Id)> Deleted { get; } = [];
+
         public VersionSettings LoadSettings(string minecraftFolder, string versionId) => new();
 
         public void SetFavorite(string minecraftFolder, string versionId, bool isFavorite)
         {
+            Favorites.Add((minecraftFolder, versionId, isFavorite));
         }
 
         public void SetHidden(string minecraftFolder, string versionId, bool isHidden)
@@ -220,6 +224,7 @@ public sealed class LaunchPageViewModelTests
 
         public void Delete(string minecraftFolder, string versionId)
         {
+            Deleted.Add((minecraftFolder, versionId));
         }
     }
 
@@ -240,9 +245,13 @@ public sealed class LaunchPageViewModelTests
 
     private sealed class FakeVersionCatalog : IVersionCatalogService
     {
+        private readonly MinecraftVersion[] _scan;
+
         public int? MajorVersion { get; init; } = 17;
 
-        public IReadOnlyList<MinecraftVersion> Scan(string minecraftFolder) => [];
+        public FakeVersionCatalog(params MinecraftVersion[] scan) => _scan = scan;
+
+        public IReadOnlyList<MinecraftVersion> Scan(string minecraftFolder) => _scan;
 
         public MinecraftVersionJson? LoadJson(string minecraftFolder, string id)
             => new()
@@ -284,7 +293,9 @@ public sealed class LaunchPageViewModelTests
         FakeAccountService? accounts = null,
         FakeJavaService? java = null,
         FakeVersionCatalog? versionCatalog = null,
-        FakeJavaListService? javaList = null)
+        FakeJavaListService? javaList = null,
+        FakeVersionManager? versionManager = null,
+        FakeFolderOpener? folderOpener = null)
         => new(
             new FakeSettingsService(),
             java ?? new FakeJavaService(),
@@ -293,11 +304,20 @@ public sealed class LaunchPageViewModelTests
             dispatcher,
             microsoft ?? new FakeMicrosoftAuthenticationService(),
             accounts ?? new FakeAccountService(),
-            new FakeVersionManager(),
+            versionManager ?? new FakeVersionManager(),
             versionCatalog ?? new FakeVersionCatalog(),
             new FakePlatform(),
-            new FakeFolderOpener(),
+            folderOpener ?? new FakeFolderOpener(),
             javaList ?? new FakeJavaListService(new JavaInfo("/games/java", "17.0.9", "x64", 17, true)));
+
+    /// <summary>启动页构造时会异步扫一遍已安装版本，测试里等到列表刷出来再断言。</summary>
+    private static async Task WaitForInstalledVersions(LaunchPageViewModel viewModel, int expected)
+    {
+        for (var i = 0; i < 200 && viewModel.InstalledVersions.Count < expected; i++)
+        {
+            await Task.Delay(10);
+        }
+    }
 
     [Fact]
     public async Task LaunchAsync_StartsGameAndTracksExit()
@@ -566,5 +586,109 @@ public sealed class LaunchPageViewModelTests
         Assert.Contains("使用 Java：/games/java", viewModel.LogText);
         Assert.Contains("启动失败：", viewModel.StatusMessage);
         Assert.Contains("下载源", viewModel.StatusMessage);
+    }
+
+    [Fact]
+    public async Task ContextMenuFavoriteCommand_PersistsTheNewStateAndUpdatesTheStar()
+    {
+        var versionManager = new FakeVersionManager();
+        var viewModel = CreateViewModel(
+            new FakeLauncher(),
+            new SessionState(),
+            new SyncDispatcher(),
+            versionCatalog: new FakeVersionCatalog(SelectedVersion("1.20.1")),
+            versionManager: versionManager);
+        await WaitForInstalledVersions(viewModel, 1);
+
+        var item = viewModel.InstalledVersions.Single();
+        Assert.False(item.IsFavorite);
+        Assert.Equal("收藏", item.FavoriteText);
+
+        item.FavoriteCommand.Execute(null);
+
+        Assert.True(item.IsFavorite);
+        Assert.Equal("取消收藏", item.FavoriteText);
+        Assert.Contains(("/games/mc", "1.20.1", true), versionManager.Favorites);
+        Assert.Contains("已收藏 1.20.1", viewModel.VersionStatus);
+    }
+
+    [Fact]
+    public async Task ContextMenuDeleteCommand_RemovesTheItemAndMovesSelectionForward()
+    {
+        var versionManager = new FakeVersionManager();
+        var viewModel = CreateViewModel(
+            new FakeLauncher(),
+            new SessionState(),
+            new SyncDispatcher(),
+            versionCatalog: new FakeVersionCatalog(SelectedVersion("1.20.1"), SelectedVersion("1.20.2")),
+            versionManager: versionManager);
+        await WaitForInstalledVersions(viewModel, 2);
+
+        var removed = viewModel.InstalledVersions[0];
+        viewModel.SelectedInstalledVersion = removed;
+
+        removed.DeleteCommand.Execute(null);
+
+        Assert.Contains(("/games/mc", "1.20.1"), versionManager.Deleted);
+        Assert.DoesNotContain(removed, viewModel.InstalledVersions);
+        Assert.Equal("1.20.2", viewModel.SelectedInstalledVersion?.Id);
+        Assert.Equal("1.20.2", viewModel.SelectedVersion?.Id);
+    }
+
+    [Fact]
+    public async Task ContextMenuDeleteCommand_OnTheLastVersion_ClearsTheSelection()
+    {
+        var viewModel = CreateViewModel(
+            new FakeLauncher(),
+            new SessionState(),
+            new SyncDispatcher(),
+            versionCatalog: new FakeVersionCatalog(SelectedVersion("1.20.1")));
+        await WaitForInstalledVersions(viewModel, 1);
+
+        viewModel.SelectedInstalledVersion = viewModel.InstalledVersions[0];
+        Assert.NotNull(viewModel.SelectedVersion);
+
+        viewModel.InstalledVersions[0].DeleteCommand.Execute(null);
+
+        Assert.Empty(viewModel.InstalledVersions);
+        Assert.Null(viewModel.SelectedInstalledVersion);
+        // 删完不能留着指向已删除版本的启动目标，否则启动按钮立刻又报未设置。
+        Assert.Null(viewModel.SelectedVersion);
+    }
+
+    [Fact]
+    public async Task ContextMenuOpenFolderCommand_OpensThatVersionFolder()
+    {
+        var opener = new FakeFolderOpener();
+        var viewModel = CreateViewModel(
+            new FakeLauncher(),
+            new SessionState(),
+            new SyncDispatcher(),
+            versionCatalog: new FakeVersionCatalog(SelectedVersion("1.20.1")),
+            folderOpener: opener);
+        await WaitForInstalledVersions(viewModel, 1);
+
+        viewModel.InstalledVersions[0].OpenFolderCommand.Execute(null);
+
+        Assert.Equal(new[] { "/games/mc/versions/1.20.1" }, opener.Opened);
+    }
+
+    [Fact]
+    public async Task ContextMenuSelectCommand_SwitchesTheLaunchTarget()
+    {
+        var viewModel = CreateViewModel(
+            new FakeLauncher(),
+            new SessionState(),
+            new SyncDispatcher(),
+            versionCatalog: new FakeVersionCatalog(SelectedVersion("1.20.1"), SelectedVersion("1.20.2")));
+        await WaitForInstalledVersions(viewModel, 2);
+
+        var second = viewModel.InstalledVersions[1];
+        Assert.NotEqual(second, viewModel.SelectedInstalledVersion);
+
+        second.SelectItemCommand.Execute(null);
+
+        Assert.Equal(second, viewModel.SelectedInstalledVersion);
+        Assert.Equal("1.20.2", viewModel.SelectedVersion?.Id);
     }
 }

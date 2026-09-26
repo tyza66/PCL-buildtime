@@ -35,7 +35,8 @@ public sealed class GameLauncher : IGameLauncher
         settings = PCL.Avalonia.Services.LaunchSettingsMerger.Merge(settings, versionSettings);
         if (string.IsNullOrWhiteSpace(settings.MinecraftFolder))
         {
-            throw new InvalidOperationException("未设置游戏目录");
+            throw new InvalidOperationException(
+                "未设置游戏目录。可尝试：到版本页左侧「添加目录」选择游戏目录，或在设置页修改默认游戏目录");
         }
 
         if (settings.OptimizeMemoryBeforeLaunch)
@@ -55,27 +56,31 @@ public sealed class GameLauncher : IGameLauncher
         var mainClass = chain
             .Select(json => json.MainClass)
             .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))
-            ?? throw new InvalidOperationException("版本 JSON 中未找到 mainClass");
+            ?? throw new InvalidOperationException(
+                "版本 JSON 中未找到 mainClass，该版本可能下载不完整。可尝试：删除这个版本后到下载页重新下载安装");
 
         var libraries = ResolveLibraries(chain, librariesRoot);
         var mainJar = Path.Combine(rootFolder, (root.Jar ?? rootId) + ".jar");
         var assetsIndexPath = Path.Combine(assetsRoot, "indexes", assetsIndexName + ".json");
         if (!File.Exists(assetsIndexPath))
         {
-            throw new FileNotFoundException("缺少资源索引文件", assetsIndexPath);
+            throw new FileNotFoundException(
+                "缺少资源索引文件，游戏资源不完整。可尝试：重新执行该版本的下载安装补全资源文件", assetsIndexPath);
         }
 
         foreach (var library in libraries)
         {
             if (!File.Exists(library.Path))
             {
-                throw new InvalidOperationException($"缺少游戏库：{library.Path}");
+                throw new InvalidOperationException(
+                    $"缺少游戏库：{library.Path}。可尝试：重新下载该版本补全文件，或删除后到下载页重新安装");
             }
         }
 
         if (!File.Exists(mainJar))
         {
-            throw new InvalidOperationException($"缺少主 JAR：{mainJar}");
+            throw new InvalidOperationException(
+                $"缺少主 JAR：{mainJar}，版本文件不完整。可尝试：删除该版本后到下载页重新下载安装");
         }
 
         var classPathEntries = libraries
@@ -162,7 +167,11 @@ public sealed class GameLauncher : IGameLauncher
         ArgumentNullException.ThrowIfNull(plan);
         if (!File.Exists(plan.JavaExecutable))
         {
-            throw new FileNotFoundException("未找到 Java 可执行文件", plan.JavaExecutable);
+            throw new FileNotFoundException(
+                $"未找到 Java 可执行文件：{plan.JavaExecutable}。"
+                + "可尝试：macOS 在终端执行 brew install openjdk 安装；Windows 访问 adoptium.net 下载安装；"
+                + "装好后到设置页扫描或手动指定 Java 路径",
+                plan.JavaExecutable);
         }
 
         var startInfo = new ProcessStartInfo
@@ -180,7 +189,9 @@ public sealed class GameLauncher : IGameLauncher
         }
 
         var process = Process.Start(startInfo)
-            ?? throw new InvalidOperationException("Java 进程启动失败");
+            ?? throw new InvalidOperationException(
+                "Java 进程启动失败。可尝试：在设置页更换其他版本的 Java、调低启动内存后重试，"
+                + "或查看运行日志里 Java 的具体报错");
         if (output is not null)
         {
             _ = Task.Run(() => ForwardLines(process.StandardOutput, output));

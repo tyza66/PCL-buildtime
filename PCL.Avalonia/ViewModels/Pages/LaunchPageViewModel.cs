@@ -161,7 +161,12 @@ public sealed partial class LaunchPageViewModel : ObservableObject, IPageActivat
 
                         versions.Add(new LaunchVersionItemViewModel(
                             version,
-                            _versionManager.LoadSettings(folder, version.Id)));
+                            _versionManager.LoadSettings(folder, version.Id),
+                            folder,
+                            ToggleLaunchItemFavorite,
+                            SelectLaunchItem,
+                            OpenLaunchItemFolder,
+                            DeleteLaunchItem));
                     }
                 }
 
@@ -224,6 +229,73 @@ public sealed partial class LaunchPageViewModel : ObservableObject, IPageActivat
         catch (Exception ex)
         {
             VersionStatus = "打开目录失败：" + ErrorMessageFormatter.Describe(ex);
+        }
+    }
+
+    /// <summary>右键菜单「选择该版本」：右键不改变选中项，没点中时用这个把启动目标切过去。</summary>
+    private void SelectLaunchItem(LaunchVersionItemViewModel item)
+    {
+        SelectedInstalledVersion = item;
+    }
+
+    /// <summary>右键菜单「收藏/取消收藏」：立刻写盘，星标和菜单文案同步变化。</summary>
+    private void ToggleLaunchItemFavorite(LaunchVersionItemViewModel item)
+    {
+        try
+        {
+            var target = !item.IsFavorite;
+            _versionManager.SetFavorite(item.SourceFolder, item.Id, target);
+            item.IsFavorite = target;
+            VersionStatus = target
+                ? $"已收藏 {item.Id}"
+                : $"已取消收藏 {item.Id}";
+        }
+        catch (Exception ex)
+        {
+            VersionStatus = "收藏操作失败：" + ErrorMessageFormatter.Describe(ex);
+        }
+    }
+
+    /// <summary>右键菜单「打开版本文件夹」：直接开到 versions/&lt;id&gt;，找存档和 jar 都靠它。</summary>
+    private void OpenLaunchItemFolder(LaunchVersionItemViewModel item)
+    {
+        try
+        {
+            _folderOpener.Open(Path.Combine(item.SourceFolder, "versions", item.Id));
+        }
+        catch (Exception ex)
+        {
+            VersionStatus = "打开目录失败：" + ErrorMessageFormatter.Describe(ex);
+        }
+    }
+
+    /// <summary>
+    /// 右键菜单「删除版本」：删掉后如果删的就是当前启动目标，自动落到列表第一项，
+    /// 免得启动按钮还指着已经没了的版本。
+    /// </summary>
+    private void DeleteLaunchItem(LaunchVersionItemViewModel item)
+    {
+        try
+        {
+            _versionManager.Delete(item.SourceFolder, item.Id);
+            InstalledVersions.Remove(item);
+            if (ReferenceEquals(SelectedInstalledVersion, item))
+            {
+                // 删的就是当前启动目标时先清空再落到列表第一项；列表空了就留空，
+                // 别再让启动按钮指向一个已经不在磁盘上的版本。
+                SelectedInstalledVersion = InstalledVersions.FirstOrDefault();
+                if (SelectedInstalledVersion is null)
+                {
+                    SelectedVersion = null;
+                    _session.SelectedVersion = null;
+                }
+            }
+
+            VersionStatus = $"已删除 {item.Id}";
+        }
+        catch (Exception ex)
+        {
+            VersionStatus = "删除版本失败：" + ErrorMessageFormatter.Describe(ex);
         }
     }
 
@@ -492,9 +564,21 @@ public sealed partial class LaunchPageViewModel : ObservableObject, IPageActivat
 
 public sealed partial class LaunchVersionItemViewModel : ObservableObject
 {
-    public LaunchVersionItemViewModel(MinecraftVersion version, VersionSettings settings)
+    /// <summary>
+    /// 启动页右侧列表项。右键菜单的四个操作由启动页注入：这里只负责把意图转给上层，
+    /// 具体落盘（收藏、删除）或打开文件夹都由启动页统一处理，状态提示也走它的 VersionStatus。
+    /// </summary>
+    public LaunchVersionItemViewModel(
+        MinecraftVersion version,
+        VersionSettings settings,
+        string sourceFolder,
+        Action<LaunchVersionItemViewModel>? toggleFavorite = null,
+        Action<LaunchVersionItemViewModel>? select = null,
+        Action<LaunchVersionItemViewModel>? openFolder = null,
+        Action<LaunchVersionItemViewModel>? delete = null)
     {
         Version = version;
+        SourceFolder = sourceFolder;
         Id = version.Id;
         TypeText = ResolveTypeText(version);
         ReleaseTimeText = version.ReleaseTime == DateTimeOffset.UnixEpoch
@@ -502,9 +586,16 @@ public sealed partial class LaunchVersionItemViewModel : ObservableObject
             : version.ReleaseTimeText;
         IsFavorite = settings.IsFavorite;
         Description = string.IsNullOrWhiteSpace(settings.Description) ? "" : settings.Description.Trim();
+        _toggleFavorite = toggleFavorite;
+        _select = select;
+        _openFolder = openFolder;
+        _delete = delete;
     }
 
     public MinecraftVersion Version { get; }
+
+    /// <summary>扫描到这个版本时所在的游戏目录，收藏和删除都要知道根目录在哪。</summary>
+    public string SourceFolder { get; }
 
     public string Id { get; }
 
@@ -513,13 +604,34 @@ public sealed partial class LaunchVersionItemViewModel : ObservableObject
     public string ReleaseTimeText { get; }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(FavoriteText))]
     private bool _isFavorite;
+
+    /// <summary>右键菜单里的收藏项跟着状态换文案。</summary>
+    public string FavoriteText => IsFavorite ? "取消收藏" : "收藏";
 
     [ObservableProperty]
     private string _description = "";
 
     /// <summary>有自定义描述就顶掉类型徽标，一眼能认出是哪个整合包实例。</summary>
     public string Subtitle => Description.Length > 0 ? Description : TypeText;
+
+    private readonly Action<LaunchVersionItemViewModel>? _toggleFavorite;
+    private readonly Action<LaunchVersionItemViewModel>? _select;
+    private readonly Action<LaunchVersionItemViewModel>? _openFolder;
+    private readonly Action<LaunchVersionItemViewModel>? _delete;
+
+    [RelayCommand]
+    private void Favorite() => _toggleFavorite?.Invoke(this);
+
+    [RelayCommand]
+    private void SelectItem() => _select?.Invoke(this);
+
+    [RelayCommand]
+    private void OpenFolder() => _openFolder?.Invoke(this);
+
+    [RelayCommand]
+    private void Delete() => _delete?.Invoke(this);
 
     private static string ResolveTypeText(MinecraftVersion version)
     {

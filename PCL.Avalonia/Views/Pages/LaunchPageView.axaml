@@ -75,10 +75,35 @@
                             SelectedItem="{Binding SelectedInstalledVersion}"
                             Background="Transparent"
                             BorderThickness="0">
+                            <!-- 内容铺满整行：默认的列表项会把内容竖直居中，行内留出的空带吃不到右键。 -->
+                            <ListBox.Styles>
+                                <Style Selector="ListBoxItem">
+                                    <Setter Property="VerticalContentAlignment" Value="Stretch" />
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                    <Setter Property="Padding" Value="0" />
+                                </Style>
+                            </ListBox.Styles>
                             <ListBox.ItemTemplate>
                                 <DataTemplate x:DataType="vm:LaunchVersionItemViewModel">
-                                    <Grid Margin="12,9" ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                        <StackPanel Spacing="2">
+                                    <!-- Background=Transparent 且内边距改由子容器承担：整行都命中得到，
+                                         右键落在卡片留白里也能弹出菜单。 -->
+                                    <Grid
+                                        Background="Transparent"
+                                        Margin="0"
+                                        VerticalAlignment="Stretch"
+                                        HorizontalAlignment="Stretch"
+                                        ColumnDefinitions="*,Auto"
+                                        ColumnSpacing="8">
+                                        <Grid.ContextFlyout>
+                                            <MenuFlyout>
+                                                <MenuItem Header="选择该版本" Command="{Binding SelectItemCommand}" />
+                                                <MenuItem Header="{Binding FavoriteText}" Command="{Binding FavoriteCommand}" />
+                                                <MenuItem Header="打开版本文件夹" Command="{Binding OpenFolderCommand}" />
+                                                <Separator />
+                                                <MenuItem Header="删除版本" Command="{Binding DeleteCommand}" />
+                                            </MenuFlyout>
+                                        </Grid.ContextFlyout>
+                                        <StackPanel Margin="12,9" VerticalAlignment="Center" Spacing="2">
                                             <TextBlock
                                                 Text="{Binding Id}"
                                                 FontSize="14"
@@ -93,6 +118,7 @@
                                         </StackPanel>
                                         <TextBlock
                                             Grid.Column="1"
+                                            Margin="0,9,12,9"
                                             Text="★"
                                             FontSize="13"
                                             VerticalAlignment="Center"
