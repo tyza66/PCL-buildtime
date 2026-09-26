@@ -31,7 +31,7 @@
 ## 环境注意事项
 
 - `dotnet` 位于 `~/.dotnet`，执行前先 `export PATH="$HOME/.dotnet:$PATH"`。
-- 测试基线：`dotnet test PCL.Avalonia.sln --nologo` → 281 通过 / 2 跳过（`JavaListServiceTests` 的平台相关用例）/ 0 失败。提交前应保持该基线。
+- 测试基线：`dotnet test PCL.Avalonia.sln --nologo` → 359 通过 / 2 跳过（`JavaListServiceTests` 的平台相关用例）/ 0 失败。提交前应保持该基线（数字随新用例增长，以「0 失败」为准）。
 - `gh` 默认仓库是上游 `Meloong-Git/PCL`，所有 `gh release` / `gh run` 命令必须显式带 `--repo tyza66/PCL-buildtime`。
 - Avalonia Headless 测试平台不会因右键 `MouseDown` 抛 `ContextRequestedEvent`，右键菜单相关行为不要在 headless 测试里断言，需在 macOS 真机验证。
 - 在 `PCL.Avalonia` 命名空间内不能直接写 `Avalonia.Threading`（会解析成 `PCL.Avalonia.Threading`），需先 `using Avalonia.Threading;` 再使用 `Dispatcher`。
