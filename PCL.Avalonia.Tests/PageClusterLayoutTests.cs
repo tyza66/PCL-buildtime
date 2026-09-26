@@ -154,7 +154,7 @@ public sealed class PageClusterLayoutTests
                             && panel.Children.Any(child => child is ComboBox)
                             && panel.Children.Any(child => child is Button));
         var row = (Grid)cluster.GetVisualParent()!;
-        var search = (TextBox)row.Children[0];
+        var search = (TextBox)cluster.Children[0];
 
         // Same height for the input and every filter next to it.
         Assert.Equal(FormControlHeight, search.Bounds.Height, 3);
@@ -163,13 +163,12 @@ public sealed class PageClusterLayoutTests
             Assert.Equal(search.Bounds.Height, child.Bounds.Height, 3);
         }
 
-        // One uniform gap between neighbours, and one between the search box and the cluster.
+        // One uniform gap between every neighbour, the search box included.
         for (var i = 1; i < cluster.Children.Count; i++)
         {
             Assert.Equal(8, cluster.Children[i].Bounds.Left - cluster.Children[i - 1].Bounds.Right, 2);
         }
 
-        Assert.Equal(8, cluster.Bounds.Left - search.Bounds.Right, 2);
         // Bounds are parent-relative: the cluster's own box is in the row's space, so its width is
         // what the children's edges are measured against, and its right edge is in the row's space.
         Assert.Equal(cluster.Bounds.Width, cluster.Children[^1].Bounds.Right, 2);
