@@ -137,7 +137,9 @@ jobs:
         run: |
           name="PCL2-R-${version}-${{ matrix.rid }}"
           dmg_name="${name}${{ matrix.suffix }}"
-          app="$name.app"
+          # dmg 文件名带版本和架构，里面的 .app 只叫 PCL2-R.app——
+          # 用户拖进 Applications 后菜单栏和程序名不该出现版本号和 rid。
+          app="PCL2-R.app"
           mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
           cp PCL.Avalonia/Assets/Info.plist "$app/Contents/Info.plist"
           cp -R publish/. "$app/Contents/MacOS/"
