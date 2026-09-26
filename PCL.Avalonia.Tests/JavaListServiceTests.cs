@@ -90,4 +90,42 @@ public sealed class JavaListServiceTests
         Assert.NotNull(java);
         Assert.Equal("arm64", java!.Architecture);
     }
+
+    [Fact]
+    public void Scan_NativeArchReader_WinsOverBannerKeyword()
+    {
+        var service = new JavaListService(
+            _ => true,
+            _ => "OpenJDK 64-Bit Server VM (build 25+1, mixed mode, sharing)",
+            _ => "arm64");
+
+        var java = service.Scan().FirstOrDefault();
+
+        // arm64 的 JDK 横幅里照样印 "64-Bit Server VM"，只有 Mach-O 头能分清，
+        // 否则 Apple Silicon 上装着的 JDK 会全在设置页里报成 x64。
+        Assert.NotNull(java);
+        Assert.Equal("arm64", java!.Architecture);
+    }
+
+    [Fact]
+    public void Scan_FallsBackToBanner_WhenNativeReadFails()
+    {
+        var service = new JavaListService(
+            _ => true,
+            _ => "openjdk version \"17.0.9\" 64-Bit Server VM (mixed mode)",
+            _ => null);
+
+        Assert.Equal("x64", service.Scan().FirstOrDefault()!.Architecture);
+    }
+
+    [Fact]
+    public void Scan_ReportsUnknownArchitecture_WhenNeitherSourceKnows()
+    {
+        var service = new JavaListService(
+            _ => true,
+            _ => "openjdk version \"17.0.9\"",
+            _ => null);
+
+        Assert.Equal("unknown", service.Scan().FirstOrDefault()!.Architecture);
+    }
 }

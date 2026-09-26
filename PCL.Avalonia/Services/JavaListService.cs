@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
 
@@ -8,6 +9,7 @@ public sealed class JavaListService : IJavaListService
     private readonly List<JavaInfo> _cache = [];
     private readonly Func<string, bool> _fileExists;
     private readonly Func<string, string?> _runJavaVersion;
+    private readonly Func<string, string?> _readNativeArchitecture;
 
     public JavaListService()
         : this(File.Exists, RunJavaVersion)
@@ -15,9 +17,18 @@ public sealed class JavaListService : IJavaListService
     }
 
     internal JavaListService(Func<string, bool> fileExists, Func<string, string?> runJavaVersion)
+        : this(fileExists, runJavaVersion, null)
+    {
+    }
+
+    internal JavaListService(
+        Func<string, bool> fileExists,
+        Func<string, string?> runJavaVersion,
+        Func<string, string?>? readNativeArchitecture)
     {
         _fileExists = fileExists;
         _runJavaVersion = runJavaVersion;
+        _readNativeArchitecture = readNativeArchitecture ?? ReadNativeArchitecture;
         Refresh();
     }
 
@@ -163,9 +174,84 @@ public sealed class JavaListService : IJavaListService
         }
 
         var version = ParseVersion(versionOutput);
-        var architecture = ParseArchitecture(versionOutput);
+        // macOS 上 bin/java 的 Mach-O 头说了算：JVM 横幅在 arm64 上也照样印 64-Bit Server VM，
+        // 只认横幅会把 Apple Silicon 的 JDK 全报成 x64，设置页里就挑不错 Java 了。
+        var architecture = _readNativeArchitecture(executable) ?? ParseArchitecture(versionOutput);
         return new JavaInfo(executable, version, architecture, ParseMajorVersion(version), IsValid: true);
     }
+
+    /// <summary>
+    /// 读 macOS 原生二进制的架构：普通 Mach-O 看 cputype，通用（fat）二进制扫全部架构片，
+    /// 有 arm64 片就认 arm64。读不了（Windows/Linux/文件损坏）返回 null，交给横幅兜底。
+    /// </summary>
+    private static string? ReadNativeArchitecture(string executable)
+    {
+        if (!OperatingSystem.IsMacOS())
+        {
+            return null;
+        }
+
+        try
+        {
+            using var stream = File.OpenRead(executable);
+            Span<byte> header = stackalloc byte[4096];
+            var read = stream.Read(header);
+            if (read < 8)
+            {
+                return null;
+            }
+
+            // fat 头的 magic 按大端存放，架构表项也是大端。
+            var bigEndianMagic = BinaryPrimitives.ReadUInt32BigEndian(header);
+            if (bigEndianMagic is 0xcafebabe or 0xcafebabf)
+            {
+                var sliceStride = bigEndianMagic == 0xcafebabe ? 20 : 32;
+                var sliceCount = BinaryPrimitives.ReadUInt32BigEndian(header[4..]);
+                if (sliceCount == 0 || read < 8 + sliceStride)
+                {
+                    return null;
+                }
+
+            var hasX64 = false;
+            for (var i = 0; i < sliceCount && read >= 8 + (i + 1) * sliceStride; i++)
+            {
+                var sliceCpuType = BinaryPrimitives.ReadUInt32BigEndian(header[(8 + i * sliceStride)..]);
+                if (sliceCpuType == Arm64CpuType)
+                {
+                    return "arm64";
+                }
+
+                hasX64 |= sliceCpuType == X64CpuType;
+            }
+
+                return hasX64 ? "x64" : null;
+            }
+
+            var littleEndianMagic = BinaryPrimitives.ReadUInt32LittleEndian(header);
+            var cputype = littleEndianMagic switch
+            {
+                // 小端文件：magic 与 cputype 都按小端读。
+                0xfeedfacf or 0xfeedface => BinaryPrimitives.ReadUInt32LittleEndian(header[4..]),
+                // 大端文件（少见，但存在）：magic 反向了，cputype 要按大端读回来。
+                0xcffaedfe or 0xcefaedfe => BinaryPrimitives.ReadUInt32BigEndian(header[4..]),
+                _ => 0u,
+            };
+
+            return cputype switch
+            {
+                Arm64CpuType => "arm64",
+                X64CpuType => "x64",
+                _ => null,
+            };
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private const uint Arm64CpuType = 0x0100000C;
+    private const uint X64CpuType = 0x01000007;
 
     private static string? RunJavaVersion(string executable)
     {
