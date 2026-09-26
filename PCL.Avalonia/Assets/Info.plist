@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleName</key>
-	<string>PCL2 Avalonia</string>
+	<string>PCL2-R</string>
 	<key>CFBundleDisplayName</key>
-	<string>PCL2 Avalonia</string>
+	<string>PCL2-R</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.pcl2.avalonia</string>
 	<key>CFBundleVersion</key>

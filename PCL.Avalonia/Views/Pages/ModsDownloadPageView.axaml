@@ -9,7 +9,7 @@
         <Grid
             DockPanel.Dock="Top"
             RowDefinitions="Auto,Auto"
-            ColumnDefinitions="*,116,150,132,96"
+            ColumnDefinitions="*,116,150,132,Auto"
             RowSpacing="8"
             ColumnSpacing="8"
             Margin="0,0,0,14">

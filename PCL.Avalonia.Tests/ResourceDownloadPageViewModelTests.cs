@@ -29,14 +29,14 @@ public sealed class ResourceDownloadPageViewModelTests
 
         public Exception? Exception { get; set; }
 
-        public List<(ResourceType Type, string Query, string GameVersion, string Loader, string Tag, ResourceSource Source)> Calls { get; } = [];
+        public List<(ResourceType Type, string Query, string GameVersion, string Loader, string? Tag, ResourceSource Source)> Calls { get; } = [];
 
         public Task<ResourceSearchResult> SearchAsync(
             ResourceType type,
             string query,
             string gameVersion,
             string loader,
-            string tag,
+            string? tag,
             ResourceSource source,
             int page = 0,
             CancellationToken cancellationToken = default)

@@ -8,7 +8,7 @@
     x:DataType="vm:LinkPageViewModel">
     <ScrollViewer>
         <StackPanel Margin="32" Spacing="14">
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                 <StackPanel Spacing="2">
                     <TextBlock
                         Text="联机"
@@ -128,7 +128,7 @@
                 CornerRadius="8"
                 IsVisible="{Binding IsSessionActive}">
                 <StackPanel Margin="18" Spacing="12">
-                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
                         <StackPanel Spacing="2">
                             <TextBlock
                                 Text="房间信息"

@@ -125,7 +125,7 @@ jobs:
         shell: bash
         run: |
           export PATH="/c/Program Files (x86)/NSIS:$PATH"
-          name="PCL2.Avalonia-${version}-${{ matrix.rid }}"
+          name="PCL2-R-${version}-${{ matrix.rid }}"
           outfile="${name}${{ matrix.suffix }}"
           sed "s|@OUTFILE@|${outfile}|g" build-scripts/installer.nsi > build-scripts/installer-final.nsi
           makensis build-scripts/installer-final.nsi
@@ -135,7 +135,7 @@ jobs:
         if: runner.os == 'macOS'
         shell: bash
         run: |
-          name="PCL2.Avalonia-${version}-${{ matrix.rid }}"
+          name="PCL2-R-${version}-${{ matrix.rid }}"
           dmg_name="${name}${{ matrix.suffix }}"
           app="$name.app"
           mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
@@ -154,7 +154,7 @@ jobs:
               sips -z "$px" "$px" --out "$iconset/icon_${size}x${size}@${scale}x.png" "$src"
             done
           done
-          iconutil -c icns "$iconset" -o "$app/Contents/Resources/PCL2Avalonia.icns"
+          iconutil -c icns "$iconset" -o "$app/Contents/Resources/PCL2-R.icns"
           rm -rf "$iconset"
 
           # Ad-hoc sign the .app bundle
@@ -165,7 +165,7 @@ jobs:
           mkdir -p "$stage"
           cp -R "$app" "$stage/"
           ln -s /Applications "$stage/Applications"
-          hdiutil create -volname "PCL2 Avalonia" -srcfolder "$stage" -ov -format UDZO "$dmg_name"
+          hdiutil create -volname "PCL2-R" -srcfolder "$stage" -ov -format UDZO "$dmg_name"
           rm -rf "$stage"
           shasum -a 256 "$dmg_name" > "${dmg_name}.sha256"
           # Verify the DMG contents: /Applications alias and the icon resource
@@ -178,8 +178,8 @@ jobs:
             echo "::error::DMG is missing the /Applications alias"
             exit 1
           fi
-          if [ ! -f "$mount_dir/$app/Contents/Resources/PCL2Avalonia.icns" ]; then
-            echo "::error::App bundle is missing PCL2Avalonia.icns"
+          if [ ! -f "$mount_dir/$app/Contents/Resources/PCL2-R.icns" ]; then
+            echo "::error::App bundle is missing PCL2-R.icns"
             exit 1
           fi
           hdiutil detach "$mount_dir" > /dev/null
@@ -189,7 +189,7 @@ jobs:
         if: runner.os == 'Linux'
         shell: bash
         run: |
-          name="PCL2.Avalonia-${version}-${{ matrix.rid }}"
+          name="PCL2-R-${version}-${{ matrix.rid }}"
           package="${name}${{ matrix.suffix }}"
           # Download x86_64 appimagetool (runs on the x64 runner regardless of target arch)
           if [ "${{ matrix.rid }}" = "linux-arm64" ]; then
@@ -213,7 +213,7 @@ jobs:
           # Desktop file MUST be at AppDir root for appimagetool to detect it
           cat > "AppDir/pcl2-avalonia.desktop" << 'EOF'
           [Desktop Entry]
-          Name=PCL2 Avalonia
+          Name=PCL2-R
           Exec=pcl2-avalonia
           Icon=pcl2-avalonia
           Type=Application
@@ -231,7 +231,7 @@ jobs:
       - name: Verify package
         shell: bash
         run: |
-          base="PCL2.Avalonia-${version}-${{ matrix.rid }}"
+          base="PCL2-R-${version}-${{ matrix.rid }}"
           for f in "$base${{ matrix.suffix }}" "$base${{ matrix.suffix }}.sha256"; do
             if [ ! -s "$f" ]; then
               echo "::error::Expected package is missing: $f"
@@ -243,10 +243,10 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
-          name: PCL2.Avalonia-${{ env.version }}-${{ matrix.rid }}
+          name: PCL2-R-${{ env.version }}-${{ matrix.rid }}
           path: |
-            PCL2.Avalonia-${{ env.version }}-${{ matrix.rid }}${{ matrix.suffix }}
-            PCL2.Avalonia-${{ env.version }}-${{ matrix.rid }}${{ matrix.suffix }}.sha256
+            PCL2-R-${{ env.version }}-${{ matrix.rid }}${{ matrix.suffix }}
+            PCL2-R-${{ env.version }}-${{ matrix.rid }}${{ matrix.suffix }}.sha256
           if-no-files-found: error
           retention-days: 14
 

@@ -8,7 +8,7 @@
     <DockPanel Margin="32">
         <Grid
             DockPanel.Dock="Top"
-            ColumnDefinitions="*,220,104,100"
+            ColumnDefinitions="*,220,Auto,Auto"
             ColumnSpacing="8"
             Margin="0,0,0,14">
             <StackPanel Spacing="2">

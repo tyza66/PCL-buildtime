@@ -15,12 +15,12 @@
                 Foreground="{DynamicResource TextPrimaryBrush}" />
             <TabControl
                 x:Name="SettingsTabs"
-                Margin="0,18,0,0"
+                Margin="0,14,0,0"
                 SelectionChanged="SettingsTabs_OnSelectionChanged"
                 Background="{DynamicResource CardBackgroundBrush}"
                 Foreground="{DynamicResource TextPrimaryBrush}">
                 <TabItem Header="启动">
-                    <StackPanel Margin="0,18,0,0" Spacing="12">
+                    <StackPanel Margin="0,14,0,0" Spacing="12">
                         <TextBlock
                             Text="游戏目录"
                             FontSize="13"
@@ -110,7 +110,7 @@
                         <CheckBox
                             Content="启动前优化内存"
                             IsChecked="{Binding OptimizeMemoryBeforeLaunch}"
-                            Margin="0,10,0,0"
+                            Margin="0,14,0,0"
                             Foreground="{DynamicResource TextPrimaryBrush}" />
                         <TextBlock
                             Text="JVM 启动参数"
@@ -139,7 +139,7 @@
                     </StackPanel>
                 </TabItem>
                 <TabItem Header="下载">
-                    <StackPanel Margin="0,18,0,0" Spacing="12">
+                    <StackPanel Margin="0,14,0,0" Spacing="12">
                         <TextBlock
                             Text="文件下载源"
                             FontSize="13"
@@ -181,7 +181,7 @@
                     </StackPanel>
                 </TabItem>
                 <TabItem Header="个性化">
-                    <StackPanel Margin="0,18,0,0" Spacing="12">
+                    <StackPanel Margin="0,14,0,0" Spacing="12">
                         <CheckBox
                             Content="使用深色主题"
                             IsChecked="{Binding UseDarkTheme}"
@@ -189,7 +189,7 @@
                     </StackPanel>
                 </TabItem>
                 <TabItem Header="联机">
-                    <StackPanel Margin="0,18,0,0" Spacing="12">
+                    <StackPanel Margin="0,14,0,0" Spacing="12">
                         <TextBlock
                             Text="模式"
                             FontSize="13"

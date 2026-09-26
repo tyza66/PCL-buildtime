@@ -19,7 +19,7 @@ public sealed class ResourceSearcherService : IResourceSearchService
         string query,
         string gameVersion,
         string loader,
-        string tag,
+        string? tag,
         ResourceSource source,
         int page = 0,
         CancellationToken cancellationToken = default)
@@ -94,7 +94,7 @@ public sealed class ResourceSearcherService : IResourceSearchService
         string query,
         string gameVersion,
         string loader,
-        string tag,
+        string? tag,
         ResourceSource source,
         int offset,
         CancellationToken cancellationToken)
@@ -138,7 +138,7 @@ public sealed class ResourceSearcherService : IResourceSearchService
         string query,
         string gameVersion,
         string loader,
-        string tag,
+        string? tag,
         ResourceSource source,
         int offset,
         CancellationToken cancellationToken)
@@ -199,7 +199,7 @@ public sealed class ResourceSearcherService : IResourceSearchService
             .ToArray())
             .ToLowerInvariant();
 
-    private static (string? CurseForge, string? Modrinth) SplitTag(string tag)
+    private static (string? CurseForge, string? Modrinth) SplitTag(string? tag)
     {
         if (string.IsNullOrWhiteSpace(tag))
         {

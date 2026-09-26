@@ -7,7 +7,7 @@ public interface IResourceSearchService
         string query,
         string gameVersion,
         string loader,
-        string tag,
+        string? tag,
         ResourceSource source,
         int page = 0,
         CancellationToken cancellationToken = default);

@@ -25,6 +25,8 @@
 
     <!-- Form controls share one height so toolbars line up. Multiline text boxes are exempt. -->
     <Style Selector="TextBox">
+        <!-- FluentTheme's English Cut/Copy/Paste flyout is replaced by ChineseTextBoxMenu. -->
+        <Setter Property="ContextFlyout" Value="{x:Null}" />
         <Setter Property="MinHeight" Value="34" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="Padding" Value="10,4" />
