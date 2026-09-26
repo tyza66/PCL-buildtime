@@ -15,9 +15,12 @@ public sealed partial class DownloadPageViewModel : ObservableObject, IPageActiv
     private readonly IVersionCatalogService _catalog;
     private readonly IPlatformService _platform;
     private readonly SessionState _session;
+    private readonly IVersionJavaInfoService _javaInfo;
+    private readonly IJavaListService _javaList;
     private readonly List<DownloadVersionItemViewModel> _allVersions = [];
     private HashSet<string> _installedIds = new(StringComparer.OrdinalIgnoreCase);
     private CancellationTokenSource? _cancellationTokenSource;
+    private CancellationTokenSource? _javaLookupCts;
     private DateTimeOffset _lastRefreshedAt;
 
     /// <summary>列表超过这个时长才在切入页面时重新拉取，避免每次切换都打一次清单接口。</summary>
@@ -29,7 +32,9 @@ public sealed partial class DownloadPageViewModel : ObservableObject, IPageActiv
         IVersionInstaller installer,
         IVersionCatalogService catalog,
         IPlatformService platform,
-        SessionState session)
+        SessionState session,
+        IVersionJavaInfoService javaInfo,
+        IJavaListService javaList)
     {
         _settingsService = settingsService;
         _manifestService = manifestService;
@@ -37,6 +42,8 @@ public sealed partial class DownloadPageViewModel : ObservableObject, IPageActiv
         _catalog = catalog;
         _platform = platform;
         _session = session;
+        _javaInfo = javaInfo;
+        _javaList = javaList;
     }
 
     public async Task OnActivatedAsync()
@@ -83,9 +90,106 @@ public sealed partial class DownloadPageViewModel : ObservableObject, IPageActiv
     [ObservableProperty]
     private string _statusMessage = "";
 
+    /// <summary>选中版本的 Java 要求行：装之前就说清要哪个 Java，别等启动才报错。</summary>
+    [ObservableProperty]
+    private string _javaRequirementText = "";
+
+    [ObservableProperty]
+    private bool _javaRequirementIsWarning;
+
     private bool CanInstall => SelectedVersion is not null && !IsInstalling;
 
     private bool CanCancel => IsInstalling;
+
+    partial void OnSelectedVersionChanged(DownloadVersionItemViewModel? value)
+    {
+        _ = LoadJavaRequirementAsync(value);
+    }
+
+    /// <summary>
+    /// 切选择时读一次版本 JSON 的 javaVersion.majorVersion，再和本机已装 Java 比一比。
+    /// 用户来回点点是很常见的，用一把取消令牌把过期的请求结果丢掉，只留最后一次选中版本的结论。
+    /// </summary>
+    private async Task LoadJavaRequirementAsync(DownloadVersionItemViewModel? item)
+    {
+        _javaLookupCts?.Cancel();
+        _javaLookupCts?.Dispose();
+        _javaLookupCts = null;
+
+        if (item is null)
+        {
+            JavaRequirementText = "";
+            JavaRequirementIsWarning = false;
+            return;
+        }
+
+        var cts = new CancellationTokenSource();
+        _javaLookupCts = cts;
+        try
+        {
+            var settings = _settingsService.Load();
+            var required = await _javaInfo
+                .GetRequiredJavaMajorAsync(settings.DownloadSource, item.Entry, item.Id, cts.Token)
+                .ConfigureAwait(true);
+            if (cts.IsCancellationRequested || !ReferenceEquals(SelectedVersion, item))
+            {
+                return;
+            }
+
+            ApplyJavaRequirement(item, required);
+        }
+        catch (OperationCanceledException)
+        {
+            // 用户换了选择，这次查询的结果没人要了。
+        }
+        catch (Exception)
+        {
+            // 拿不到 Java 要求只是少一句提示，不该在状态栏报错吓用户。
+            if (!cts.IsCancellationRequested && ReferenceEquals(SelectedVersion, item))
+            {
+                JavaRequirementText = $"{item.Id} 的 Java 要求暂时获取失败，安装前可到启动页确认";
+                JavaRequirementIsWarning = false;
+            }
+        }
+        finally
+        {
+            cts.Dispose();
+            if (ReferenceEquals(_javaLookupCts, cts))
+            {
+                _javaLookupCts = null;
+            }
+        }
+    }
+
+    private void ApplyJavaRequirement(DownloadVersionItemViewModel item, int? requiredMajor)
+    {
+        if (requiredMajor is not { } required)
+        {
+            JavaRequirementText = $"{item.Id} 未提供 Java 要求信息，安装后可在启动页查看";
+            JavaRequirementIsWarning = false;
+            return;
+        }
+
+        var best = _javaList.Scan()
+            .Where(java => java.IsValid && java.MajorVersion > 0)
+            .OrderBy(java => java.MajorVersion)
+            .LastOrDefault();
+
+        if (best is null)
+        {
+            JavaRequirementIsWarning = true;
+            JavaRequirementText =
+                $"{item.Id} 需要 Java {required}，但本机没有检测到 Java。"
+                + $"请先安装 Java {required}，再到设置页指定路径，否则装完也启动不了";
+            return;
+        }
+
+        JavaRequirementIsWarning = best.MajorVersion < required;
+        JavaRequirementText = best.MajorVersion < required
+            ? $"{item.Id} 需要 Java {required}，当前最高只检测到 Java {best.MajorVersion}。"
+              + $"请到设置页更换或安装 Java {required}"
+            : $"{item.Id} 需要 Java {required}，当前 Java {best.MajorVersion} 满足要求";
+    }
 
     [RelayCommand(CanExecute = nameof(CanInstall))]
     private async Task InstallAsync()
@@ -159,6 +263,8 @@ public sealed partial class DownloadPageViewModel : ObservableObject, IPageActiv
 
         IsRefreshing = true;
         StatusMessage = "";
+        JavaRequirementText = "";
+        JavaRequirementIsWarning = false;
         try
         {
             var settings = _settingsService.Load();

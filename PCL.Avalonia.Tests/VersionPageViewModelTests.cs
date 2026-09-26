@@ -29,13 +29,15 @@ public sealed class VersionPageViewModelTests
 
         public List<string> ScannedFolders { get; } = [];
 
+        public MinecraftVersionJson? Json { get; set; }
+
         public IReadOnlyList<MinecraftVersion> Scan(string minecraftFolder)
         {
             ScannedFolders.Add(minecraftFolder);
             return Installed;
         }
 
-        public MinecraftVersionJson? LoadJson(string minecraftFolder, string id) => null;
+        public MinecraftVersionJson? LoadJson(string minecraftFolder, string id) => Json;
     }
 
     private sealed class FakePlatformService : IPlatformService
@@ -118,6 +120,21 @@ public sealed class VersionPageViewModelTests
             => ResolveJavaExecutable(settings);
     }
 
+    private sealed class FakeJavaListService : IJavaListService
+    {
+        private readonly JavaInfo[] _items;
+
+        public FakeJavaListService(params JavaInfo[] items) => _items = items;
+
+        public IReadOnlyList<JavaInfo> Scan() => _items;
+
+        public JavaInfo? GetJava(string path) => _items.FirstOrDefault(item => item.Path == path);
+
+        public void Refresh()
+        {
+        }
+    }
+
     private sealed class FakeGameLauncher : IGameLauncher
     {
         public LaunchPlan? LastPlan { get; private set; }
@@ -183,6 +200,7 @@ public sealed class VersionPageViewModelTests
         FakeFolderOpener? folderOpener = null,
         FakeGameLauncher? launcher = null,
         FakeScriptExporter? exporter = null,
+        FakeJavaListService? javaList = null,
         FakeSettingsService? settings = null)
     {
         var viewModel = new VersionPageViewModel(
@@ -194,6 +212,7 @@ public sealed class VersionPageViewModelTests
             manager ?? new FakeVersionManager(),
             folderOpener ?? new FakeFolderOpener(),
             new FakeJavaService(),
+            javaList ?? new FakeJavaListService(),
             launcher ?? new FakeGameLauncher(),
             exporter ?? new FakeScriptExporter(),
             new InstancePackExporter(),
@@ -366,5 +385,109 @@ public sealed class VersionPageViewModelTests
         Assert.EndsWith(expectedName, exported.FilePath, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("1.20.1", session.SelectedVersion?.Id);
         Assert.Contains("已导出启动脚本", viewModel.StatusMessage);
+    }
+
+    private static FakeCatalog JavaHintCatalog(int majorVersion)
+        => new()
+        {
+            Installed = [Version("1.20.1")],
+            Json = new MinecraftVersionJson { JavaVersion = new JavaVersionJson { MajorVersion = majorVersion } },
+        };
+
+    [Fact]
+    public void JavaHint_SaysTheRequirementIsMet_WhenTheCurrentJavaIsNewEnough()
+    {
+        var (_, _, viewModel) = CreateViewModel(
+            JavaHintCatalog(21),
+            new SessionState(),
+            javaList: new FakeJavaListService(new JavaInfo("/usr/bin/java", "21.0.2", "aarch64", 21, true)));
+
+        Assert.Contains("该版本需要 Java 21", viewModel.JavaHintText);
+        Assert.Contains("满足要求", viewModel.JavaHintText);
+        Assert.False(viewModel.JavaHintIsWarning);
+    }
+
+    [Fact]
+    public void JavaHint_Warns_WhenTheCurrentJavaIsOlderThanTheVersionNeeds()
+    {
+        var (_, _, viewModel) = CreateViewModel(
+            JavaHintCatalog(21),
+            new SessionState(),
+            javaList: new FakeJavaListService(new JavaInfo("/usr/bin/java", "17.0.9", "x86_64", 17, true)));
+
+        Assert.Contains("该版本需要 Java 21", viewModel.JavaHintText);
+        Assert.Contains("当前会用到 Java 17", viewModel.JavaHintText);
+        Assert.True(viewModel.JavaHintIsWarning);
+    }
+
+    [Fact]
+    public void JavaHint_PrefersTheInstanceJavaPath_OverTheGlobalOne()
+    {
+        var manager = new FakeVersionManager
+        {
+            SettingsByVersion =
+            {
+                ["1.20.1"] = new VersionSettings { JavaPath = "/opt/jdk17/bin/java" },
+            },
+        };
+        var javaList = new FakeJavaListService(
+            new JavaInfo("/usr/bin/java", "21.0.2", "aarch64", 21, true),
+            new JavaInfo("/opt/jdk17/bin/java", "17.0.9", "x86_64", 17, true));
+
+        var (_, _, viewModel) = CreateViewModel(
+            JavaHintCatalog(21),
+            new SessionState(),
+            manager,
+            javaList: javaList);
+
+        Assert.Contains("当前会用到 Java 17", viewModel.JavaHintText);
+        Assert.True(viewModel.JavaHintIsWarning);
+    }
+
+    [Fact]
+    public void JavaHint_Warns_WhenNoJavaIsDetectedAtAll()
+    {
+        var settings = new FakeSettingsService
+        {
+            Settings = new AppSettings { MinecraftFolder = "/games/mc", JavaPath = "" },
+        };
+
+        var (_, _, viewModel) = CreateViewModel(
+            JavaHintCatalog(21),
+            new SessionState(),
+            settings: settings);
+
+        Assert.Contains("该版本需要 Java 21", viewModel.JavaHintText);
+        Assert.Contains("但当前没有检测到 Java", viewModel.JavaHintText);
+        Assert.True(viewModel.JavaHintIsWarning);
+    }
+
+    [Fact]
+    public void JavaHint_SaysNotProvided_WhenTheVersionJsonHasNoJavaVersion()
+    {
+        var catalog = new FakeCatalog { Installed = [Version("1.20.1")], Json = null };
+
+        var (_, _, viewModel) = CreateViewModel(
+            catalog,
+            new SessionState(),
+            javaList: new FakeJavaListService(new JavaInfo("/usr/bin/java", "21.0.2", "aarch64", 21, true)));
+
+        Assert.Contains("未提供 Java 要求", viewModel.JavaHintText);
+        Assert.Contains("当前将使用 Java 21", viewModel.JavaHintText);
+        Assert.False(viewModel.JavaHintIsWarning);
+    }
+
+    [Fact]
+    public void JavaHint_Clears_WhenTheSelectionIsRemoved()
+    {
+        var (_, _, viewModel) = CreateViewModel(
+            JavaHintCatalog(21),
+            new SessionState(),
+            javaList: new FakeJavaListService(new JavaInfo("/usr/bin/java", "21.0.2", "aarch64", 21, true)));
+        Assert.NotEmpty(viewModel.JavaHintText);
+
+        viewModel.SelectedItem = null;
+
+        Assert.Empty(viewModel.JavaHintText);
     }
 }

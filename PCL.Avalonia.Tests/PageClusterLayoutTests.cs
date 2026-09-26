@@ -132,6 +132,65 @@ public sealed class PageClusterLayoutTests
     }
 
     [AvaloniaFact]
+    public void VersionPageColumnsEachKeepTheirOwnLane()
+    {
+        var version = FakeVersion("1.20.1");
+        var viewModel = CreateVersionPageViewModel(new StubVersionCatalogService(version));
+        var view = new VersionPageView { DataContext = viewModel };
+        viewModel.RefreshCommand.Execute(null);
+        var window = Show(view);
+
+        var folderCard = window.GetVisualDescendants().OfType<TextBlock>()
+            .First(text => text.Text == "游戏目录")
+            .GetVisualAncestors().OfType<Border>().First();
+        var grid = (Grid)folderCard.GetVisualParent()!;
+        // 直接按 Border 搜会先命中版本列那一层（"选择"按钮的祖先也算"包含它"），
+        // 所以从按钮出发向上取第一层 Border 才是卡片，再往上找直接挂在 grid 上的列。
+        var card = window.GetVisualDescendants().OfType<Button>()
+            .First(button => button.Content as string == "选择")
+            .GetVisualAncestors().OfType<Border>().First();
+        var versionColumn = card.GetVisualAncestors().OfType<Border>()
+            .First(border => ReferenceEquals(border.GetVisualParent(), grid));
+        var detailCard = window.GetVisualDescendants().OfType<ToggleButton>()
+            .First(toggle => toggle.Content as string == "总体")
+            .GetVisualAncestors()
+            .First(ancestor => ReferenceEquals(ancestor.GetVisualParent(), grid));
+
+        // The version column used to be wrapped in a Panel, which silently dropped the
+        // Grid.Column assignment and stacked the version list on top of the folder column.
+        Assert.Equal(190d, grid.ColumnDefinitions[0].Width.Value, 1);
+        Assert.Equal(280d, grid.ColumnDefinitions[1].Width.Value, 1);
+        Assert.Equal(190d, folderCard.Bounds.Width, 1);
+        Assert.Equal(280d, versionColumn.Bounds.Width, 1);
+
+        var origin = new Point(0, 0);
+        var folderLeft = folderCard.TranslatePoint(origin, window)!.Value;
+        var versionLeft = versionColumn.TranslatePoint(origin, window)!.Value;
+        var detailLeft = detailCard.TranslatePoint(origin, window)!.Value;
+        var cardLeft = card.TranslatePoint(origin, window)!.Value;
+
+        Assert.True(
+            versionLeft.X >= folderLeft.X + folderCard.Bounds.Width,
+            "the version column starts inside the folder column");
+        Assert.True(
+            detailLeft.X >= versionLeft.X + versionColumn.Bounds.Width,
+            "the detail column starts inside the version column");
+        Assert.True(
+            cardLeft.X >= versionLeft.X,
+            "the version card sits outside its own column");
+        Assert.True(
+            cardLeft.X + card.Bounds.Width <= versionLeft.X + versionColumn.Bounds.Width + 1,
+            "the version card runs past the end of its column");
+
+        var name = card.GetVisualDescendants().OfType<TextBlock>()
+            .First(text => text.Text == version.Id);
+        Assert.True(
+            name.Bounds.Width >= 240,
+            $"the version name only has {name.Bounds.Width:0.#}px to render in");
+        window.Close();
+    }
+
+    [AvaloniaFact]
     public void VersionPageFolderButtonsSitInTwoRowsWithoutOverlap()
     {
         var version = FakeVersion("1.20.1");
@@ -474,6 +533,7 @@ public sealed class PageClusterLayoutTests
         new StubVersionManagerService(),
         new StubFolderOpener(),
         new StubJavaService(),
+        new StubJavaListService(),
         new StubGameLauncher(),
         new StubScriptExporter(),
         new InstancePackExporter(),

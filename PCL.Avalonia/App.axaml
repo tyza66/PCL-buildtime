@@ -12,6 +12,7 @@
     <Application.Resources>
         <ResourceDictionary>
             <conv:IsEmptyCollectionConverter x:Key="IsEmptyCount" />
+            <conv:StringNotEmptyConverter x:Key="StringNotEmpty" />
             <ResourceDictionary.MergedDictionaries>
                 <ResourceInclude Source="avares://PCL2.Avalonia/Themes/ThemeColors.axaml" />
             </ResourceDictionary.MergedDictionaries>

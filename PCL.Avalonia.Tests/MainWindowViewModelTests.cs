@@ -487,6 +487,7 @@ public sealed class MainWindowViewModelTests
             new FakePlatformService(),
             new FakeManifestService(),
             new FakeInstaller(),
+            new FakeVersionJavaInfo(),
             new FakeModsService(),
             new FakeInstanceClassifier(),
             new FakeInstancePackExporter(),
@@ -595,6 +596,7 @@ public sealed class MainWindowViewModelTests
             new FakePlatformService(),
             new FakeManifestService(),
             new FakeInstaller(),
+            new FakeVersionJavaInfo(),
             new FakeModsService(),
             new FakeInstanceClassifier(),
             new FakeInstancePackExporter(),
@@ -635,5 +637,17 @@ public sealed class MainWindowViewModelTests
         public void Refresh()
         {
         }
+    }
+
+    private sealed class FakeVersionJavaInfo : IVersionJavaInfoService
+    {
+        public int? RequiredMajor { get; set; }
+
+        public Task<int?> GetRequiredJavaMajorAsync(
+            DownloadSource source,
+            VersionManifestEntry? entry,
+            string versionId,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(RequiredMajor);
     }
 }

@@ -23,6 +23,7 @@ public sealed partial class VersionPageViewModel : ObservableObject
     private readonly IVersionManagerService _versionManager;
     private readonly IFolderOpener _folderOpener;
     private readonly IJavaService _javaService;
+    private readonly IJavaListService _javaList;
     private readonly IGameLauncher _launcher;
     private readonly ILaunchScriptExporter _scriptExporter;
     private readonly IInstancePackExporter _packExporter;
@@ -40,6 +41,7 @@ public sealed partial class VersionPageViewModel : ObservableObject
         IVersionManagerService versionManager,
         IFolderOpener folderOpener,
         IJavaService javaService,
+        IJavaListService javaListService,
         IGameLauncher launcher,
         ILaunchScriptExporter scriptExporter,
         IInstancePackExporter packExporter,
@@ -53,6 +55,7 @@ public sealed partial class VersionPageViewModel : ObservableObject
         _versionManager = versionManager;
         _folderOpener = folderOpener;
         _javaService = javaService;
+        _javaList = javaListService;
         _launcher = launcher;
         _scriptExporter = scriptExporter;
         _packExporter = packExporter;
@@ -154,6 +157,13 @@ public sealed partial class VersionPageViewModel : ObservableObject
 
     [ObservableProperty]
     private string _javaPathInput = "";
+
+    /// <summary>版本详情里 Java 路径下方的提示：这个版本要哪个 Java、现在选中的是哪个。</summary>
+    [ObservableProperty]
+    private string _javaHintText = "";
+
+    [ObservableProperty]
+    private bool _javaHintIsWarning;
 
     [ObservableProperty]
     private string _jvmArgumentsInput = "";
@@ -296,7 +306,7 @@ public sealed partial class VersionPageViewModel : ObservableObject
 
         if (folder.IsDefault)
         {
-            StatusMessage = "默认游戏目录不能移除";
+            StatusMessage = $"默认游戏目录不能移除，{folder.Path} 是启动器默认使用的目录；要换默认目录请到设置页修改游戏目录";
             return;
         }
 
@@ -388,7 +398,7 @@ public sealed partial class VersionPageViewModel : ObservableObject
         {
             if (!int.TryParse(MaxMemoryInput.Trim(), out var value) || value < 256)
             {
-                StatusMessage = "手动内存需要填写不小于 256 的数字";
+                StatusMessage = $"手动内存需要填写不小于 256 的数字（单位 MB），当前填的是“{MaxMemoryInput.Trim()}”；也可以改选自动或跟随全局";
                 return;
             }
 
@@ -461,10 +471,13 @@ public sealed partial class VersionPageViewModel : ObservableObject
         try
         {
             var settings = _settingsService.Load();
-            var java = _javaService.ResolveJavaExecutable(settings);
+            var requiredJavaMajor = ResolveInstanceJavaMajor(item.Id);
+            var java = _javaService.ResolveJavaExecutable(settings, requiredJavaMajor);
             if (java is null)
             {
-                StatusMessage = "未找到 Java，请先在设置页配置 Java 路径";
+                StatusMessage = requiredJavaMajor is { } required
+                    ? $"未找到 Java：{item.Id} 需要 Java {required}，请先安装该版本，或到设置页指定 Java 路径"
+                    : "未找到 Java：请先安装 Java，或到设置页指定 Java 路径";
                 return;
             }
 
@@ -506,7 +519,7 @@ public sealed partial class VersionPageViewModel : ObservableObject
             var fileName = SanitizeFileName(displayName);
             if (fileName.Length == 0)
             {
-                StatusMessage = "整合包名称全部由非法字符组成";
+                StatusMessage = $"整合包名称全部由非法字符组成，“{displayName}”里没有可用文字；请改用中文、字母、数字、下划线或连字符";
                 return;
             }
 
@@ -627,6 +640,7 @@ public sealed partial class VersionPageViewModel : ObservableObject
         if (item is null)
         {
             ModsStatus = "";
+            UpdateInstanceJavaHint(null);
             return;
         }
 
@@ -650,6 +664,66 @@ public sealed partial class VersionPageViewModel : ObservableObject
         }
 
         LoadMods();
+        UpdateInstanceJavaHint(item);
+    }
+
+    /// <summary>
+    /// 每个版本能单独指定 Java 路径，但用户填的时候并不知道这个版本到底要哪个 Java。
+    /// 这里把"版本要求 X / 实际会用到 Y"并排说清，填错路径在保存时就能看见，不用等启动才报。
+    /// </summary>
+    private void UpdateInstanceJavaHint(VersionItemViewModel? item)
+    {
+        if (item is null)
+        {
+            JavaHintText = "";
+            JavaHintIsWarning = false;
+            return;
+        }
+
+        var requiredMajor = ResolveInstanceJavaMajor(item.Id);
+
+        var settings = _settingsService.Load();
+        // 实例自己填了 Java 路径就以它为准，否则跟随全局，和启动时的选择逻辑保持一致。
+        var effective = string.IsNullOrWhiteSpace(item.Settings.JavaPath)
+            ? settings
+            : settings with { JavaPath = item.Settings.JavaPath };
+        var javaPath = _javaService.ResolveJavaExecutable(effective, requiredMajor);
+        var java = javaPath is null ? null : _javaList.GetJava(javaPath);
+
+        if (requiredMajor is not { } required)
+        {
+            JavaHintIsWarning = false;
+            JavaHintText = java is null
+                ? "该版本未提供 Java 要求，当前也没有检测到 Java"
+                : $"该版本未提供 Java 要求，当前将使用 Java {java.MajorVersion}";
+            return;
+        }
+
+        if (java is null)
+        {
+            JavaHintIsWarning = true;
+            JavaHintText = $"该版本需要 Java {required}，但当前没有检测到 Java。请先安装 Java {required}，再到设置页指定路径";
+            return;
+        }
+
+        JavaHintIsWarning = java.MajorVersion < required;
+        JavaHintText = java.MajorVersion < required
+            ? $"该版本需要 Java {required}，当前会用到 Java {java.MajorVersion}，请在上方更换 Java 路径或安装 Java {required}"
+            : $"该版本需要 Java {required}，当前 Java {java.MajorVersion} 满足要求";
+    }
+
+    /// <summary>读本地版本 JSON 的 javaVersion.majorVersion；读不出来返回 null，按"未提供"处理。</summary>
+    private int? ResolveInstanceJavaMajor(string versionId)
+    {
+        try
+        {
+            return _catalog.LoadJson(CurrentFolder, versionId)?.JavaVersion?.MajorVersion;
+        }
+        catch (Exception)
+        {
+            // 版本 JSON 缺失或损坏都很常见（手动删过文件），不该让提示逻辑抛出去。
+            return null;
+        }
     }
 
     private void LoadMods()

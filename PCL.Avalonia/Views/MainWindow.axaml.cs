@@ -42,6 +42,7 @@ public partial class MainWindow : Window
         var curseForgeDownloadService = new CurseForgeDownloadService(downloadClient);
         var resourceDownloadService = new ResourceDownloadService(downloadClient);
         var versionInstaller = new VersionInstaller(downloadClient, catalog);
+        var versionJavaInfo = new VersionJavaInfoService(downloadClient);
         var modsService = new ModsService();
         var fabricLoaderService = new FabricLoaderService(downloadClient, versionInstaller);
         var forgelikeInstallRunner = new JavaForgelikeInstallRunner(settings, new JavaService());
@@ -62,6 +63,7 @@ public partial class MainWindow : Window
             platform,
             new VersionManifestService(downloadClient),
             versionInstaller,
+            versionJavaInfo,
             modsService,
             new InstanceClassifier(),
             new InstancePackExporter(),

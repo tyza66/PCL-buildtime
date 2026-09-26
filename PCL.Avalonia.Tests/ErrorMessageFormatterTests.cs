@@ -51,6 +51,45 @@ public sealed class ErrorMessageFormatterTests
     }
 
     [Fact]
+    public void Describe_MissingFile_ExplainsNotFoundBeforeIoError()
+    {
+        // FileNotFoundException 是 IOException 的子类，说成"文件读写失败"会把用户带偏。
+        var text = ErrorMessageFormatter.Describe(
+            new FileNotFoundException("版本 JSON 不存在", "/games/mc/versions/1.20.1/1.20.1.json"));
+
+        Assert.Contains("找不到文件", text);
+        Assert.Contains("可尝试", text);
+        Assert.DoesNotContain("文件读写失败", text);
+    }
+
+    [Fact]
+    public void Describe_MissingDirectory_ExplainsNotFound()
+    {
+        var text = ErrorMessageFormatter.Describe(new DirectoryNotFoundException("/games/mc"));
+
+        Assert.Contains("找不到目录", text);
+        Assert.Contains("可尝试", text);
+        Assert.DoesNotContain("文件读写失败", text);
+    }
+
+    [Fact]
+    public void Describe_ChineseBusinessErrorWithoutGuidance_GainsAdvice()
+    {
+        var text = ErrorMessageFormatter.Describe(new InvalidDataException("整合包文件已损坏"));
+
+        Assert.Contains("整合包文件已损坏", text);
+        Assert.Contains("切换", text);
+    }
+
+    [Fact]
+    public void Describe_ChineseMessageAlreadyCarryingGuidance_StaysAsItIs()
+    {
+        var text = ErrorMessageFormatter.Describe(new ArgumentException("路径含有非法字符，请更换游戏目录"));
+
+        Assert.Equal("路径含有非法字符，请更换游戏目录", text);
+    }
+
+    [Fact]
     public void Describe_UnknownError_FallsBackToRestartAdvice()
     {
         var text = ErrorMessageFormatter.Describe(new NotSupportedException("nope"));
@@ -74,5 +113,12 @@ public sealed class ErrorMessageFormatterTests
     public void Brief_ChineseBusinessError_KeepsFirstClause()
     {
         Assert.Equal("该版本已存在", ErrorMessageFormatter.Brief(new InvalidOperationException("该版本已存在，请刷新列表")));
+    }
+
+    [Fact]
+    public void Brief_MissingFileAndFolder_GetDedicatedLabels()
+    {
+        Assert.Equal("文件缺失", ErrorMessageFormatter.Brief(new FileNotFoundException("x")));
+        Assert.Equal("目录缺失", ErrorMessageFormatter.Brief(new DirectoryNotFoundException("x")));
     }
 }

@@ -205,7 +205,8 @@ public sealed class LinkPageViewModelTests
 
         await viewModel.JoinRoomCommand.ExecuteAsync(null);
 
-        Assert.Equal("邀请码无效", viewModel.StatusMessage);
+        // 状态行现在带上格式原因，避免用户只知道"无效"却不知道该改哪里。
+        Assert.StartsWith("邀请码无效", viewModel.StatusMessage);
         Assert.Contains("邀请码有误", viewModel.ErrorMessage);
         Assert.Null(viewModel.Session);
         Assert.Equal(1, service.JoinCalls);

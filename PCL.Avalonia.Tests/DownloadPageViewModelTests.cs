@@ -80,13 +80,82 @@ public sealed class DownloadPageViewModelTests
         public string GetDefaultMinecraftFolder() => "/default/.minecraft";
     }
 
+    private sealed class FakeJavaInfoService : IVersionJavaInfoService
+    {
+        public int? RequiredMajor { get; set; }
+
+        public List<string> RequestedIds { get; } = [];
+
+        public Exception? Exception { get; set; }
+
+        public Task<int?> GetRequiredJavaMajorAsync(
+            DownloadSource source,
+            VersionManifestEntry? entry,
+            string versionId,
+            CancellationToken cancellationToken = default)
+        {
+            RequestedIds.Add(versionId);
+            return Exception is null
+                ? Task.FromResult(RequiredMajor)
+                : Task.FromException<int?>(Exception);
+        }
+    }
+
+    private sealed class FakeJavaListService : IJavaListService
+    {
+        private readonly JavaInfo[] _items;
+
+        public FakeJavaListService(params JavaInfo[] items) => _items = items;
+
+        public IReadOnlyList<JavaInfo> Scan() => _items;
+
+        public JavaInfo? GetJava(string path) => _items.FirstOrDefault(item => item.Path == path);
+
+        public void Refresh()
+        {
+        }
+    }
+
     private static DownloadPageViewModel CreateViewModel(
         FakeSettingsService settings,
         FakeManifestService manifest,
         FakeInstaller installer,
         FakeCatalog catalog,
         SessionState? session = null)
-        => new(settings, manifest, installer, catalog, new FakePlatformService(), session ?? new SessionState());
+        => new(
+            settings,
+            manifest,
+            installer,
+            catalog,
+            new FakePlatformService(),
+            session ?? new SessionState(),
+            new FakeJavaInfoService(),
+            new FakeJavaListService());
+
+    private static DownloadPageViewModel CreateViewModel(
+        FakeSettingsService settings,
+        FakeManifestService manifest,
+        FakeInstaller installer,
+        FakeCatalog catalog,
+        FakeJavaInfoService javaInfo,
+        FakeJavaListService? javaList = null)
+        => new(
+            settings,
+            manifest,
+            installer,
+            catalog,
+            new FakePlatformService(),
+            new SessionState(),
+            javaInfo,
+            javaList ?? new FakeJavaListService());
+
+    private static DownloadVersionItemViewModel SelectVersion(DownloadPageViewModel viewModel, string id)
+    {
+        var item = new DownloadVersionItemViewModel(new VersionManifestEntry { Id = id }, isInstalled: false);
+        viewModel.Versions.Add(item);
+        viewModel.SelectedVersion = item;
+        return item;
+    }
 
     [Fact]
     public async Task RefreshAsync_LoadsManifestAndMarksInstalled()
@@ -343,5 +412,131 @@ public sealed class DownloadPageViewModelTests
         Assert.Equal(0, manifest.CallCount);
         viewModel.CancelCommand.Execute(null);
         await installTask;
+    }
+
+    [Fact]
+    public void SelectedVersion_ReportsTheJavaRequirementItWillSatisfy()
+    {
+        var javaInfo = new FakeJavaInfoService { RequiredMajor = 21 };
+        var viewModel = CreateViewModel(
+            new FakeSettingsService(),
+            new FakeManifestService(),
+            new FakeInstaller(),
+            new FakeCatalog(),
+            javaInfo,
+            new FakeJavaListService(new JavaInfo("/usr/bin/java", "21.0.2", "aarch64", 21, true)));
+
+        SelectVersion(viewModel, "1.20.6");
+
+        Assert.Contains("需要 Java 21", viewModel.JavaRequirementText);
+        Assert.Contains("满足要求", viewModel.JavaRequirementText);
+        Assert.False(viewModel.JavaRequirementIsWarning);
+        Assert.Equal("1.20.6", Assert.Single(javaInfo.RequestedIds));
+    }
+
+    [Fact]
+    public void SelectedVersion_WarnsWhenTheBestLocalJavaIsTooOld()
+    {
+        var viewModel = CreateViewModel(
+            new FakeSettingsService(),
+            new FakeManifestService(),
+            new FakeInstaller(),
+            new FakeCatalog(),
+            new FakeJavaInfoService { RequiredMajor = 21 },
+            new FakeJavaListService(new JavaInfo("/usr/bin/java", "17.0.9", "x86_64", 17, true)));
+
+        SelectVersion(viewModel, "1.20.6");
+
+        Assert.Contains("需要 Java 21", viewModel.JavaRequirementText);
+        Assert.Contains("当前最高只检测到 Java 17", viewModel.JavaRequirementText);
+        Assert.True(viewModel.JavaRequirementIsWarning);
+    }
+
+    [Fact]
+    public void SelectedVersion_WarnsWhenNoJavaIsInstalledAtAll()
+    {
+        var viewModel = CreateViewModel(
+            new FakeSettingsService(),
+            new FakeManifestService(),
+            new FakeInstaller(),
+            new FakeCatalog(),
+            new FakeJavaInfoService { RequiredMajor = 21 });
+
+        SelectVersion(viewModel, "1.20.6");
+
+        Assert.Contains("请先安装 Java 21", viewModel.JavaRequirementText);
+        Assert.True(viewModel.JavaRequirementIsWarning);
+    }
+
+    [Fact]
+    public void SelectedVersion_SaysNotProvided_WhenTheManifestCarriesNoJavaRequirement()
+    {
+        var viewModel = CreateViewModel(
+            new FakeSettingsService(),
+            new FakeManifestService(),
+            new FakeInstaller(),
+            new FakeCatalog(),
+            new FakeJavaInfoService());
+
+        SelectVersion(viewModel, "1.12.2");
+
+        Assert.Contains("未提供 Java 要求信息", viewModel.JavaRequirementText);
+        Assert.False(viewModel.JavaRequirementIsWarning);
+    }
+
+    [Fact]
+    public void SelectedVersion_ShowsTransientHint_WhenTheLookupFails()
+    {
+        var viewModel = CreateViewModel(
+            new FakeSettingsService(),
+            new FakeManifestService(),
+            new FakeInstaller(),
+            new FakeCatalog(),
+            new FakeJavaInfoService { Exception = new HttpRequestException("no route to host") });
+
+        SelectVersion(viewModel, "1.20.6");
+
+        Assert.Contains("暂时获取失败", viewModel.JavaRequirementText);
+        Assert.False(viewModel.JavaRequirementIsWarning);
+    }
+
+    [Fact]
+    public void DeselectingVersion_ClearsTheJavaRequirementRow()
+    {
+        var viewModel = CreateViewModel(
+            new FakeSettingsService(),
+            new FakeManifestService(),
+            new FakeInstaller(),
+            new FakeCatalog(),
+            new FakeJavaInfoService { RequiredMajor = 21 });
+
+        SelectVersion(viewModel, "1.20.6");
+        Assert.NotEmpty(viewModel.JavaRequirementText);
+
+        viewModel.SelectedVersion = null;
+
+        Assert.Empty(viewModel.JavaRequirementText);
+    }
+
+    [Fact]
+    public async Task Refresh_ClearsTheJavaRequirementRow()
+    {
+        var manifest = new FakeManifestService
+        {
+            Manifest = new VersionManifest { Versions = [new VersionManifestEntry { Id = "1.20.6" }] },
+        };
+        var viewModel = CreateViewModel(
+            new FakeSettingsService(),
+            manifest,
+            new FakeInstaller(),
+            new FakeCatalog(),
+            new FakeJavaInfoService { RequiredMajor = 21 });
+
+        SelectVersion(viewModel, "1.20.6");
+        Assert.NotEmpty(viewModel.JavaRequirementText);
+
+        await viewModel.RefreshCommand.ExecuteAsync(null);
+
+        Assert.Empty(viewModel.JavaRequirementText);
     }
 }

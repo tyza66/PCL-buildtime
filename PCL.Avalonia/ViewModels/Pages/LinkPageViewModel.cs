@@ -159,12 +159,13 @@ public sealed partial class LinkPageViewModel : ObservableObject, IDisposable
         catch (FormatException ex)
         {
             ErrorMessage = ErrorMessageFormatter.Describe(ex);
-            StatusMessage = "邀请码无效";
+            // 状态行只说"邀请码无效"时用户不知道该改哪一位，带上简短的格式说明。
+            StatusMessage = $"邀请码无效：{ErrorMessageFormatter.Brief(ex)}，请检查是否复制完整";
         }
         catch (Exception ex)
         {
             ErrorMessage = ErrorMessageFormatter.Describe(ex);
-            StatusMessage = "联机失败";
+            StatusMessage = $"联机失败：{ErrorMessageFormatter.Brief(ex)}";
         }
         finally
         {
