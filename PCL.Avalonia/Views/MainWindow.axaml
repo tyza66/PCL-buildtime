@@ -60,7 +60,7 @@
             Width="220"
             Background="{DynamicResource SidebarBackgroundBrush}">
             <Grid RowDefinitions="Auto,*,Auto">
-                <StackPanel Grid.Row="0" Margin="20,20,20,14" Spacing="2">
+                <StackPanel Grid.Row="0" Margin="16,18,16,10" Spacing="2">
                     <TextBlock
                         Text="PCL2-R"
                         FontSize="22"
@@ -77,19 +77,31 @@
                     SelectedItem="{Binding SelectedItem}"
                     Background="Transparent"
                     BorderThickness="0">
+                    <!-- 13 个导航项必须在默认 720pt 窗口高度下完整可见：容器高度固定，行高不随字体行距膨胀。
+                         文字垂直居中，靠 TextBlock 自身的左内边距留出缩进。 -->
+                    <ListBox.Styles>
+                        <Style Selector="ListBoxItem">
+                            <Setter Property="Height" Value="33" />
+                            <Setter Property="Margin" Value="8,2" />
+                            <Setter Property="Padding" Value="0" />
+                            <Setter Property="VerticalContentAlignment" Value="Center" />
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        </Style>
+                    </ListBox.Styles>
                     <ListBox.ItemTemplate>
                         <DataTemplate x:DataType="vm:NavItemViewModel">
                             <TextBlock
                                 Text="{Binding Title}"
                                 FontSize="14"
-                                Padding="16,10"
+                                Padding="14,0"
+                                VerticalAlignment="Center"
                                 Foreground="{DynamicResource TextPrimaryBrush}" />
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
                 <Button
                     Grid.Row="2"
-                    Margin="12,12"
+                    Margin="8,8"
                     HorizontalAlignment="Stretch"
                     Background="{DynamicResource ButtonBackgroundBrush}"
                     Foreground="{DynamicResource TextPrimaryBrush}"

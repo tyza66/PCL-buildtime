@@ -1,6 +1,8 @@
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using Avalonia.Layout;
 using Avalonia.Logging;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -110,6 +112,36 @@ public sealed class MainWindowPageRenderTests : IDisposable
     {
         return _window.GetVisualDescendants()
             .FirstOrDefault(v => v is UserControl);
+    }
+
+    [AvaloniaFact]
+    public void SidebarNav_ShowsAllEntriesWithoutVerticalScrolling_AtEveryWindowHeight()
+    {
+        // All 13 nav entries must be reachable without scrolling, both at the default
+        // 1080x720 size and at the smallest resizable height (MinHeight 600), otherwise
+        // 联机/设置/其他 stay off-screen.
+        foreach (var height in new[] { 720d, 600d })
+        {
+            _window.Height = height;
+            Dispatcher.UIThread.RunJobs();
+            _window.UpdateLayout();
+            Dispatcher.UIThread.RunJobs();
+
+            var nav = _window.GetVisualDescendants().OfType<ListBox>().First();
+            Assert.Equal(_viewModel.Items.Count, nav.GetVisualDescendants().OfType<ListBoxItem>().Count());
+
+            var scroller = nav.GetVisualDescendants().OfType<ScrollViewer>().First();
+            Assert.True(
+                scroller.Extent.Height <= scroller.Viewport.Height,
+                $"Sidebar needs {scroller.Extent.Height}pt but only has {scroller.Viewport.Height}pt at window height {height}.");
+
+            var vScroll = nav.GetVisualDescendants().OfType<ScrollBar>()
+                .FirstOrDefault(s => s.Orientation == Orientation.Vertical);
+            if (vScroll is not null)
+            {
+                Assert.False(vScroll.IsVisible, $"Sidebar shows a scrollbar at window height {height}.");
+            }
+        }
     }
 
     private sealed class RecordingLogSink : ILogSink

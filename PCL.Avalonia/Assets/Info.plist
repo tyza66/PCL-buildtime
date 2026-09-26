@@ -9,9 +9,9 @@
 	<key>CFBundleIdentifier</key>
 	<string>com.pcl2.avalonia</string>
 	<key>CFBundleVersion</key>
-	<string>1.0.20261004</string>
+	<string>1.0.20261005</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0.20261004</string>
+	<string>1.0.20261005</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleExecutable</key>
