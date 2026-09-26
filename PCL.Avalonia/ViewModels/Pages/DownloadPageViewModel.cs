@@ -132,7 +132,7 @@ public sealed partial class DownloadPageViewModel : ObservableObject, IPageActiv
         }
         catch (Exception ex)
         {
-            StatusMessage = "安装失败：" + ex.Message;
+            StatusMessage = "安装失败：" + ErrorMessageFormatter.Describe(ex);
         }
         finally
         {
@@ -180,7 +180,7 @@ public sealed partial class DownloadPageViewModel : ObservableObject, IPageActiv
         }
         catch (Exception ex)
         {
-            StatusMessage = "获取版本清单失败：" + ex.Message;
+            StatusMessage = "获取版本清单失败：" + ErrorMessageFormatter.Describe(ex);
         }
         finally
         {

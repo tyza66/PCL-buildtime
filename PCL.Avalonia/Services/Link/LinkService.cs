@@ -239,7 +239,7 @@ public sealed class LinkService : ILinkService
         }
         catch (Exception ex)
         {
-            ErrorMessage = ex.Message;
+            ErrorMessage = ErrorMessageFormatter.Describe(ex);
             KillCore();
             _session = null;
             State = LinkState.Failed;

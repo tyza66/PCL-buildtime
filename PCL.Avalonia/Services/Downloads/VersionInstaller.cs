@@ -125,7 +125,7 @@ public sealed class VersionInstaller : IVersionInstaller
                 }
                 catch (Exception ex)
                 {
-                    errors.Add($"版本 {id} JSON 下载失败：{ex.Message}");
+                    errors.Add($"版本 {id} JSON 下载失败：{ErrorMessageFormatter.Brief(ex)}");
                     break;
                 }
             }
@@ -181,7 +181,7 @@ public sealed class VersionInstaller : IVersionInstaller
         }
         catch (Exception ex)
         {
-            errors.Add($"客户端 {jarId} 下载失败：{ex.Message}");
+            errors.Add($"客户端 {jarId} 下载失败：{ErrorMessageFormatter.Brief(ex)}");
         }
     }
 
@@ -284,7 +284,7 @@ public sealed class VersionInstaller : IVersionInstaller
                 {
                     lock (errors)
                     {
-                        errors.Add($"支持库 {library.Name} 下载失败：{ex.Message}");
+                        errors.Add($"支持库 {library.Name} 下载失败：{ErrorMessageFormatter.Brief(ex)}");
                     }
                 }
 
@@ -356,7 +356,7 @@ public sealed class VersionInstaller : IVersionInstaller
             }
             catch (Exception ex)
             {
-                errors.Add($"资源索引 {indexName} 下载失败：{ex.Message}");
+                errors.Add($"资源索引 {indexName} 下载失败：{ErrorMessageFormatter.Brief(ex)}");
                 return;
             }
         }
@@ -370,7 +370,7 @@ public sealed class VersionInstaller : IVersionInstaller
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
         {
-            errors.Add($"资源索引 {indexName} 解析失败：{ex.Message}");
+            errors.Add($"资源索引 {indexName} 解析失败：{ErrorMessageFormatter.Brief(ex)}");
             return;
         }
 
@@ -438,7 +438,7 @@ public sealed class VersionInstaller : IVersionInstaller
             {
                 lock (errors)
                 {
-                    errors.Add($"资源 {asset.Name} 下载失败：{ex.Message}");
+                    errors.Add($"资源 {asset.Name} 下载失败：{ErrorMessageFormatter.Brief(ex)}");
                 }
             }
 

@@ -76,7 +76,7 @@ public sealed partial class AccountsPageViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = $"微软登录失败：{ex.Message}";
+            StatusMessage = $"微软登录失败：{ErrorMessageFormatter.Describe(ex)}";
         }
         finally
         {

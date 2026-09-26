@@ -130,22 +130,24 @@ public sealed class PageClusterLayoutTests
     }
 
     [AvaloniaFact]
-    public void LaunchPageLeftColumnKeepsItsThreeRowsApart()
+    public void LaunchPageLeftColumnKeepsItsRowsApart()
     {
         var window = Show(new LaunchPageView());
 
         var leftColumn = window.GetVisualDescendants().OfType<Grid>()
-            .First(grid => grid.RowDefinitions.Count == 3);
-        Assert.Equal(3, leftColumn.Children.Count);
+            .First(grid => grid.RowDefinitions.Count == 4);
+        Assert.Equal(4, leftColumn.Children.Count);
 
         var header = leftColumn.Children[0];
         var list = leftColumn.Children[1];
-        var footer = leftColumn.Children[2];
+        var javaRow = leftColumn.Children[2];
+        var footer = leftColumn.Children[3];
 
         // A Panel with no Dock used to fall back to LastChildFill, which let the version list
         // share the row with the folder info block.
         Assert.True(list.Bounds.Top >= header.Bounds.Bottom - 1, "version list overlaps its header");
-        Assert.True(footer.Bounds.Top >= list.Bounds.Bottom - 1, "folder info overlaps the version list");
+        Assert.True(javaRow.Bounds.Top >= list.Bounds.Bottom - 1, "java status overlaps the version list");
+        Assert.True(footer.Bounds.Top >= javaRow.Bounds.Bottom - 1, "folder info overlaps the java status");
         Assert.Equal(leftColumn.Bounds.Bottom, footer.Bounds.Bottom, 1);
         Assert.True(list.Bounds.Height > header.Bounds.Height, "the list is not the row that stretches");
     }
@@ -176,7 +178,13 @@ public sealed class PageClusterLayoutTests
 
         // The folder block is a single row: the path stays on one line beside its button rather
         // than wrapping into a tall card with a full-width action underneath.
-        var folder = (Border)left.Children[2];
+        var javaRow = (Border)left.Children[2];
+        var javaRowGrid = (Grid)javaRow.Child!;
+        Assert.Equal(2, javaRowGrid.Children.Count);
+        Assert.True(((TextBlock)javaRowGrid.Children[1]).Bounds.Height < FormControlHeight,
+            "the java status text wrapped onto more lines");
+
+        var folder = (Border)left.Children[3];
         var folderRow = (Grid)folder.Child!;
         var path = (TextBlock)folderRow.Children[0];
         var openFolder = (Button)folderRow.Children[1];
@@ -187,8 +195,50 @@ public sealed class PageClusterLayoutTests
         Assert.Equal(folderRow.Bounds.Height / 2, path.Bounds.Center.Y, 1);
     }
 
+    [AvaloniaFact]
+    public void LaunchPageJavaStatusRowFlagsMissingJavaInDangerColor()
+    {
+        var view = new LaunchPageView
+        {
+            DataContext = CreateLaunchPageViewModel(javaPath: null)
+        };
+        var window = Show(view);
+
+        var status = window.GetVisualDescendants().OfType<TextBlock>()
+            .First(block => block.Text?.StartsWith("未检测到 Java", StringComparison.Ordinal) == true);
+
+        Assert.Contains("javaalert", status.Classes);
+        Assert.Equal(ThemeBrush("DangerBrush"), status.Foreground);
+        Assert.Contains("设置页", status.Text!);
+    }
+
+    [AvaloniaFact]
+    public void LaunchPageJavaStatusRowShowsTheResolvedJava()
+    {
+        var view = new LaunchPageView
+        {
+            DataContext = CreateLaunchPageViewModel(
+                "/jdk25/bin/java",
+                new JavaInfo("/jdk25/bin/java", "25.0.1", "aarch64", 25, true))
+        };
+        var window = Show(view);
+
+        var status = window.GetVisualDescendants().OfType<TextBlock>()
+            .First(block => block.Text?.StartsWith("Java ", StringComparison.Ordinal) == true);
+
+        Assert.DoesNotContain("javaalert", status.Classes);
+        Assert.Equal(ThemeBrush("TextSecondaryBrush"), status.Foreground);
+        Assert.Contains("25.0.1", status.Text!);
+        Assert.Contains("aarch64", status.Text!);
+    }
+
     private static double Top(Visual visual, Visual reference)
         => visual.TranslatePoint(new Point(0, 0), reference)?.Y ?? double.NaN;
+
+    private static IBrush? ThemeBrush(string key)
+        => Application.Current!.TryGetResource(key, Application.Current.ActualThemeVariant, out var brush)
+            ? (IBrush?)brush
+            : null;
 
     [AvaloniaFact]
     public void DownloadFilterClustersKeepEvenGapsAndHugTheRightEdge()
@@ -279,9 +329,29 @@ public sealed class PageClusterLayoutTests
         ReleaseTime = new DateTimeOffset(2026, 9, 15, 19, 23, 0, TimeSpan.Zero)
     };
 
+    private static LaunchPageViewModel CreateLaunchPageViewModel(string? javaPath, params JavaInfo[] java) => new(
+        new StubSettingsService(javaPath),
+        // 没装 Java 时解析结果也要是空，设置页的路径和扫描列表两条路都堵上。
+        new StubJavaService(javaPath),
+        new StubGameLauncher(),
+        new SessionState(),
+        new StubDispatcher(),
+        new StubMicrosoftAuthentication(),
+        new StubAccountService(),
+        new StubVersionManagerService(),
+        new StubVersionCatalogService(),
+        new StubPlatformService(),
+        new StubFolderOpener(),
+        new StubJavaListService(java));
+
     private sealed class StubSettingsService : ISettingsService
     {
-        public AppSettings Load() => new() { MinecraftFolder = "/games/mc", JavaPath = "/usr/bin/java" };
+        private readonly AppSettings _settings;
+
+        public StubSettingsService(string? javaPath = "/usr/bin/java")
+            => _settings = new() { MinecraftFolder = "/games/mc", JavaPath = javaPath ?? "" };
+
+        public AppSettings Load() => _settings;
 
         public void Save(AppSettings settings)
         {
@@ -352,10 +422,72 @@ public sealed class PageClusterLayoutTests
 
     private sealed class StubJavaService : IJavaService
     {
-        public string? ResolveJavaExecutable(AppSettings settings) => settings.JavaPath;
+        private readonly string? _resolved;
+
+        public StubJavaService(string? resolved = null) => _resolved = resolved;
+
+        public string? ResolveJavaExecutable(AppSettings settings) => Resolve(settings);
 
         public string? ResolveJavaExecutable(AppSettings settings, int? requiredMajorVersion)
-            => settings.JavaPath;
+            => Resolve(settings);
+
+        // 空白路径在真实实现里等于没设置，扫描落空返回 null；stub 照抄这个约定，
+        // 否则"未检测到 Java"分支测不到。
+        private string? Resolve(AppSettings settings)
+            => !string.IsNullOrWhiteSpace(_resolved) ? _resolved
+                : !string.IsNullOrWhiteSpace(settings.JavaPath) ? settings.JavaPath
+                : null;
+    }
+
+    private sealed class StubJavaListService : IJavaListService
+    {
+        private readonly JavaInfo[] _items;
+
+        public StubJavaListService(params JavaInfo[] items) => _items = items;
+
+        public IReadOnlyList<JavaInfo> Scan() => _items;
+
+        public JavaInfo? GetJava(string path) => _items.FirstOrDefault(item => item.Path == path);
+
+        public void Refresh()
+        {
+        }
+    }
+
+    private sealed class StubDispatcher : IUiDispatcher
+    {
+        public void Post(Action action) => action();
+
+        public void Debounce(string key, TimeSpan delay, Action action) => action();
+    }
+
+    private sealed class StubMicrosoftAuthentication : IMicrosoftAuthenticationService
+    {
+        public Task<MicrosoftAccountSession> LoginAsync(
+            IProgress<string>? progress = null,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<MicrosoftAccountSession?> RefreshAsync(
+            Account account,
+            IProgress<string>? progress = null,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+    }
+
+    private sealed class StubAccountService : IAccountService
+    {
+        public IReadOnlyList<Account> Load() => [];
+
+        public Account AddOfflineAccount(string name) => throw new NotSupportedException();
+
+        public Account AddMicrosoftAccount(MicrosoftAccountSession session) => throw new NotSupportedException();
+
+        public void RemoveAccount(Guid id) => throw new NotSupportedException();
+
+        public void SetDefaultAccount(Guid id) => throw new NotSupportedException();
+
+        public Account? GetDefaultAccount() => null;
     }
 
     private sealed class StubGameLauncher : IGameLauncher

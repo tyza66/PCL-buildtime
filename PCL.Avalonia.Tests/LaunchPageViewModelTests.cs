@@ -19,14 +19,32 @@ public sealed class LaunchPageViewModelTests
 
     private sealed class FakeJavaService : IJavaService
     {
+        public string? Resolved { get; init; } = "/games/java";
+
         public int? LastRequiredMajor { get; private set; }
 
-        public string? ResolveJavaExecutable(AppSettings settings) => "/games/java";
+        public string? ResolveJavaExecutable(AppSettings settings) => Resolved;
 
         public string? ResolveJavaExecutable(AppSettings settings, int? requiredMajorVersion)
         {
             LastRequiredMajor = requiredMajorVersion;
-            return "/games/java";
+            return Resolved;
+        }
+    }
+
+    private sealed class FakeJavaListService : IJavaListService
+    {
+        private readonly JavaInfo[] _items;
+
+        public FakeJavaListService(params JavaInfo[] items) => _items = items;
+
+        public IReadOnlyList<JavaInfo> Scan() => _items;
+
+        public JavaInfo? GetJava(string path)
+            => _items.FirstOrDefault(item => string.Equals(item.Path, path, StringComparison.Ordinal));
+
+        public void Refresh()
+        {
         }
     }
 
@@ -59,6 +77,8 @@ public sealed class LaunchPageViewModelTests
     {
         public IGameLaunch LaunchResult { get; set; } = new FakeGameLaunch();
 
+        public Exception? BuildError { get; set; }
+
         public int LaunchCount { get; private set; }
 
         public AppSettings? LastBuildSettings { get; private set; }
@@ -70,8 +90,13 @@ public sealed class LaunchPageViewModelTests
             AppSettings settings,
             string javaExecutable,
             Account? account = null,
-            VersionSettings? versionSettings = null)
+        VersionSettings? versionSettings = null)
         {
+            if (BuildError is not null)
+            {
+                throw BuildError;
+            }
+
             LastBuildSettings = settings;
             LastAccount = account;
             return new()
@@ -258,7 +283,8 @@ public sealed class LaunchPageViewModelTests
         FakeMicrosoftAuthenticationService? microsoft = null,
         FakeAccountService? accounts = null,
         FakeJavaService? java = null,
-        FakeVersionCatalog? versionCatalog = null)
+        FakeVersionCatalog? versionCatalog = null,
+        FakeJavaListService? javaList = null)
         => new(
             new FakeSettingsService(),
             java ?? new FakeJavaService(),
@@ -270,7 +296,8 @@ public sealed class LaunchPageViewModelTests
             new FakeVersionManager(),
             versionCatalog ?? new FakeVersionCatalog(),
             new FakePlatform(),
-            new FakeFolderOpener());
+            new FakeFolderOpener(),
+            javaList ?? new FakeJavaListService(new JavaInfo("/games/java", "17.0.9", "x64", 17, true)));
 
     [Fact]
     public async Task LaunchAsync_StartsGameAndTracksExit()
@@ -435,5 +462,88 @@ public sealed class LaunchPageViewModelTests
 
         Assert.Null(java.LastRequiredMajor);
         Assert.Equal(1, launcher.LaunchCount);
+    }
+
+    [Fact]
+    public void JavaStatus_ShowsResolvedJavaPathAndVersion()
+    {
+        var javaList = new FakeJavaListService(new JavaInfo("/games/java", "25.0.1", "x64", 25, true));
+        var viewModel = CreateViewModel(
+            new FakeLauncher(),
+            new SessionState { SelectedVersion = SelectedVersion() },
+            new SyncDispatcher(),
+            versionCatalog: new FakeVersionCatalog { MajorVersion = 25 },
+            javaList: javaList);
+
+        Assert.False(viewModel.JavaStatusIsError);
+        Assert.Contains("Java 25", viewModel.JavaStatusText);
+        Assert.Contains("/games/java", viewModel.JavaStatusText);
+    }
+
+    [Fact]
+    public void JavaStatus_WarnsWhenVersionNeedsNewerJava()
+    {
+        var javaList = new FakeJavaListService(new JavaInfo("/games/java", "17.0.9", "x64", 17, true));
+        var viewModel = CreateViewModel(
+            new FakeLauncher(),
+            new SessionState { SelectedVersion = SelectedVersion() },
+            new SyncDispatcher(),
+            versionCatalog: new FakeVersionCatalog { MajorVersion = 25 },
+            javaList: javaList);
+
+        Assert.True(viewModel.JavaStatusIsError);
+        Assert.Contains("需要 Java 25", viewModel.JavaStatusText);
+        Assert.Contains("Java 17", viewModel.JavaStatusText);
+    }
+
+    [Fact]
+    public void JavaStatus_WarnsWhenNoJavaDetected()
+    {
+        var viewModel = CreateViewModel(
+            new FakeLauncher(),
+            new SessionState { SelectedVersion = SelectedVersion() },
+            new SyncDispatcher(),
+            java: new FakeJavaService { Resolved = null },
+            javaList: new FakeJavaListService());
+
+        Assert.True(viewModel.JavaStatusIsError);
+        Assert.Contains("未检测到 Java", viewModel.JavaStatusText);
+    }
+
+    [Fact]
+    public async Task LaunchAsync_WhenNoJavaFound_ExplainsRequiredVersion()
+    {
+        var launcher = new FakeLauncher();
+        var viewModel = CreateViewModel(
+            launcher,
+            new SessionState { SelectedVersion = SelectedVersion() },
+            new SyncDispatcher(),
+            java: new FakeJavaService { Resolved = null },
+            versionCatalog: new FakeVersionCatalog { MajorVersion = 25 },
+            javaList: new FakeJavaListService());
+
+        await viewModel.LaunchCommand.ExecuteAsync(null);
+
+        Assert.Equal(0, launcher.LaunchCount);
+        Assert.Contains("需要 Java 25", viewModel.StatusMessage);
+        Assert.Contains("设置页", viewModel.StatusMessage);
+    }
+
+    [Fact]
+    public async Task LaunchAsync_LogsJavaPath_AndChineseFailureOnLauncherError()
+    {
+        var launcher = new FakeLauncher();
+        launcher.BuildError = new HttpRequestException("no route");
+        var viewModel = CreateViewModel(
+            launcher,
+            new SessionState { SelectedVersion = SelectedVersion() },
+            new SyncDispatcher(),
+            javaList: new FakeJavaListService(new JavaInfo("/games/java", "25.0.1", "x64", 25, true)));
+
+        await viewModel.LaunchCommand.ExecuteAsync(null);
+
+        Assert.Contains("使用 Java：/games/java", viewModel.LogText);
+        Assert.Contains("启动失败：", viewModel.StatusMessage);
+        Assert.Contains("下载源", viewModel.StatusMessage);
     }
 }

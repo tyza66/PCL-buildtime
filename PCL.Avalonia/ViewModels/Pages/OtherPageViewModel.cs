@@ -81,7 +81,7 @@ public sealed partial class OtherPageViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = "扫描临时文件失败：" + ex.Message;
+            StatusMessage = "扫描临时文件失败：" + ErrorMessageFormatter.Describe(ex);
         }
     }
 
@@ -99,7 +99,7 @@ public sealed partial class OtherPageViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = "清理临时文件失败：" + ex.Message;
+            StatusMessage = "清理临时文件失败：" + ErrorMessageFormatter.Describe(ex);
         }
     }
 
@@ -112,7 +112,7 @@ public sealed partial class OtherPageViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = $"打开{label}失败：{ex.Message}";
+            StatusMessage = $"打开{label}失败：{ErrorMessageFormatter.Describe(ex)}";
         }
     }
 

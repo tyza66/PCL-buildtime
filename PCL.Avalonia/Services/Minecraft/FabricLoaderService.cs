@@ -92,7 +92,7 @@ public sealed class FabricLoaderService : IFabricLoaderService
         }
         catch (Exception ex)
         {
-            errors.Add($"Fabric 版本资料下载失败：{ex.Message}");
+            errors.Add($"Fabric 版本资料下载失败：{ErrorMessageFormatter.Brief(ex)}");
             progress?.Report(new FabricInstallProgress(FabricInstallStage.Complete, loader, 1, 1));
             return new FabricInstallResult($"fabric-loader-{loader}-{game}", game, loader, errors);
         }
@@ -111,7 +111,7 @@ public sealed class FabricLoaderService : IFabricLoaderService
         }
         catch (JsonException ex)
         {
-            errors.Add("Fabric 版本资料解析失败：" + ex.Message);
+            errors.Add("Fabric 版本资料解析失败：" + ErrorMessageFormatter.Brief(ex));
             progress?.Report(new FabricInstallProgress(FabricInstallStage.Complete, loader, 1, 1));
             return new FabricInstallResult($"fabric-loader-{loader}-{game}", game, loader, errors);
         }
@@ -177,7 +177,7 @@ public sealed class FabricLoaderService : IFabricLoaderService
             }
             catch (Exception ex)
             {
-                errors.Add($"支持库 {Path.GetFileName(destination)} 下载失败：{ex.Message}");
+                errors.Add($"支持库 {Path.GetFileName(destination)} 下载失败：{ErrorMessageFormatter.Brief(ex)}");
             }
 
             progress?.Report(new FabricInstallProgress(

@@ -59,7 +59,7 @@ public sealed partial class ModsPageViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = "读取 Mod 失败：" + ex.Message;
+            StatusMessage = "读取 Mod 失败：" + ErrorMessageFormatter.Describe(ex);
         }
         finally
         {
@@ -88,7 +88,7 @@ public sealed partial class ModsPageViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = "切换 Mod 失败：" + ex.Message;
+            StatusMessage = "切换 Mod 失败：" + ErrorMessageFormatter.Describe(ex);
         }
         finally
         {
@@ -113,7 +113,7 @@ public sealed partial class ModsPageViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = "删除 Mod 失败：" + ex.Message;
+            StatusMessage = "删除 Mod 失败：" + ErrorMessageFormatter.Describe(ex);
         }
         finally
         {

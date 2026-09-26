@@ -46,9 +46,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
         IForgelikeLoaderService forgelikeLoaderService,
         IVersionManagerService versionManager,
         IFolderOpener folderOpener,
-        ILaunchScriptExporter scriptExporter,
-        IOtherToolsService otherToolsService,
-        ILinkService linkService)
+       ILaunchScriptExporter scriptExporter,
+       IOtherToolsService otherToolsService,
+        ILinkService linkService,
+        IJavaListService javaListService)
     {
         _settingsService = settingsService;
         _themeService = themeService;
@@ -70,7 +71,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 versionManager,
                 versionCatalogService,
                 platformService,
-                folderOpener)),
+                folderOpener,
+                javaListService)),
             new NavItemViewModel("账号", new AccountsPageViewModel(accountService, microsoftAuthentication, session)),
             new NavItemViewModel("下载", new DownloadPageViewModel(settingsService, versionManifestService, versionInstaller, versionCatalogService, platformService, session)),
             new NavItemViewModel("Fabric", new FabricLoaderPageViewModel(settingsService, fabricLoaderService, platformService, session)),
@@ -99,7 +101,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 modsService)),
             new NavItemViewModel("Mod管理", new ModsPageViewModel(settingsService, modsService, platformService)),
             new NavItemViewModel("联机", new LinkPageViewModel(linkService, settingsService, dispatcher)),
-            new NavItemViewModel("设置", new SettingsPageViewModel(settingsService, platformService, _themeService, new JavaListService(), dispatcher)),
+            new NavItemViewModel("设置", new SettingsPageViewModel(settingsService, platformService, _themeService, javaListService, dispatcher)),
             new NavItemViewModel("其他", new OtherPageViewModel(
                 settingsService,
                 platformService,

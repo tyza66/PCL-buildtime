@@ -128,7 +128,7 @@ public sealed partial class LinkPageViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            ErrorMessage = ex.Message;
+            ErrorMessage = ErrorMessageFormatter.Describe(ex);
         }
     }
 
@@ -158,12 +158,12 @@ public sealed partial class LinkPageViewModel : ObservableObject, IDisposable
         }
         catch (FormatException ex)
         {
-            ErrorMessage = ex.Message;
+            ErrorMessage = ErrorMessageFormatter.Describe(ex);
             StatusMessage = "邀请码无效";
         }
         catch (Exception ex)
         {
-            ErrorMessage = ex.Message;
+            ErrorMessage = ErrorMessageFormatter.Describe(ex);
             StatusMessage = "联机失败";
         }
         finally

@@ -213,7 +213,7 @@ public sealed partial class VersionPageViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = "保存分类失败：" + ex.Message;
+            StatusMessage = "保存分类失败：" + ErrorMessageFormatter.Describe(ex);
         }
     }
 
@@ -246,7 +246,7 @@ public sealed partial class VersionPageViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = "读取版本失败：" + ex.Message;
+            StatusMessage = "读取版本失败：" + ErrorMessageFormatter.Describe(ex);
         }
     }
 
@@ -326,7 +326,7 @@ public sealed partial class VersionPageViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = "打开目录失败：" + ex.Message;
+            StatusMessage = "打开目录失败：" + ErrorMessageFormatter.Describe(ex);
         }
     }
 
@@ -347,7 +347,7 @@ public sealed partial class VersionPageViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = "保存描述失败：" + ex.Message;
+            StatusMessage = "保存描述失败：" + ErrorMessageFormatter.Describe(ex);
         }
     }
 
@@ -370,7 +370,7 @@ public sealed partial class VersionPageViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = "重命名失败：" + ex.Message;
+            StatusMessage = "重命名失败：" + ErrorMessageFormatter.Describe(ex);
         }
     }
 
@@ -418,7 +418,7 @@ public sealed partial class VersionPageViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = "保存实例设置失败：" + ex.Message;
+            StatusMessage = "保存实例设置失败：" + ErrorMessageFormatter.Describe(ex);
         }
     }
 
@@ -445,7 +445,7 @@ public sealed partial class VersionPageViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = "重置实例设置失败：" + ex.Message;
+            StatusMessage = "重置实例设置失败：" + ErrorMessageFormatter.Describe(ex);
         }
     }
 
@@ -480,7 +480,7 @@ public sealed partial class VersionPageViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = "导出启动脚本失败：" + ex.Message;
+            StatusMessage = "导出启动脚本失败：" + ErrorMessageFormatter.Describe(ex);
         }
     }
 
@@ -519,7 +519,7 @@ public sealed partial class VersionPageViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = "导出整合包失败：" + ex.Message;
+            StatusMessage = "导出整合包失败：" + ErrorMessageFormatter.Describe(ex);
         }
         finally
         {
@@ -568,7 +568,7 @@ public sealed partial class VersionPageViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = "收藏操作失败：" + ex.Message;
+            StatusMessage = "收藏操作失败：" + ErrorMessageFormatter.Describe(ex);
         }
     }
 
@@ -584,7 +584,7 @@ public sealed partial class VersionPageViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = "隐藏操作失败：" + ex.Message;
+            StatusMessage = "隐藏操作失败：" + ErrorMessageFormatter.Describe(ex);
         }
     }
 
@@ -599,7 +599,7 @@ public sealed partial class VersionPageViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = "删除版本失败：" + ex.Message;
+            StatusMessage = "删除版本失败：" + ErrorMessageFormatter.Describe(ex);
         }
     }
 
@@ -673,7 +673,7 @@ public sealed partial class VersionPageViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            ModsStatus = "读取 Mod 失败：" + ex.Message;
+            ModsStatus = "读取 Mod 失败：" + ErrorMessageFormatter.Describe(ex);
         }
     }
 
@@ -688,7 +688,7 @@ public sealed partial class VersionPageViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            ModsStatus = "切换 Mod 失败：" + ex.Message;
+            ModsStatus = "切换 Mod 失败：" + ErrorMessageFormatter.Describe(ex);
         }
     }
 
@@ -702,7 +702,7 @@ public sealed partial class VersionPageViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            ModsStatus = "删除 Mod 失败：" + ex.Message;
+            ModsStatus = "删除 Mod 失败：" + ErrorMessageFormatter.Describe(ex);
         }
     }
 
@@ -783,7 +783,7 @@ public sealed partial class VersionPageViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = "打开文件夹失败：" + ex.Message;
+            StatusMessage = "打开文件夹失败：" + ErrorMessageFormatter.Describe(ex);
         }
     }
 

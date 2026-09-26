@@ -21,6 +21,7 @@ public sealed partial class LaunchPageViewModel : ObservableObject, IPageActivat
     private readonly IVersionCatalogService _catalog;
     private readonly IPlatformService _platform;
     private readonly IFolderOpener _folderOpener;
+    private readonly IJavaListService _javaListService;
     private IGameLaunch? _activeLaunch;
 
     public LaunchPageViewModel(
@@ -34,7 +35,8 @@ public sealed partial class LaunchPageViewModel : ObservableObject, IPageActivat
         IVersionManagerService versionManager,
         IVersionCatalogService versionCatalog,
         IPlatformService platformService,
-        IFolderOpener folderOpener)
+        IFolderOpener folderOpener,
+        IJavaListService javaListService)
     {
         _settingsService = settingsService;
         _javaService = javaService;
@@ -47,6 +49,7 @@ public sealed partial class LaunchPageViewModel : ObservableObject, IPageActivat
         _catalog = versionCatalog;
         _platform = platformService;
         _folderOpener = folderOpener;
+        _javaListService = javaListService;
         _session.VersionInstalled += OnVersionInstalled;
         _session.PropertyChanged += OnSessionPropertyChanged;
         SelectedVersion = _session.SelectedVersion;
@@ -74,6 +77,13 @@ public sealed partial class LaunchPageViewModel : ObservableObject, IPageActivat
 
     [ObservableProperty]
     private string _versionStatus = "";
+
+    [ObservableProperty]
+    private bool _javaStatusIsError;
+
+    /// <summary>启动页常驻的 Java 状态行：版本不匹配时提前说清"要 25、现在 17"并指路设置页。</summary>
+    [ObservableProperty]
+    private string _javaStatusText = "";
 
     partial void OnSelectedInstalledVersionChanged(LaunchVersionItemViewModel? value)
     {
@@ -188,7 +198,7 @@ public sealed partial class LaunchPageViewModel : ObservableObject, IPageActivat
         }
         catch (Exception ex)
         {
-            VersionStatus = "读取已安装版本失败：" + ex.Message;
+            VersionStatus = "读取已安装版本失败：" + ErrorMessageFormatter.Describe(ex);
         }
         finally
         {
@@ -213,7 +223,7 @@ public sealed partial class LaunchPageViewModel : ObservableObject, IPageActivat
         }
         catch (Exception ex)
         {
-            VersionStatus = "打开目录失败：" + ex.Message;
+            VersionStatus = "打开目录失败：" + ErrorMessageFormatter.Describe(ex);
         }
     }
 
@@ -229,7 +239,55 @@ public sealed partial class LaunchPageViewModel : ObservableObject, IPageActivat
                 ? "还没有已安装的版本，先去下载页安装一个"
                 : "请选择一个版本"
             : $"当前版本：{SelectedVersion.Id}";
+        UpdateJavaStatus();
     }
+
+    /// <summary>
+    /// 常驻 Java 状态：没装 Java 或版本对不上时直接说清差距和去处（设置页），
+    /// 别等用户点完启动才看到一句干巴巴的"未找到 Java"。
+    /// </summary>
+    private void UpdateJavaStatus()
+    {
+        var settings = _settingsService.Load();
+        var requiredMajor = SelectedVersion is null
+            ? (int?)null
+            : ResolveRequiredJavaMajor(GetMinecraftFolder(settings), SelectedVersion);
+        var javaPath = _javaService.ResolveJavaExecutable(settings, requiredMajor);
+        var java = javaPath is null ? null : _javaListService.GetJava(javaPath);
+
+        if (java is null)
+        {
+            if (javaPath is not null)
+            {
+                // 用户在设置页手填了路径，扫描列表里没有它，版本号未知但照样能用。
+                JavaStatusIsError = false;
+                JavaStatusText = $"Java（自定义路径，未识别版本）：{javaPath}";
+                return;
+            }
+
+            JavaStatusIsError = true;
+            JavaStatusText = NotInstalledJavaHint();
+            return;
+        }
+
+        if (requiredMajor is { } required && java.MajorVersion < required)
+        {
+            JavaStatusIsError = true;
+            JavaStatusText = $"Java 版本过低：该版本需要 Java {required}，当前可用的是 Java {java.MajorVersion}，请到设置页更换或安装新的 Java";
+            return;
+        }
+
+        JavaStatusIsError = false;
+        JavaStatusText = java.Version.Length > 0
+            ? $"Java {java.MajorVersion}（{java.Version} · {java.Architecture}） · {java.Path}"
+            : $"Java {java.MajorVersion} · {java.Path}";
+    }
+
+    private static string NotInstalledJavaHint()
+        => "未检测到 Java：请到设置页扫描或指定 Java 路径，否则无法启动游戏";
+
+    private int? ResolveRequiredJavaMajor(string gameFolder, MinecraftVersion version)
+        => _catalog.LoadJson(gameFolder, version.Id)?.JavaVersion?.MajorVersion;
 
     private List<string> ResolveGameFolders(AppSettings settings)
     {
@@ -305,15 +363,19 @@ public sealed partial class LaunchPageViewModel : ObservableObject, IPageActivat
             };
             var launchSettings = LaunchSettingsMerger.Merge(settings, versionSettings);
             // 版本清单点名要某个 Java 大版本时（如 26.3 要 25）按它挑 Java，否则会默认落到 Java 8。
-            var requiredJavaMajor = _catalog.LoadJson(gameFolder, version.Id)?.JavaVersion?.MajorVersion;
+            var requiredJavaMajor = ResolveRequiredJavaMajor(gameFolder, version);
             var java = _javaService.ResolveJavaExecutable(launchSettings, requiredJavaMajor);
             if (java is null)
             {
-                LogLine("未找到 Java，请先在设置页配置 Java 路径");
-                StatusMessage = "未找到 Java";
+                var javaHint = requiredJavaMajor is { } required
+                    ? $"未找到 Java：{version.Id} 需要 Java {required}，请先安装该版本或到设置页指定 Java 路径"
+                    : "未找到 Java：请先安装 Java 或到设置页指定 Java 路径";
+                LogLine(javaHint);
+                StatusMessage = javaHint;
                 return;
             }
 
+            LogLine($"使用 Java：{java}");
             var launchAccount = account;
             var plan = await Task.Run(() => _launcher.BuildLaunchPlan(
                 version,
@@ -331,8 +393,9 @@ public sealed partial class LaunchPageViewModel : ObservableObject, IPageActivat
         }
         catch (Exception ex)
         {
-            LogLine("启动失败：" + ex.Message);
-            StatusMessage = "启动失败：" + ex.Message;
+            var failure = "启动失败：" + ErrorMessageFormatter.Describe(ex);
+            LogLine(failure);
+            StatusMessage = failure;
         }
         finally
         {

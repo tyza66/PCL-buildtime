@@ -137,7 +137,7 @@ public sealed class ForgelikeLoaderService : IForgelikeLoaderService
         }
         catch (Exception ex)
         {
-            errors.Add($"{displayName} 安装器下载失败：{ex.Message}");
+            errors.Add($"{displayName} 安装器下载失败：{ErrorMessageFormatter.Brief(ex)}");
         }
 
         progress?.Report(new ForgelikeInstallProgress(ForgelikeInstallStage.Installer, loaderVersion, 1, 1));
@@ -209,7 +209,7 @@ public sealed class ForgelikeLoaderService : IForgelikeLoaderService
         }
         catch (Exception ex)
         {
-            errors.Add($"{displayName} 安装器解析失败：{ex.Message}");
+            errors.Add($"{displayName} 安装器解析失败：{ErrorMessageFormatter.Brief(ex)}");
             progress?.Report(new ForgelikeInstallProgress(ForgelikeInstallStage.Injector, versionId, 0, 1));
             try
             {
@@ -274,7 +274,7 @@ public sealed class ForgelikeLoaderService : IForgelikeLoaderService
         }
         catch (Exception ex)
         {
-            errors.Add($"运行 {displayName} 安装器失败：{ex.Message}");
+            errors.Add($"运行 {displayName} 安装器失败：{ErrorMessageFormatter.Brief(ex)}");
         }
 
         progress?.Report(new ForgelikeInstallProgress(ForgelikeInstallStage.Injector, versionId, 1, 1));
@@ -448,7 +448,7 @@ public sealed class ForgelikeLoaderService : IForgelikeLoaderService
         }
         catch (Exception ex)
         {
-            errors.Add($"旧版 {displayName} 安装失败：{ex.Message}");
+            errors.Add($"旧版 {displayName} 安装失败：{ErrorMessageFormatter.Brief(ex)}");
         }
 
         progress?.Report(new ForgelikeInstallProgress(ForgelikeInstallStage.Injector, versionId, 1, 1));
@@ -510,7 +510,7 @@ public sealed class ForgelikeLoaderService : IForgelikeLoaderService
         }
         catch (Exception ex)
         {
-            return $"支持库 {Path.GetFileName(destination)} 下载失败：{ex.Message}";
+            return $"支持库 {Path.GetFileName(destination)} 下载失败：{ErrorMessageFormatter.Brief(ex)}";
         }
     }
 

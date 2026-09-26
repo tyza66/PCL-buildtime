@@ -117,7 +117,7 @@ public sealed class ModpackInstallerService : IModpackInstallerService
             }
             catch (Exception ex)
             {
-                errors.Add($"Mod {manifestFile.ProjectId}/{manifestFile.FileId} 下载失败：{ex.Message}");
+                errors.Add($"Mod {manifestFile.ProjectId}/{manifestFile.FileId} 下载失败：{ErrorMessageFormatter.Brief(ex)}");
             }
 
             progress?.Report(new ModpackInstallProgress(ModpackInstallStage.Mods, null, index + 1, requiredFiles.Count, 0, null));

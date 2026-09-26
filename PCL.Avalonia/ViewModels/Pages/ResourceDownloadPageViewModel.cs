@@ -135,7 +135,7 @@ public sealed partial class ResourceDownloadPageViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = "搜索失败：" + ex.Message;
+            StatusMessage = "搜索失败：" + ErrorMessageFormatter.Describe(ex);
         }
         finally
         {
@@ -179,7 +179,7 @@ public sealed partial class ResourceDownloadPageViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = "安装失败：" + ex.Message;
+            StatusMessage = "安装失败：" + ErrorMessageFormatter.Describe(ex);
         }
         finally
         {

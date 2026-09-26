@@ -127,7 +127,7 @@ public sealed partial class ForgelikeLoaderPageViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = "安装失败：" + ex.Message;
+            StatusMessage = "安装失败：" + ErrorMessageFormatter.Describe(ex);
         }
         finally
         {
@@ -172,7 +172,7 @@ public sealed partial class ForgelikeLoaderPageViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = "获取加载器版本失败：" + ex.Message;
+            StatusMessage = "获取加载器版本失败：" + ErrorMessageFormatter.Describe(ex);
         }
         finally
         {

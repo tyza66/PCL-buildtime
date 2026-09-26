@@ -506,7 +506,8 @@ public sealed class MainWindowViewModelTests
             new FakeFolderOpener(),
             new FakeScriptExporter(),
             new FakeOtherToolsService(),
-            new FakeLinkService());
+            new FakeLinkService(),
+            new FakeJavaListService());
         return (settings, theme, viewModel);
     }
 
@@ -613,7 +614,8 @@ public sealed class MainWindowViewModelTests
             new FakeFolderOpener(),
             new FakeScriptExporter(),
             new FakeOtherToolsService(),
-            new FakeLinkService());
+            new FakeLinkService(),
+            new FakeJavaListService());
 
         viewModel.ToggleThemeCommand.Execute(null);
 
@@ -622,5 +624,16 @@ public sealed class MainWindowViewModelTests
         Assert.False(settings.Settings.UseDarkTheme);
         Assert.Equal("/games/mc", settings.Settings.MinecraftFolder);
         Assert.Equal(1, settings.SaveCount);
+    }
+
+    private sealed class FakeJavaListService : IJavaListService
+    {
+        public IReadOnlyList<JavaInfo> Scan() => [];
+
+        public JavaInfo? GetJava(string path) => null;
+
+        public void Refresh()
+        {
+        }
     }
 }

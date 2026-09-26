@@ -28,6 +28,8 @@ public partial class MainWindow : Window
     {
         var platform = new PlatformService();
         var settings = new JsonSettingsService(Path.Combine(platform.GetConfigDirectory(), "settings.json"));
+        // 启动页的 Java 状态行和设置页共用一份扫描结果，两边看到的版本信息才对得上。
+        var javaListService = new JavaListService();
         var session = new SessionState();
         var dispatcher = new AvaloniaUiDispatcher();
         var catalog = new VersionCatalogService();
@@ -79,6 +81,7 @@ public partial class MainWindow : Window
             new DefaultFolderOpener(),
             new LaunchScriptExporter(),
             new OtherToolsService(),
-            linkService);
+            linkService,
+            javaListService);
     }
 }
