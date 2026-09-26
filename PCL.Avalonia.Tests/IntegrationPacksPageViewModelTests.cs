@@ -185,4 +185,15 @@ public sealed class IntegrationPacksPageViewModelTests
         FakeModpackService service,
         FakeModpackInstaller installer)
         => new(new FakeSettingsService(), service, installer, new FakePlatformService());
+
+    [Fact]
+    public void JavaHintText_TracksGameVersion()
+    {
+        var viewModel = CreateViewModel(new FakeModpackService());
+
+        Assert.Equal("1.20.1 需要 Java 17", viewModel.JavaHintText);
+
+        viewModel.GameVersion = "1.12.2";
+        Assert.Equal("1.12.2 需要 Java 8", viewModel.JavaHintText);
+    }
 }

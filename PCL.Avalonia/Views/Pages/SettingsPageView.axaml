@@ -95,7 +95,7 @@
                             Foreground="{DynamicResource TextPrimaryBrush}" />
                         <TextBox
                             Text="{Binding UserName}"
-                            Watermark="Player"
+                            Watermark="玩家名"
                             Foreground="{DynamicResource TextPrimaryBrush}" />
                         <TextBlock
                             Text="最大内存（MB）"

@@ -23,6 +23,13 @@
                     FontSize="13"
                     TextWrapping="Wrap"
                     Foreground="{DynamicResource TextSecondaryBrush}" />
+                <TextBlock
+                    Text="{Binding JavaHintText}"
+                    IsVisible="{Binding JavaHintText, Converter={StaticResource StringNotEmpty}}"
+                    FontSize="12"
+                    TextWrapping="Wrap"
+                    Foreground="{DynamicResource TextSecondaryBrush}"
+                    ToolTip.Tip="{Binding JavaHintText}" />
             </StackPanel>
             <Grid
                 Grid.Row="1"

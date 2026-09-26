@@ -62,6 +62,16 @@ public sealed partial class ForgelikeLoaderPageViewModel : ObservableObject
 
     public string ModeTitle => IsNeoForgeMode ? "NeoForge" : "Forge";
 
+    /// <summary>
+    /// Forge / NeoForge 的版本接口没带 Java 要求这个信息，按 Mojang 官方的
+    /// 「游戏版本 → Java 大版本」对应关系补一句提示；版本填得不对就返回空串隐藏提示。
+    /// </summary>
+    public string JavaHintText => MinecraftJavaRequirement.GetRequiredMajor(GameVersionText) is { } required
+        ? $"{GameVersionText.Trim()} 需要 Java {required}"
+        : "";
+
+    partial void OnGameVersionTextChanged(string value) => OnPropertyChanged(nameof(JavaHintText));
+
     public bool IsForgeMode => !IsNeoForgeMode;
 
     private bool CanInstall => SelectedLoader is not null && !IsInstalling;

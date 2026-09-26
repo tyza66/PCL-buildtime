@@ -321,4 +321,15 @@ public sealed class ResourceDownloadPageViewModelTests
         Assert.False(viewModel.IsLoaderVisible);
         Assert.Equal("any", viewModel.Loader);
     }
+
+    [Fact]
+    public void JavaHintText_TracksGameVersion()
+    {
+        var viewModel = CreateViewModel(new FakeSearchService(), new FakeDownloadService());
+
+        Assert.Equal("1.20.1 需要 Java 17", viewModel.JavaHintText);
+
+        viewModel.GameVersion = "1.17.1";
+        Assert.Equal("1.17.1 需要 Java 16", viewModel.JavaHintText);
+    }
 }

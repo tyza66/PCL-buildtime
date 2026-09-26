@@ -55,6 +55,15 @@ public sealed partial class ModsDownloadPageViewModel : ObservableObject
     [ObservableProperty]
     private string _gameVersion = "1.20.1";
 
+    /// <summary>
+    /// 按所选游戏版本给出 Java 需求提示；识别不了的版本返回空串，界面上的提示行自动隐藏。
+    /// </summary>
+    public string JavaHintText => MinecraftJavaRequirement.GetRequiredMajor(GameVersion) is { } required
+        ? $"{GameVersion} 需要 Java {required}"
+        : "";
+
+    partial void OnGameVersionChanged(string value) => OnPropertyChanged(nameof(JavaHintText));
+
     [ObservableProperty]
     private string _loader = "fabric";
 

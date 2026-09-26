@@ -262,4 +262,15 @@ public sealed class ModsDownloadPageViewModelTests
             new FakePlatformService(),
             curseForgeApi,
             curseForgeInstaller);
+
+    [Fact]
+    public void JavaHintText_TracksGameVersion()
+    {
+        var viewModel = CreateViewModel(new FakeApi(), new FakeInstaller());
+
+        Assert.Equal("1.20.1 需要 Java 17", viewModel.JavaHintText);
+
+        viewModel.GameVersion = "1.21.4";
+        Assert.Equal("1.21.4 需要 Java 21", viewModel.JavaHintText);
+    }
 }

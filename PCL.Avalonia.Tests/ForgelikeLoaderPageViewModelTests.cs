@@ -189,4 +189,30 @@ public sealed class ForgelikeLoaderPageViewModelTests
         Assert.StartsWith("安装未完成", viewModel.StatusMessage);
         Assert.Contains("asm 下载失败", viewModel.StatusMessage);
     }
+
+    [Fact]
+    public void JavaHintText_FollowsGameVersion()
+    {
+        var (_, _, _, viewModel) = CreateViewModel();
+
+        viewModel.GameVersionText = "1.20.1";
+        Assert.Equal("1.20.1 需要 Java 17", viewModel.JavaHintText);
+
+        viewModel.GameVersionText = "1.21.4";
+        Assert.Equal("1.21.4 需要 Java 21", viewModel.JavaHintText);
+
+        viewModel.GameVersionText = "1.16.5";
+        Assert.Equal("1.16.5 需要 Java 8", viewModel.JavaHintText);
+    }
+
+    [Fact]
+    public void JavaHintText_UnknownVersion_StaysEmpty()
+    {
+        var (_, _, _, viewModel) = CreateViewModel();
+
+        Assert.Equal("", viewModel.JavaHintText);
+
+        viewModel.GameVersionText = "23w13a";
+        Assert.Equal("", viewModel.JavaHintText);
+    }
 }
