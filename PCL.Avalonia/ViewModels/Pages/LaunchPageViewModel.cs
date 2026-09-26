@@ -440,8 +440,14 @@ public sealed partial class LaunchPageViewModel : ObservableObject, IPageActivat
             }
 
             _activeLaunch = null;
-            LogLine($"游戏进程已退出（退出码 {exitCode}）");
-            StatusMessage = $"已退出 {versionId}（退出码 {exitCode}）";
+            LogLine(GameExitDiagnostics.LogLine(exitCode));
+            var advice = GameExitDiagnostics.Describe(exitCode);
+            if (advice.Length > 0)
+            {
+                LogLine($"排查建议：{advice}");
+            }
+
+            StatusMessage = $"已退出 {versionId}（{GameExitDiagnostics.Brief(exitCode)}）";
             IsRunning = false;
             launch.Dispose();
         });

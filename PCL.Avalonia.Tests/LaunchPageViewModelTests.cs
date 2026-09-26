@@ -317,7 +317,28 @@ public sealed class LaunchPageViewModelTests
         await launch.DisposeTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
         Assert.False(viewModel.IsRunning);
         Assert.Contains("退出码 0", viewModel.LogText);
+        Assert.Contains("正常退出", viewModel.StatusMessage);
+        Assert.DoesNotContain("排查建议", viewModel.LogText);
         Assert.Equal(1, launch.DisposeCount);
+    }
+
+    [Fact]
+    public async Task LaunchAsync_CrashedGame_GetsDiagnosisAndFixAdvice()
+    {
+        var launch = new FakeGameLaunch();
+        var launcher = new FakeLauncher { LaunchResult = launch };
+        var viewModel = CreateViewModel(launcher, new SessionState { SelectedVersion = SelectedVersion() }, new SyncDispatcher());
+
+        await viewModel.LaunchCommand.ExecuteAsync(null);
+        launch.ExitTcs.SetResult(1);
+        await launch.DisposeTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        // 崩了就干巴巴一个"退出码 1"等于没报：日志里要点名去哪儿看、先动哪一格。
+        Assert.Contains("游戏进程已退出（退出码 1）", viewModel.LogText);
+        Assert.Contains("排查建议", viewModel.LogText);
+        Assert.Contains("crash-reports", viewModel.LogText);
+        Assert.Contains("Mod", viewModel.LogText);
+        Assert.Contains("游戏崩溃", viewModel.StatusMessage);
     }
 
     [Fact]
