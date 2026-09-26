@@ -5,6 +5,52 @@
     xmlns:vm="clr-namespace:PCL.Avalonia.ViewModels.Pages;assembly=PCL2.Avalonia"
     xmlns:ctl="clr-namespace:PCL.Avalonia.Controls;assembly=PCL2.Avalonia"
     x:DataType="vm:VersionPageViewModel">
+    <UserControl.Styles>
+        <!-- The detail column is too narrow for TabControl's header strip, where labels wrapped and
+             overlapped; the panel draws its own segmented control instead. -->
+        <Style Selector="ToggleButton.tabsegment">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="MinWidth" Value="76" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border
+                        Background="{TemplateBinding Background}"
+                        CornerRadius="6">
+                        <ContentPresenter
+                            Content="{TemplateBinding Content}"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center" />
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="ToggleButton.tabsegment:pointerover">
+            <Setter Property="Background" Value="{DynamicResource HoverBrush}" />
+        </Style>
+        <Style Selector="ToggleButton.tabsegment:checked">
+            <Setter Property="Background" Value="{DynamicResource SelectedBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+        </Style>
+
+        <!-- One rhythm for every form on this page: section label, then control, then action. -->
+        <Style Selector="TextBlock.sectionlabel">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,4,0,0" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+        </Style>
+        <Style Selector="Button.formaction">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+        </Style>
+    </UserControl.Styles>
     <DockPanel Margin="28">
         <Grid
             DockPanel.Dock="Top"
@@ -39,7 +85,7 @@
                 Foreground="{DynamicResource TextPrimaryBrush}" />
         </Grid>
         <Grid
-            ColumnDefinitions="210,330,*"
+            ColumnDefinitions="190,280,*"
             ColumnSpacing="12">
             <Border
                 Grid.Column="0"
@@ -66,8 +112,8 @@
                             FontSize="12"
                             Foreground="{DynamicResource TextPrimaryBrush}" />
                         <Button
+                            Classes="formaction"
                             Content="添加目录"
-                            HorizontalAlignment="Stretch"
                             Command="{Binding AddFolderCommand}"
                             Background="{DynamicResource ButtonBackgroundBrush}"
                             Foreground="{DynamicResource TextPrimaryBrush}" />
@@ -77,14 +123,14 @@
                         Margin="12,0,12,12"
                         Spacing="6">
                         <Button
+                            Classes="formaction"
                             Content="打开目录"
-                            HorizontalAlignment="Stretch"
                             Command="{Binding OpenCurrentFolderCommand}"
                             Background="{DynamicResource ButtonBackgroundBrush}"
                             Foreground="{DynamicResource TextPrimaryBrush}" />
                         <Button
+                            Classes="formaction"
                             Content="移除目录"
-                            HorizontalAlignment="Stretch"
                             Command="{Binding RemoveFolderCommand}"
                             Background="{DynamicResource ButtonBackgroundBrush}"
                             Foreground="{DynamicResource TextPrimaryBrush}" />
@@ -203,7 +249,7 @@
                                                                     FontSize="11"
                                                                     Command="{Binding SelectCommand}"
                                                                     Background="{DynamicResource AccentBrush}"
-                                                                    Foreground="White" />
+                                                                    Foreground="{DynamicResource TextOnAccentBrush}" />
                                                             </Grid>
                                                             <StackPanel Orientation="Horizontal" Spacing="6">
                                                                 <Button
@@ -218,8 +264,8 @@
                                                                     MinWidth="64"
                                                                     FontSize="11"
                                                                     Command="{Binding DeleteCommand}"
-                                                                    Background="{DynamicResource ButtonBackgroundBrush}"
-                                                                    Foreground="{DynamicResource TextPrimaryBrush}" />
+                                                                    Background="{DynamicResource DangerBrush}"
+                                                                    Foreground="{DynamicResource TextOnAccentBrush}" />
                                                             </StackPanel>
                                                         </StackPanel>
                                                     </Border>
@@ -241,13 +287,45 @@
                 Grid.Column="2"
                 Background="{DynamicResource CardBackgroundBrush}"
                 CornerRadius="8">
-                <TabControl
-                    SelectedIndex="{Binding SelectedDetailTab}"
-                    Background="Transparent"
-                    Foreground="{DynamicResource TextPrimaryBrush}">
-                    <TabItem Header="总体">
-                        <ScrollViewer>
-                            <StackPanel Margin="14" Spacing="10">
+                <DockPanel>
+                    <Grid
+                        DockPanel.Dock="Top"
+                        Margin="8,8,8,0"
+                        ColumnDefinitions="Auto,Auto,Auto,Auto"
+                        HorizontalAlignment="Left"
+                        ColumnSpacing="4">
+                        <ToggleButton
+                            Grid.Column="0"
+                            Classes="tabsegment"
+                            Content="总体"
+                            IsChecked="{Binding IsOverviewTab, Mode=OneWay}"
+                            Command="{Binding SelectDetailTabCommand}"
+                            CommandParameter="0" />
+                        <ToggleButton
+                            Grid.Column="1"
+                            Classes="tabsegment"
+                            Content="Mod"
+                            IsChecked="{Binding IsModsTab, Mode=OneWay}"
+                            Command="{Binding SelectDetailTabCommand}"
+                            CommandParameter="1" />
+                        <ToggleButton
+                            Grid.Column="2"
+                            Classes="tabsegment"
+                            Content="设置"
+                            IsChecked="{Binding IsSettingsTab, Mode=OneWay}"
+                            Command="{Binding SelectDetailTabCommand}"
+                            CommandParameter="2" />
+                        <ToggleButton
+                            Grid.Column="3"
+                            Classes="tabsegment"
+                            Content="导出"
+                            IsChecked="{Binding IsExportTab, Mode=OneWay}"
+                            Command="{Binding SelectDetailTabCommand}"
+                            CommandParameter="3" />
+                    </Grid>
+                    <Panel Margin="0,10,0,0">
+                        <ScrollViewer IsVisible="{Binding IsOverviewTab}">
+                            <StackPanel Margin="12" Spacing="8">
                                 <StackPanel Spacing="2">
                                     <TextBlock
                                         Text="{Binding SelectedItem.Id, TargetNullValue=未选择版本}"
@@ -255,7 +333,7 @@
                                         FontWeight="SemiBold"
                                         TextWrapping="Wrap"
                                         Foreground="{DynamicResource TextPrimaryBrush}" />
-                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
                                         <TextBlock
                                             Text="{Binding SelectedItem.Type, TargetNullValue=未知类型}"
                                             FontSize="11"
@@ -267,33 +345,27 @@
                                     </StackPanel>
                                 </StackPanel>
                                 <TextBlock
-                                    Text="描述"
-                                    FontSize="12"
-                                    FontWeight="SemiBold"
-                                    Foreground="{DynamicResource TextPrimaryBrush}" />
+                                    Classes="sectionlabel"
+                                    Text="描述" />
                                 <TextBox
                                     Text="{Binding DescriptionInput}"
                                     AcceptsReturn="True"
-                                    Height="64"
+                                    Height="72"
                                     Watermark="自定义描述"
-                                    FontSize="12"
                                     Foreground="{DynamicResource TextPrimaryBrush}" />
                                 <Button
+                                    Classes="formaction"
                                     Content="保存描述"
-                                    HorizontalAlignment="Left"
                                     Command="{Binding SaveDescriptionCommand}"
-                                    Background="{DynamicResource ButtonBackgroundBrush}"
-                                    Foreground="{DynamicResource TextPrimaryBrush}" />
+                                    Background="{DynamicResource AccentBrush}"
+                                    Foreground="{DynamicResource TextOnAccentBrush}" />
                                 <TextBlock
-                                    Text="分类"
-                                    FontSize="12"
-                                    FontWeight="SemiBold"
-                                    Margin="0,4,0,0"
-                                    Foreground="{DynamicResource TextPrimaryBrush}" />
+                                    Classes="sectionlabel"
+                                    Text="分类" />
                                 <ComboBox
+                                    HorizontalAlignment="Stretch"
                                     ItemsSource="{Binding DisplayTypeOptions}"
                                     SelectedItem="{Binding DisplayType}"
-                                    Background="{DynamicResource PageBackgroundBrush}"
                                     Foreground="{DynamicResource TextPrimaryBrush}">
                                     <ComboBox.ItemTemplate>
                                         <DataTemplate x:DataType="vm:DisplayTypeOption">
@@ -303,71 +375,76 @@
                                         </DataTemplate>
                                     </ComboBox.ItemTemplate>
                                 </ComboBox>
-                                <WrapPanel>
+                                <Grid
+                                    ColumnDefinitions="*,*"
+                                    ColumnSpacing="8"
+                                    RowSpacing="8">
                                     <Button
+                                        Grid.Row="0"
+                                        Grid.Column="0"
                                         Content="打开版本目录"
-                                        Margin="0,0,6,6"
                                         Command="{Binding OpenVersionFolderCommand}"
                                         Background="{DynamicResource ButtonBackgroundBrush}"
                                         Foreground="{DynamicResource TextPrimaryBrush}" />
                                     <Button
+                                        Grid.Row="0"
+                                        Grid.Column="1"
                                         Content="打开存档"
-                                        Margin="0,0,6,6"
                                         Command="{Binding OpenSavesFolderCommand}"
                                         Background="{DynamicResource ButtonBackgroundBrush}"
                                         Foreground="{DynamicResource TextPrimaryBrush}" />
                                     <Button
+                                        Grid.Row="1"
+                                        Grid.Column="0"
                                         Content="打开 Mod 目录"
-                                        Margin="0,0,6,6"
                                         Command="{Binding OpenModsFolderCommand}"
                                         Background="{DynamicResource ButtonBackgroundBrush}"
                                         Foreground="{DynamicResource TextPrimaryBrush}" />
                                     <Button
+                                        Grid.Row="1"
+                                        Grid.Column="1"
                                         Content="打开截图"
-                                        Margin="0,0,6,6"
                                         Command="{Binding OpenScreenshotsFolderCommand}"
                                         Background="{DynamicResource ButtonBackgroundBrush}"
                                         Foreground="{DynamicResource TextPrimaryBrush}" />
-                                </WrapPanel>
+                                </Grid>
                                 <TextBlock
-                                    Text="重命名"
-                                    FontSize="12"
-                                    FontWeight="SemiBold"
-                                    Margin="0,4,0,0"
-                                    Foreground="{DynamicResource TextPrimaryBrush}" />
+                                    Classes="sectionlabel"
+                                    Text="重命名" />
                                 <TextBox
                                     Text="{Binding NewName}"
                                     Watermark="新版本名称"
-                                    FontSize="12"
                                     Foreground="{DynamicResource TextPrimaryBrush}" />
                                 <Button
+                                    Classes="formaction"
                                     Content="重命名"
-                                    HorizontalAlignment="Left"
                                     Command="{Binding RenameCommand}"
-                                    Background="{DynamicResource ButtonBackgroundBrush}"
-                                    Foreground="{DynamicResource TextPrimaryBrush}" />
+                                    Background="{DynamicResource AccentBrush}"
+                                    Foreground="{DynamicResource TextOnAccentBrush}" />
+                                <TextBlock
+                                    Classes="sectionlabel"
+                                    Text="更多操作" />
                                 <Button
+                                    Classes="formaction"
                                     Content="导出启动脚本"
-                                    HorizontalAlignment="Left"
                                     Command="{Binding ExportScriptCommand}"
                                     Background="{DynamicResource ButtonBackgroundBrush}"
                                     Foreground="{DynamicResource TextPrimaryBrush}" />
                                 <Button
+                                    Classes="formaction"
                                     Content="删除版本"
-                                    HorizontalAlignment="Left"
                                     Command="{Binding SelectedItem.DeleteCommand}"
                                     Background="{DynamicResource DangerBrush}"
-                                    Foreground="White" />
+                                    Foreground="{DynamicResource TextOnAccentBrush}" />
                             </StackPanel>
                         </ScrollViewer>
-                    </TabItem>
-                    <TabItem Header="Mod">
-                        <DockPanel>
+                        <DockPanel IsVisible="{Binding IsModsTab}">
                             <TextBlock
                                 DockPanel.Dock="Top"
                                 Text="{Binding ModsStatus}"
                                 FontSize="12"
-                                Margin="14,12,14,8"
+                                Margin="12,0,12,8"
+                                TextWrapping="Wrap"
                                 Foreground="{DynamicResource TextSecondaryBrush}" />
                             <ListBox
                                 ItemsSource="{Binding Mods}"
@@ -410,26 +487,22 @@
                                                 Content="删除"
                                                 FontSize="11"
                                                 Command="{Binding DeleteCommand}"
-                                                Background="{DynamicResource ButtonBackgroundBrush}"
-                                                Foreground="{DynamicResource TextPrimaryBrush}" />
+                                                Background="{DynamicResource DangerBrush}"
+                                                Foreground="{DynamicResource TextOnAccentBrush}" />
                                         </Grid>
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
                             </ListBox>
                         </DockPanel>
-                    </TabItem>
-                    <TabItem Header="设置">
-                        <ScrollViewer>
-                            <StackPanel Margin="14" Spacing="10">
+                        <ScrollViewer IsVisible="{Binding IsSettingsTab}">
+                            <StackPanel Margin="12" Spacing="8">
                                 <TextBlock
-                                    Text="内存"
-                                    FontSize="12"
-                                    FontWeight="SemiBold"
-                                    Foreground="{DynamicResource TextPrimaryBrush}" />
+                                    Classes="sectionlabel"
+                                    Text="内存" />
                                 <ComboBox
+                                    HorizontalAlignment="Stretch"
                                     ItemsSource="{Binding MemoryModeOptions}"
                                     SelectedItem="{Binding MemoryMode}"
-                                    Background="{DynamicResource PageBackgroundBrush}"
                                     Foreground="{DynamicResource TextPrimaryBrush}">
                                     <ComboBox.ItemTemplate>
                                         <DataTemplate x:DataType="vm:MemoryModeOption">
@@ -442,79 +515,68 @@
                                 <TextBox
                                     Text="{Binding MaxMemoryInput}"
                                     Watermark="手动内存（MB）"
-                                    FontSize="12"
                                     Foreground="{DynamicResource TextPrimaryBrush}" />
                                 <TextBlock
-                                    Text="Java 路径"
-                                    FontSize="12"
-                                    FontWeight="SemiBold"
-                                    Margin="0,4,0,0"
-                                    Foreground="{DynamicResource TextPrimaryBrush}" />
+                                    Classes="sectionlabel"
+                                    Text="Java 路径" />
                                 <TextBox
                                     Text="{Binding JavaPathInput}"
                                     Watermark="留空则跟随全局"
-                                    FontSize="12"
                                     Foreground="{DynamicResource TextPrimaryBrush}" />
                                 <TextBlock
-                                    Text="JVM 启动参数"
-                                    FontSize="12"
-                                    FontWeight="SemiBold"
-                                    Margin="0,4,0,0"
-                                    Foreground="{DynamicResource TextPrimaryBrush}" />
+                                    Classes="sectionlabel"
+                                    Text="JVM 启动参数" />
                                 <TextBox
                                     Text="{Binding JvmArgumentsInput}"
                                     AcceptsReturn="True"
                                     Height="72"
-                                    FontSize="12"
                                     Foreground="{DynamicResource TextPrimaryBrush}" />
                                 <TextBlock
-                                    Text="游戏启动参数"
-                                    FontSize="12"
-                                    FontWeight="SemiBold"
-                                    Margin="0,4,0,0"
-                                    Foreground="{DynamicResource TextPrimaryBrush}" />
+                                    Classes="sectionlabel"
+                                    Text="游戏启动参数" />
                                 <TextBox
                                     Text="{Binding GameArgumentsInput}"
                                     AcceptsReturn="True"
                                     Height="72"
-                                    FontSize="12"
                                     Foreground="{DynamicResource TextPrimaryBrush}" />
-                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Grid
+                                    ColumnDefinitions="*,*"
+                                    ColumnSpacing="8"
+                                    Margin="0,6,0,0">
                                     <Button
+                                        Grid.Column="0"
                                         Content="保存设置"
                                         Command="{Binding SaveInstanceSettingsCommand}"
-                                        Background="{DynamicResource ButtonBackgroundBrush}"
-                                        Foreground="{DynamicResource TextPrimaryBrush}" />
+                                        Background="{DynamicResource AccentBrush}"
+                                        Foreground="{DynamicResource TextOnAccentBrush}" />
                                     <Button
+                                        Grid.Column="1"
                                         Content="重置独立设置"
                                         Command="{Binding ResetInstanceSettingsCommand}"
                                         Background="{DynamicResource ButtonBackgroundBrush}"
                                         Foreground="{DynamicResource TextPrimaryBrush}" />
-                                </StackPanel>
+                                </Grid>
                             </StackPanel>
                         </ScrollViewer>
-                    </TabItem>
-                    <TabItem Header="导出">
-                        <StackPanel Margin="14" Spacing="10">
-                            <TextBlock
-                                Text="整合包名称"
-                                FontSize="12"
-                                FontWeight="SemiBold"
-                                Foreground="{DynamicResource TextPrimaryBrush}" />
-                            <TextBox
-                                Text="{Binding ExportName}"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextPrimaryBrush}" />
-                            <Button
-                                Content="导出整合包"
-                                HorizontalAlignment="Left"
-                                Command="{Binding ExportPackCommand}"
-                                IsEnabled="{Binding !IsExporting}"
-                                Background="{DynamicResource ButtonBackgroundBrush}"
-                                Foreground="{DynamicResource TextPrimaryBrush}" />
-                        </StackPanel>
-                    </TabItem>
-                </TabControl>
+                        <ScrollViewer IsVisible="{Binding IsExportTab}">
+                            <StackPanel Margin="12" Spacing="8">
+                                <TextBlock
+                                    Classes="sectionlabel"
+                                    Text="整合包名称" />
+                                <TextBox
+                                    Text="{Binding ExportName}"
+                                    Foreground="{DynamicResource TextPrimaryBrush}" />
+                                <Button
+                                    Classes="formaction"
+                                    Content="导出整合包"
+                                    Command="{Binding ExportPackCommand}"
+                                    IsEnabled="{Binding !IsExporting}"
+                                    Background="{DynamicResource AccentBrush}"
+                                    Foreground="{DynamicResource TextOnAccentBrush}" />
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Panel>
+                </DockPanel>
             </Border>
         </Grid>
     </DockPanel>

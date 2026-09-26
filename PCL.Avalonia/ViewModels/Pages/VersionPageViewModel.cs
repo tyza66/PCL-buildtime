@@ -110,6 +110,27 @@ public sealed partial class VersionPageViewModel : ObservableObject
     [ObservableProperty]
     private int _selectedDetailTab;
 
+    public bool IsOverviewTab => SelectedDetailTab == 0;
+    public bool IsModsTab => SelectedDetailTab == 1;
+    public bool IsSettingsTab => SelectedDetailTab == 2;
+    public bool IsExportTab => SelectedDetailTab == 3;
+
+    partial void OnSelectedDetailTabChanged(int value)
+    {
+        OnPropertyChanged(nameof(IsOverviewTab));
+        OnPropertyChanged(nameof(IsModsTab));
+        OnPropertyChanged(nameof(IsSettingsTab));
+        OnPropertyChanged(nameof(IsExportTab));
+    }
+
+    /// <summary>
+    /// XAML 把 CommandParameter 原样当成字符串送来，RelayCommand&lt;T&gt; 不会做类型转换，
+    /// 所以这里按文本接参数。分段标签只走命令切换，避免 TwoWay 绑定回写选中态。
+    /// </summary>
+    [RelayCommand]
+    private void SelectDetailTab(string index)
+        => SelectedDetailTab = int.TryParse(index, out var parsed) ? parsed : SelectedDetailTab;
+
     [ObservableProperty]
     private string _descriptionInput = "";
 

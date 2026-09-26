@@ -23,6 +23,13 @@
         <Setter Property="Background" Value="{DynamicResource SelectedBrush}" />
     </Style>
 
+    <!-- Section headers: one size, one weight, one baseline, so a page's columns line up. -->
+    <Style Selector="TextBlock.sectionheader">
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
     <!-- Form controls share one height so toolbars line up. Multiline text boxes are exempt. -->
     <Style Selector="TextBox">
         <!-- FluentTheme's English Cut/Copy/Paste flyout is replaced by ChineseTextBoxMenu. -->

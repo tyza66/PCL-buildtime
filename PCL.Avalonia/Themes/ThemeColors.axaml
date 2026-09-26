@@ -11,6 +11,7 @@
             <SolidColorBrush x:Key="TextSecondaryBrush" Color="#5D6B76" />
             <SolidColorBrush x:Key="AccentBrush" Color="#1E7EDB" />
             <SolidColorBrush x:Key="TextOnAccentBrush" Color="#FFFFFF" />
+            <SolidColorBrush x:Key="DangerBrush" Color="#D64545" />
             <SolidColorBrush x:Key="HoverBrush" Color="#E8EDF2" />
             <SolidColorBrush x:Key="SelectedBrush" Color="#DCE9F7" />
             <SolidColorBrush x:Key="ButtonBackgroundBrush" Color="#E4E9EE" />
@@ -24,6 +25,7 @@
             <SolidColorBrush x:Key="TextSecondaryBrush" Color="#9AA5AF" />
             <SolidColorBrush x:Key="AccentBrush" Color="#4FA8FF" />
             <SolidColorBrush x:Key="TextOnAccentBrush" Color="#FFFFFF" />
+            <SolidColorBrush x:Key="DangerBrush" Color="#E05252" />
             <SolidColorBrush x:Key="HoverBrush" Color="#26303A" />
             <SolidColorBrush x:Key="SelectedBrush" Color="#2C3A46" />
             <SolidColorBrush x:Key="ButtonBackgroundBrush" Color="#232A33" />

@@ -9,12 +9,8 @@
         <Grid
             DockPanel.Dock="Top"
             RowDefinitions="Auto,Auto"
-            ColumnDefinitions="*,120,120,132,Auto"
-            RowSpacing="8"
-            ColumnSpacing="8"
             Margin="0,0,0,14">
             <StackPanel
-                Grid.ColumnSpan="5"
                 Grid.Row="0"
                 Spacing="2">
                 <TextBlock
@@ -28,60 +24,61 @@
                     TextWrapping="Wrap"
                     Foreground="{DynamicResource TextSecondaryBrush}" />
             </StackPanel>
-            <TextBox
+            <Grid
                 Grid.Row="1"
-                Text="{Binding SearchText}"
-                Watermark="搜索资源"
-                VerticalAlignment="Top"
-                Foreground="{DynamicResource TextPrimaryBrush}" />
-            <ComboBox
-                Grid.Column="1"
-                Grid.Row="1"
-                ItemsSource="{Binding ResourceTypeOptions}"
-                SelectedItem="{Binding ResourceType}"
-                VerticalAlignment="Top"
-                Foreground="{DynamicResource TextPrimaryBrush}"
-                Background="{DynamicResource ButtonBackgroundBrush}">
-                <ComboBox.ItemTemplate>
-                    <DataTemplate x:DataType="vm:ResourceTypeOption">
-                        <TextBlock
-                            Text="{Binding Label}"
-                            Foreground="{DynamicResource TextPrimaryBrush}" />
-                    </DataTemplate>
-                </ComboBox.ItemTemplate>
-            </ComboBox>
-            <ComboBox
-                Grid.Column="2"
-                Grid.Row="1"
-                ItemsSource="{Binding SourceOptions}"
-                SelectedItem="{Binding Source}"
-                VerticalAlignment="Top"
-                Foreground="{DynamicResource TextPrimaryBrush}"
-                Background="{DynamicResource ButtonBackgroundBrush}">
-                <ComboBox.ItemTemplate>
-                    <DataTemplate x:DataType="vm:ResourceSourceOption">
-                        <TextBlock
-                            Text="{Binding Label}"
-                            Foreground="{DynamicResource TextPrimaryBrush}" />
-                    </DataTemplate>
-                </ComboBox.ItemTemplate>
-            </ComboBox>
-            <ComboBox
-                Grid.Column="3"
-                Grid.Row="1"
-                ItemsSource="{Binding GameVersions}"
-                SelectedItem="{Binding GameVersion}"
-                VerticalAlignment="Top"
-                Foreground="{DynamicResource TextPrimaryBrush}"
-                Background="{DynamicResource ButtonBackgroundBrush}" />
-            <Button
-                Grid.Column="4"
-                Grid.Row="1"
-                Content="搜索"
-                VerticalAlignment="Top"
-                Command="{Binding SearchCommand}"
-                Background="{DynamicResource AccentBrush}"
-                Foreground="White" />
+                Margin="0,10,0,0"
+                ColumnDefinitions="*,Auto"
+                ColumnSpacing="8">
+                <TextBox
+                    Text="{Binding SearchText}"
+                    Watermark="搜索资源"
+                    Foreground="{DynamicResource TextPrimaryBrush}" />
+                <StackPanel
+                    Grid.Column="1"
+                    Orientation="Horizontal"
+                    Spacing="8">
+                    <ComboBox
+                        ItemsSource="{Binding ResourceTypeOptions}"
+                        SelectedItem="{Binding ResourceType}"
+                        MinWidth="104"
+                        Foreground="{DynamicResource TextPrimaryBrush}"
+                        Background="{DynamicResource ButtonBackgroundBrush}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ResourceTypeOption">
+                                <TextBlock
+                                    Text="{Binding Label}"
+                                    Foreground="{DynamicResource TextPrimaryBrush}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <ComboBox
+                        ItemsSource="{Binding SourceOptions}"
+                        SelectedItem="{Binding Source}"
+                        MinWidth="104"
+                        Foreground="{DynamicResource TextPrimaryBrush}"
+                        Background="{DynamicResource ButtonBackgroundBrush}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ResourceSourceOption">
+                                <TextBlock
+                                    Text="{Binding Label}"
+                                    Foreground="{DynamicResource TextPrimaryBrush}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <ComboBox
+                        ItemsSource="{Binding GameVersions}"
+                        SelectedItem="{Binding GameVersion}"
+                        MinWidth="104"
+                        Foreground="{DynamicResource TextPrimaryBrush}"
+                        Background="{DynamicResource ButtonBackgroundBrush}" />
+                    <Button
+                        Content="搜索"
+                        MinWidth="72"
+                        Command="{Binding SearchCommand}"
+                        Background="{DynamicResource AccentBrush}"
+                        Foreground="White" />
+                </StackPanel>
+            </Grid>
         </Grid>
         <StackPanel
             DockPanel.Dock="Bottom"

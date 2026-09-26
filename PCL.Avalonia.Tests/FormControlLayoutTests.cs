@@ -24,12 +24,22 @@ public sealed class FormControlLayoutTests
     [AvaloniaFact]
     public void ToolbarButtonColumnsFillTheirSpacing()
     {
-        // Buttons must live in Auto columns, otherwise the fixed column width leaks into the gap
-        // between neighbouring buttons. Combo boxes keep their fixed column: they size to content.
+        // Installer toolbars keep the input and its action buttons in one row of Auto columns, so
+        // the leftover space lands on the input instead of stretching the gaps between buttons.
         AssertToolbar("FabricLoaderPageView.axaml", "*,240,Auto,Auto");
         AssertToolbar("ForgelikeLoaderPageView.axaml", "*,220,Auto,Auto");
-        AssertToolbar("ModsDownloadPageView.axaml", "*,116,150,132,Auto");
-        AssertToolbar("ResourceDownloadPageView.axaml", "*,120,120,132,Auto");
+    }
+
+    /// <summary>
+    /// Download pages moved their filters into a right-aligned cluster: fixed-width combo columns
+    /// used to leave uneven gaps next to the search box, so only the cluster owns a width now.
+    /// </summary>
+    [AvaloniaFact]
+    public void DownloadFilterClustersFillTheirRow()
+    {
+        AssertToolbar("ModsDownloadPageView.axaml", "*,Auto");
+        AssertToolbar("ResourceDownloadPageView.axaml", "*,Auto");
+        AssertToolbar("IntegrationPacksPageView.axaml", "*,Auto");
     }
 
     private static void AssertToolbar(string pageFile, string expectedColumns)
