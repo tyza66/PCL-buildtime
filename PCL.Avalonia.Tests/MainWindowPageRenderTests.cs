@@ -96,6 +96,38 @@ public sealed class MainWindowPageRenderTests : IDisposable
         Assert.False(forgeButton!.Classes.Contains("active"), "Forge button stays highlighted after switching.");
     }
 
+    [AvaloniaFact]
+    public void SettingsPage_LinkTab_DisablesControls_WhilePublicNodeServiceIsDown()
+    {
+        Select("设置");
+
+        var linkTab = _window.GetVisualDescendants().OfType<TabItem>()
+            .FirstOrDefault(tab => (tab.Header as string)?.Contains("联机") == true);
+        Assert.True(linkTab is not null, $"联机 tab missing in settings page. Log: {_sink.Describe()}");
+        Assert.Contains("暂不可用", (string?)linkTab!.Header);
+
+        linkTab.IsSelected = true;
+        Dispatcher.UIThread.RunJobs();
+
+        var latencyCombo = _window.GetVisualDescendants().OfType<ComboBox>()
+            .FirstOrDefault(combo => combo.SelectedItem is ViewModels.Pages.LinkLatencyModeOption);
+        Assert.True(latencyCombo is not null, $"联机 latency combo missing. Log: {_sink.Describe()}");
+        Assert.False(latencyCombo!.IsEffectivelyEnabled, "Latency combo should stay disabled while the public node service is down.");
+
+        var peerBox = _window.GetVisualDescendants().OfType<TextBox>()
+            .FirstOrDefault(box => (box.Watermark as string)?.Contains("easytier") == true);
+        Assert.True(peerBox is not null, "联机 custom peer textbox missing.");
+        Assert.False(peerBox!.IsEffectivelyEnabled, "Custom peer textbox should stay disabled while the public node service is down.");
+
+        var note = _window.GetVisualDescendants().OfType<TextBlock>()
+            .Any(text => (text.Text as string)?.Contains("公共节点服务已下线") == true);
+        Assert.True(note, "联机 tab should explain why the feature is unavailable.");
+
+        Assert.True(
+            _sink.SevereEntries.Count == 0,
+            "Binding errors while rendering the settings link tab: " + string.Join(" | ", _sink.SevereEntries));
+    }
+
     private void Select(string title)
     {
         _viewModel.SelectedItem = _viewModel.Items.First(i => i.Title == title);
