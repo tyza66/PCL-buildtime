@@ -7,6 +7,8 @@ namespace PCL.Avalonia.Tests;
 
 public sealed class ModsPageViewModelTests
 {
+
+    private static string ModsFolder(string gameFolder) => Path.Combine(gameFolder, "mods");
     private sealed class FakeSettingsService : ISettingsService
     {
         public AppSettings Settings { get; set; } = new() { MinecraftFolder = "/games/mc" };
@@ -204,9 +206,9 @@ public sealed class ModsPageViewModelTests
 
         var viewModel = CreateViewModel(service, session, versionManager);
 
-        Assert.Equal("/games/mc/versions/1.20.1-fabric/mods", service.ScannedFolders[^1]);
+        Assert.Equal(ModsFolder("/games/mc/versions/1.20.1-fabric"), service.ScannedFolders[^1]);
         Assert.Contains("隔离目录", viewModel.StatusMessage);
-        Assert.Contains("/games/mc/versions/1.20.1-fabric/mods", viewModel.StatusMessage);
+        Assert.Contains(ModsFolder("/games/mc/versions/1.20.1-fabric"), viewModel.StatusMessage);
     }
 
     [Fact]
@@ -221,7 +223,7 @@ public sealed class ModsPageViewModelTests
 
         var viewModel = CreateViewModel(service, session, versionManager);
 
-        Assert.Equal("/games/mc/mods", service.ScannedFolders[^1]);
+        Assert.Equal(ModsFolder("/games/mc"), service.ScannedFolders[^1]);
         Assert.DoesNotContain("隔离目录", viewModel.StatusMessage);
     }
 
@@ -231,12 +233,12 @@ public sealed class ModsPageViewModelTests
         var service = new FakeModsService { ScanResult = [] };
         var session = new SessionState();
         var viewModel = CreateViewModel(service, session);
-        Assert.Equal("/games/mc/mods", service.ScannedFolders[^1]);
+        Assert.Equal(ModsFolder("/games/mc"), service.ScannedFolders[^1]);
 
         session.SelectedVersion = Version("1.20.1-neoforge");
 
         Assert.Equal(2, service.ScannedFolders.Count);
-        Assert.Equal("/games/mc/versions/1.20.1-neoforge/mods", service.ScannedFolders[^1]);
+        Assert.Equal(ModsFolder("/games/mc/versions/1.20.1-neoforge"), service.ScannedFolders[^1]);
     }
 
     [Fact]
@@ -256,6 +258,6 @@ public sealed class ModsPageViewModelTests
 
         Assert.Contains("读取版本隔离设置失败", viewModel.StatusMessage);
         // 全局默认 All：读不出每版本设置时仍按默认规则隔离，不阻断列表。
-        Assert.Equal("/games/mc/versions/1.20.1/mods", service.ScannedFolders[^1]);
+        Assert.Equal(ModsFolder("/games/mc/versions/1.20.1"), service.ScannedFolders[^1]);
     }
 }

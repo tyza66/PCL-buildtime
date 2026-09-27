@@ -8,6 +8,8 @@ namespace PCL.Avalonia.Tests;
 
 public sealed class ModsDownloadPageViewModelTests
 {
+
+    private static string ModsFolder(string gameFolder) => Path.Combine(gameFolder, "mods");
     private sealed class FakeSettingsService : ISettingsService
     {
         public AppSettings Settings { get; set; } = new() { MinecraftFolder = "/games/mc" };
@@ -343,13 +345,13 @@ public sealed class ModsDownloadPageViewModelTests
         var viewModel = CreateViewModel(api, installer, session: session, versionManager: versionManager);
 
         Assert.Contains("隔离目录", viewModel.InstallTargetText);
-        Assert.Contains("/games/mc/versions/1.20.1-fabric/mods", viewModel.InstallTargetText);
+        Assert.Contains(ModsFolder("/games/mc/versions/1.20.1-fabric"), viewModel.InstallTargetText);
 
         viewModel.SearchText = "JEI";
         await viewModel.SearchCommand.ExecuteAsync(null);
         await viewModel.Projects[0].InstallCommand.ExecuteAsync(null);
 
-        Assert.Equal("/games/mc/versions/1.20.1-fabric/mods", installer.LastFolder);
+        Assert.Equal(ModsFolder("/games/mc/versions/1.20.1-fabric"), installer.LastFolder);
     }
 
     [Fact]
@@ -359,11 +361,11 @@ public sealed class ModsDownloadPageViewModelTests
         var viewModel = CreateViewModel(new FakeApi(), new FakeInstaller(), session: session);
 
         Assert.Contains("未选择版本", viewModel.InstallTargetText);
-        Assert.Contains("/games/mc/mods", viewModel.InstallTargetText);
+        Assert.Contains(ModsFolder("/games/mc"), viewModel.InstallTargetText);
 
         session.SelectedVersion = Version("1.20.1-fabric");
 
         Assert.Contains("1.20.1-fabric", viewModel.InstallTargetText);
-        Assert.Contains("/games/mc/versions/1.20.1-fabric/mods", viewModel.InstallTargetText);
+        Assert.Contains(ModsFolder("/games/mc/versions/1.20.1-fabric"), viewModel.InstallTargetText);
     }
 }

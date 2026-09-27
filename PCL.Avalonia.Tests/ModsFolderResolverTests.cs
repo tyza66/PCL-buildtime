@@ -5,6 +5,8 @@ namespace PCL.Avalonia.Tests;
 
 public sealed class ModsFolderResolverTests
 {
+
+    private static string ModsFolder(string gameFolder) => Path.Combine(gameFolder, "mods");
     private static MinecraftVersion Version(string id, LoaderKind loader = LoaderKind.None)
         => new()
         {
@@ -24,7 +26,7 @@ public sealed class ModsFolderResolverTests
 
         Assert.True(resolved.Isolated);
         Assert.Equal("/games/mc/versions/1.20.1-fabric", resolved.GameFolder);
-        Assert.Equal("/games/mc/versions/1.20.1-fabric/mods", resolved.ModsFolder);
+        Assert.Equal(ModsFolder("/games/mc/versions/1.20.1-fabric"), resolved.ModsFolder);
     }
 
     [Fact]
@@ -37,7 +39,7 @@ public sealed class ModsFolderResolverTests
 
         Assert.False(resolved.Isolated);
         Assert.Equal("/games/mc", resolved.GameFolder);
-        Assert.Equal("/games/mc/mods", resolved.ModsFolder);
+        Assert.Equal(ModsFolder("/games/mc"), resolved.ModsFolder);
     }
 
     [Fact]
@@ -51,7 +53,7 @@ public sealed class ModsFolderResolverTests
             VersionIsolationDefault.All,
             new VersionSettings { Independent = false });
         Assert.False(off.Isolated);
-        Assert.Equal("/games/mc/mods", off.ModsFolder);
+        Assert.Equal(ModsFolder("/games/mc"), off.ModsFolder);
 
         var on = ModsFolderResolver.Resolve(
             "/games/mc",
@@ -59,7 +61,7 @@ public sealed class ModsFolderResolverTests
             VersionIsolationDefault.Off,
             new VersionSettings { Independent = true });
         Assert.True(on.Isolated);
-        Assert.Equal("/games/mc/versions/1.20.1/mods", on.ModsFolder);
+        Assert.Equal(ModsFolder("/games/mc/versions/1.20.1"), on.ModsFolder);
     }
 
     [Fact]
@@ -76,7 +78,7 @@ public sealed class ModsFolderResolverTests
             Version("1.20.1"),
             VersionIsolationDefault.ModdableOnly);
         Assert.False(vanilla.Isolated);
-        Assert.Equal("/games/mc/mods", vanilla.ModsFolder);
+        Assert.Equal(ModsFolder("/games/mc"), vanilla.ModsFolder);
     }
 
     [Fact]
@@ -88,7 +90,7 @@ public sealed class ModsFolderResolverTests
             VersionIsolationDefault.All);
 
         Assert.False(resolved.Isolated);
-        Assert.Equal("/games/mc/mods", resolved.ModsFolder);
+        Assert.Equal(ModsFolder("/games/mc"), resolved.ModsFolder);
     }
 
     [Fact]
