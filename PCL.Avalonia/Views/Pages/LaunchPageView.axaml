@@ -47,26 +47,55 @@
                     Foreground="{DynamicResource TextPrimaryBrush}" />
             </StackPanel>
         </Grid>
-        <Grid ColumnDefinitions="300,*" ColumnSpacing="12">
-            <Grid Grid.Column="0" RowDefinitions="Auto,*,Auto,Auto" RowSpacing="10">
+        <!-- 两栏共用一行页眉：卡片上沿由同一行的排布决定，不会再各自舍入差出 1px。 -->
+        <Grid
+            ColumnDefinitions="300,*"
+            ColumnSpacing="12"
+            RowDefinitions="Auto,*"
+            RowSpacing="10">
             <Grid
                 Grid.Row="0"
+                Grid.Column="0"
+                MinHeight="34"
                 ColumnDefinitions="*,Auto"
                 ColumnSpacing="8">
                 <TextBlock
                     Classes="sectionheader"
                     Text="已安装的版本"
                     Foreground="{DynamicResource TextPrimaryBrush}" />
-                    <Button
-                        Grid.Column="1"
-                        Content="刷新"
-                        MinWidth="72"
-                        Command="{Binding RefreshInstalledCommand}"
-                        IsEnabled="{Binding !IsRefreshing}"
-                        Background="{DynamicResource ButtonBackgroundBrush}"
-                        Foreground="{DynamicResource TextPrimaryBrush}" />
-                </Grid>
-                <Panel Grid.Row="1">
+                <Button
+                    Grid.Column="1"
+                    Content="刷新"
+                    MinWidth="72"
+                    Command="{Binding RefreshInstalledCommand}"
+                    IsEnabled="{Binding !IsRefreshing}"
+                    Background="{DynamicResource ButtonBackgroundBrush}"
+                    Foreground="{DynamicResource TextPrimaryBrush}" />
+            </Grid>
+            <Grid
+                Grid.Row="0"
+                Grid.Column="1"
+                MinHeight="34"
+                ColumnDefinitions="*,Auto"
+                ColumnSpacing="8">
+                <TextBlock
+                    Classes="sectionheader"
+                    Text="运行日志"
+                    Foreground="{DynamicResource TextPrimaryBrush}" />
+                <TextBlock
+                    Grid.Column="1"
+                    Text="{Binding StatusMessage}"
+                    FontSize="13"
+                    VerticalAlignment="Center"
+                    TextTrimming="CharacterEllipsis"
+                    Foreground="{DynamicResource TextSecondaryBrush}" />
+            </Grid>
+            <Grid
+                Grid.Row="1"
+                Grid.Column="0"
+                RowDefinitions="Auto,Auto,Auto"
+                RowSpacing="10">
+                <Panel VerticalAlignment="Top" MaxHeight="420">
                     <Border
                         Background="{DynamicResource CardBackgroundBrush}"
                         CornerRadius="8">
@@ -74,7 +103,8 @@
                             ItemsSource="{Binding InstalledVersions}"
                             SelectedItem="{Binding SelectedInstalledVersion}"
                             Background="Transparent"
-                            BorderThickness="0">
+                            BorderThickness="0"
+                            Padding="6">
                             <!-- 内容铺满整行：默认的列表项会把内容竖直居中，行内留出的空带吃不到右键。 -->
                             <ListBox.Styles>
                                 <Style Selector="ListBoxItem">
@@ -137,11 +167,11 @@
                 <!-- One compact row instead of a wrapping path card stacked under a full-width button. -->
                 <!-- Java 状态常驻一行：没装或版本对不上时在这里就说清楚，不用等点了启动才报错。 -->
                 <Border
-                    Grid.Row="2"
+                    Grid.Row="1"
                     Background="{DynamicResource CardBackgroundBrush}"
                     CornerRadius="8"
-                    Padding="12,0"
-                    MinHeight="46">
+                    Padding="12,9"
+                    MinHeight="40">
                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
                         <TextBlock
                             Text="Java"
@@ -156,72 +186,80 @@
                             Text="{Binding JavaStatusText}"
                             FontSize="12"
                             VerticalAlignment="Center"
-                            TextTrimming="CharacterEllipsis"
-                            ToolTip.Tip="{Binding JavaStatusText}" />
+                            TextWrapping="Wrap"
+                            MaxLines="3"
+                            ToolTip.Tip="{Binding JavaStatusTip}" />
                     </Grid>
                 </Border>
+                <!-- 目录 + 隔离状态：标签一行、路径一行、判定一行，各就各位不再互相挤。 -->
                 <Border
-                    Grid.Row="3"
+                    Grid.Row="2"
                     Background="{DynamicResource CardBackgroundBrush}"
                     CornerRadius="8"
-                    Padding="12,0"
-                    MinHeight="46">
-                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                    Padding="12,9">
+                    <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="3">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                            <TextBlock
+                                Text="游戏目录"
+                                FontSize="11"
+                                VerticalAlignment="Center"
+                                Foreground="{DynamicResource TextSecondaryBrush}" />
+                            <Button
+                                Grid.Column="1"
+                                Content="打开目录"
+                                MinWidth="72"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                Command="{Binding OpenGameFolderCommand}"
+                                Background="{DynamicResource ButtonBackgroundBrush}"
+                                Foreground="{DynamicResource TextPrimaryBrush}" />
+                        </Grid>
                         <TextBlock
-                            Text="{Binding GameFolderText}"
+                            Grid.Row="1"
+                            Text="{Binding GameFolderPathText}"
                             FontSize="12"
-                            VerticalAlignment="Center"
-                            TextTrimming="CharacterEllipsis"
-                            ToolTip.Tip="{Binding GameFolderText}"
+                            TextWrapping="Wrap"
+                            MaxLines="2"
+                            ToolTip.Tip="{Binding GameFolderPathTip}"
                             Foreground="{DynamicResource TextPrimaryBrush}" />
-                        <Button
-                            Grid.Column="1"
-                            Content="打开目录"
-                            MinWidth="72"
-                            VerticalAlignment="Center"
-                            Command="{Binding OpenGameFolderCommand}"
-                            Background="{DynamicResource ButtonBackgroundBrush}"
-                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <TextBlock
+                            Grid.Row="2"
+                            Classes="javastatus"
+                            Text="{Binding IsolationStatusText}"
+                            FontSize="11"
+                            TextWrapping="Wrap"
+                            MaxLines="2"
+                            IsVisible="{Binding IsolationStatusText, Converter={StaticResource StringNotEmpty}}"
+                            ToolTip.Tip="{Binding IsolationStatusTip}" />
                     </Grid>
                 </Border>
             </Grid>
-            <Grid Grid.Column="1" RowDefinitions="Auto,*" RowSpacing="10">
-                <Grid
-                    Grid.Row="0"
-                    MinHeight="34"
-                    ColumnDefinitions="*,Auto"
-                    ColumnSpacing="8">
-                    <TextBlock
-                        Classes="sectionheader"
-                        Text="运行日志"
-                        Foreground="{DynamicResource TextPrimaryBrush}" />
-                    <TextBlock
-                        Grid.Column="1"
-                        Text="{Binding StatusMessage}"
-                        FontSize="13"
-                        VerticalAlignment="Center"
-                        TextTrimming="CharacterEllipsis"
-                        Foreground="{DynamicResource TextSecondaryBrush}" />
-                </Grid>
+            <Panel Grid.Row="1" Grid.Column="1">
                 <Border
-                    Grid.Row="1"
                     Background="{DynamicResource CardBackgroundBrush}"
                     CornerRadius="8"
                     Padding="12">
                     <ScrollViewer HorizontalScrollBarVisibility="Auto">
-                    <TextBox
-                        Text="{Binding LogText}"
-                        AcceptsReturn="True"
-                        IsReadOnly="True"
-                        TextWrapping="NoWrap"
-                        Background="Transparent"
-                        BorderThickness="0"
-                        FontFamily="Menlo,Consolas,DejaVu Sans Mono,monospace"
-                        FontSize="12"
-                        Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <TextBox
+                            Text="{Binding LogText}"
+                            AcceptsReturn="True"
+                            IsReadOnly="True"
+                            TextWrapping="NoWrap"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            FontFamily="Menlo,Consolas,DejaVu Sans Mono,monospace"
+                            FontSize="12"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
                     </ScrollViewer>
                 </Border>
-            </Grid>
+                <TextBlock
+                    IsVisible="{Binding !HasLogContent}"
+                    Text="启动游戏后，这里会输出游戏的运行日志"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    FontSize="13"
+                    Foreground="{DynamicResource TextSecondaryBrush}" />
+            </Panel>
         </Grid>
     </DockPanel>
 </UserControl>

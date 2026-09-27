@@ -206,6 +206,8 @@ public sealed class GameLauncherTests : IDisposable
             MinecraftFolder = _minecraftFolder,
             UserName = "Steve",
             MaxMemoryMb = 4096,
+            // 这里断言的是公共游戏目录下的参数，显式关掉版本隔离。
+            VersionIsolationDefault = VersionIsolationDefault.Off,
         };
 
         var plan = new GameLauncher(_catalog).BuildLaunchPlan(version, settings, _javaPath);
@@ -513,5 +515,75 @@ public sealed class GameLauncherTests : IDisposable
         // macOS 上没装 Java 是最常见的启动失败，直接把安装命令写在报错里。
         Assert.Contains("brew install openjdk", exception.Message);
         Assert.Contains("设置页", exception.Message);
+    }
+
+    [Fact]
+    public void BuildLaunchPlan_ManualIsolation_PointsGameDirectoryToVersionFolder()
+    {
+        var version = FindForgeVersion();
+        var settings = new AppSettings
+        {
+            MinecraftFolder = _minecraftFolder,
+            UserName = "Steve",
+            VersionIsolationDefault = VersionIsolationDefault.Off,
+        };
+        var isolatedFolder = Path.Combine(_minecraftFolder, "versions", "forge-1.20.1");
+
+        var plan = new GameLauncher(_catalog).BuildLaunchPlan(
+            version,
+            settings,
+            _javaPath,
+            versionSettings: new VersionSettings { Independent = true });
+
+        Assert.Equal(isolatedFolder, plan.WorkingDirectory);
+        var args = plan.Arguments.ToList();
+        var gameDirIndex = args.IndexOf("--gameDir");
+        Assert.True(gameDirIndex >= 0);
+        Assert.Equal(isolatedFolder, args[gameDirIndex + 1]);
+        // 资源索引仍从公共目录取，隔离只影响存档与 Mod 的写入位置。
+        Assert.Contains("--assetIndex", plan.Arguments);
+    }
+
+    [Fact]
+    public void BuildLaunchPlan_IsolationDisabled_SharesTheCommonGameDirectory()
+    {
+        var version = FindForgeVersion();
+        var settings = new AppSettings
+        {
+            MinecraftFolder = _minecraftFolder,
+            UserName = "Steve",
+            VersionIsolationDefault = VersionIsolationDefault.All,
+        };
+
+        var plan = new GameLauncher(_catalog).BuildLaunchPlan(
+            version,
+            settings,
+            _javaPath,
+            versionSettings: new VersionSettings { Independent = false });
+
+        Assert.Equal(_minecraftFolder, plan.WorkingDirectory);
+        var args = plan.Arguments.ToList();
+        var gameDirIndex = args.IndexOf("--gameDir");
+        Assert.True(gameDirIndex >= 0);
+        Assert.Equal(_minecraftFolder, args[gameDirIndex + 1]);
+    }
+
+    [Fact]
+    public void BuildLaunchPlan_RejectsSemicolonInGamePath_WithActionableHint()
+    {
+        var version = FindForgeVersion();
+        var settings = new AppSettings
+        {
+            MinecraftFolder = _minecraftFolder + ";",
+            UserName = "Steve",
+            // 关掉隔离，确保被校验的是这个带 ; 的公共游戏目录。
+            VersionIsolationDefault = VersionIsolationDefault.Off,
+        };
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            new GameLauncher(_catalog).BuildLaunchPlan(version, settings, _javaPath));
+
+        Assert.Contains(";", exception.Message);
+        Assert.Contains("可尝试", exception.Message);
     }
 }

@@ -350,6 +350,10 @@ public sealed class MainWindowViewModelTests
         {
         }
 
+        public void SetInstanceIsolation(string minecraftFolder, string versionId, bool? independent)
+        {
+        }
+
         public void SetDescription(string minecraftFolder, string versionId, string description)
         {
         }

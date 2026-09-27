@@ -1,3 +1,5 @@
+using PCL.Avalonia.Services.Minecraft;
+
 namespace PCL.Avalonia.Services;
 
 public sealed record AppSettings
@@ -29,6 +31,9 @@ public sealed record AppSettings
     public string LinkCustomPeer { get; init; } = "";
 
     public IReadOnlyList<MinecraftFolder> LaunchFolders { get; init; } = [];
+
+    /// <summary>新装版本默认的隔离策略，语义与上游 PCL2 的 LaunchArgumentIndieV2 一致。</summary>
+    public VersionIsolationDefault VersionIsolationDefault { get; init; } = VersionIsolationDefault.All;
 }
 
 public sealed record MinecraftFolder(string Name, string Path);

@@ -95,7 +95,7 @@
                 Foreground="{DynamicResource TextPrimaryBrush}" />
         </Grid>
         <Grid
-            ColumnDefinitions="190,280,*"
+            ColumnDefinitions="200,330,*"
             ColumnSpacing="12">
             <Border
                 Grid.Column="0"
@@ -571,6 +571,29 @@
                                     FontSize="11"
                                     TextWrapping="Wrap"
                                     ToolTip.Tip="{Binding JavaHintText}" />
+                                <TextBlock
+                                    Classes="sectionlabel"
+                                    Text="版本隔离" />
+                                <ComboBox
+                                    HorizontalAlignment="Stretch"
+                                    ItemsSource="{Binding IsolationModeOptions}"
+                                    SelectedItem="{Binding IsolationMode}"
+                                    Foreground="{DynamicResource TextPrimaryBrush}">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:IsolationModeOption">
+                                            <TextBlock
+                                                Text="{Binding Label}"
+                                                Foreground="{DynamicResource TextPrimaryBrush}" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                                <TextBlock
+                                    Classes="javahint"
+                                    Text="{Binding IsolationStatusText}"
+                                    Margin="0,2,0,0"
+                                    FontSize="11"
+                                    TextWrapping="Wrap"
+                                    ToolTip.Tip="{Binding IsolationStatusText}" />
                                 <TextBlock
                                     Classes="sectionlabel"
                                     Text="JVM 启动参数" />

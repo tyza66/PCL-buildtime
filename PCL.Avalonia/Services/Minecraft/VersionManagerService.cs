@@ -13,6 +13,7 @@ public sealed class VersionManagerService : IVersionManagerService
     private const string KeyJavaPath = "JavaDir";
     private const string KeyJvmArguments = "VersionJvmArgs";
     private const string KeyGameArguments = "VersionGameArgs";
+    private const string KeyIndependent = "VersionArgumentIndieV2";
 
     public VersionSettings LoadSettings(string minecraftFolder, string versionId)
     {
@@ -33,6 +34,7 @@ public sealed class VersionManagerService : IVersionManagerService
             JavaPath = values.GetValueOrDefault(KeyJavaPath),
             JvmArguments = values.GetValueOrDefault(KeyJvmArguments),
             GameArguments = values.GetValueOrDefault(KeyGameArguments),
+            Independent = ParseNullableBoolean(values.GetValueOrDefault(KeyIndependent)),
         };
     }
 
@@ -90,6 +92,23 @@ public sealed class VersionManagerService : IVersionManagerService
         });
     }
 
+    /// <summary>
+    /// 设置版本隔离开关：null 表示改为跟随全局默认，恢复自动判断。
+    /// 键名与上游 PCL2 的 VersionArgumentIndieV2 一致，兼容两启动器共用同一游戏目录。
+    /// </summary>
+    public void SetInstanceIsolation(string minecraftFolder, string versionId, bool? independent)
+    {
+        UpdateSettings(minecraftFolder, versionId, new Dictionary<string, string>
+        {
+            [KeyIndependent] = independent switch
+            {
+                true => "True",
+                false => "False",
+                null => "",
+            },
+        });
+    }
+
     public string Rename(string minecraftFolder, string versionId, string newName)
     {
         ValidateVersionId(versionId);
@@ -127,6 +146,21 @@ public sealed class VersionManagerService : IVersionManagerService
         {
             Directory.Delete(folder, recursive: true);
         }
+    }
+
+    private static bool? ParseNullableBoolean(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        return value.Trim() switch
+        {
+            "True" or "true" or "1" => true,
+            "False" or "false" or "0" => false,
+            _ => null,
+        };
     }
 
     private static string GetSettingsPath(string minecraftFolder, string versionId)

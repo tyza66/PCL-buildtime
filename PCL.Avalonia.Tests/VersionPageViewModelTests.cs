@@ -83,6 +83,8 @@ public sealed class VersionPageViewModelTests
                 JvmArguments = jvmArguments,
                 GameArguments = gameArguments,
             };
+        public void SetInstanceIsolation(string minecraftFolder, string versionId, bool? independent)
+            => SettingsByVersion[versionId] = LoadSettings(minecraftFolder, versionId) with { Independent = independent };
 
         public void SetDescription(string minecraftFolder, string versionId, string description)
             => SettingsByVersion[versionId] = LoadSettings(minecraftFolder, versionId) with { Description = description };
@@ -489,5 +491,97 @@ public sealed class VersionPageViewModelTests
         viewModel.SelectedItem = null;
 
         Assert.Empty(viewModel.JavaHintText);
+    }
+
+    [Fact]
+    public void Isolation_FollowsGlobalDefault_AndSaysWhereSavesGo()
+    {
+        var (_, _, viewModel) = CreateViewModel(
+            new FakeCatalog { Installed = [Version("1.20.1")] },
+            new SessionState());
+
+        Assert.Equal("FollowGlobal", viewModel.IsolationMode.Id);
+        Assert.Contains("已开启版本隔离", viewModel.IsolationStatusText);
+        Assert.Contains("跟随全局默认：隔离所有版本", viewModel.IsolationStatusText);
+        Assert.Contains("存档、Mod、资源包保存在版本目录", viewModel.IsolationStatusText);
+    }
+
+    [Fact]
+    public void Isolation_FollowsGlobalDefault_WhenGlobalIsOff()
+    {
+        var settings = new FakeSettingsService
+        {
+            Settings = new AppSettings
+            {
+                MinecraftFolder = "/games/mc",
+                JavaPath = "/usr/bin/java",
+                VersionIsolationDefault = VersionIsolationDefault.Off,
+            },
+        };
+
+        var (_, _, viewModel) = CreateViewModel(
+            new FakeCatalog { Installed = [Version("1.20.1")] },
+            new SessionState(),
+            settings: settings);
+
+        Assert.Contains("未启用版本隔离", viewModel.IsolationStatusText);
+        Assert.Contains("与其他版本共用", viewModel.IsolationStatusText);
+    }
+
+    [Fact]
+    public void Isolation_TurningOn_WritesToManagerAndRefreshesStatus()
+    {
+        var manager = new FakeVersionManager();
+        var (_, _, viewModel) = CreateViewModel(
+            new FakeCatalog { Installed = [Version("1.20.1")] },
+            new SessionState(),
+            manager);
+
+        viewModel.IsolationMode = viewModel.IsolationModeOptions.First(option => option.Id == "On");
+
+        Assert.True(manager.SettingsByVersion["1.20.1"].Independent);
+        Assert.Contains("已开启版本隔离", viewModel.IsolationStatusText);
+        Assert.Contains("该版本手动开启了隔离", viewModel.IsolationStatusText);
+        Assert.Contains("版本隔离", viewModel.StatusMessage);
+    }
+
+    [Fact]
+    public void Isolation_TurningBeatsGlobalDefault_AndCanBeReverted()
+    {
+        var manager = new FakeVersionManager();
+        var (_, _, viewModel) = CreateViewModel(
+            new FakeCatalog { Installed = [Version("1.20.1")] },
+            new SessionState(),
+            manager);
+
+        viewModel.IsolationMode = viewModel.IsolationModeOptions.First(option => option.Id == "Off");
+        Assert.False(manager.SettingsByVersion["1.20.1"].Independent);
+        Assert.Contains("未启用版本隔离", viewModel.IsolationStatusText);
+        Assert.Contains("该版本手动关闭了隔离", viewModel.IsolationStatusText);
+
+        viewModel.IsolationMode = viewModel.IsolationModeOptions.First(option => option.Id == "FollowGlobal");
+        Assert.Null(manager.SettingsByVersion["1.20.1"].Independent);
+        Assert.Contains("跟随全局默认", viewModel.IsolationStatusText);
+        Assert.Contains("已让 1.20.1 的版本隔离跟随全局默认", viewModel.StatusMessage);
+    }
+
+    [Fact]
+    public void Isolation_IsRestoredFromPersistedSettings_WhenVersionIsSelected()
+    {
+        var manager = new FakeVersionManager
+        {
+            SettingsByVersion =
+            {
+                ["1.20.1"] = new VersionSettings { Independent = false },
+            },
+        };
+
+        var (_, _, viewModel) = CreateViewModel(
+            new FakeCatalog { Installed = [Version("1.20.1")] },
+            new SessionState(),
+            manager);
+
+        Assert.Equal("Off", viewModel.IsolationMode.Id);
+        Assert.Contains("未启用版本隔离", viewModel.IsolationStatusText);
     }
 }

@@ -14,6 +14,8 @@ public sealed partial class VersionPageViewModel : ObservableObject
     private const string FollowGlobalId = "FollowGlobal";
     private const string AutoId = "Auto";
     private const string ManualId = "Manual";
+    private const string IsolationOnId = "On";
+    private const string IsolationOffId = "Off";
 
     private readonly ISettingsService _settingsService;
     private readonly IVersionCatalogService _catalog;
@@ -98,6 +100,13 @@ public sealed partial class VersionPageViewModel : ObservableObject
         new(ManualId, "手动"),
     ];
 
+    public IReadOnlyList<IsolationModeOption> IsolationModeOptions { get; } =
+    [
+        new(FollowGlobalId, "跟随全局"),
+        new(IsolationOnId, "开启隔离"),
+        new(IsolationOffId, "关闭隔离"),
+    ];
+
     [ObservableProperty]
     private FolderItemViewModel? _selectedFolder;
 
@@ -154,6 +163,13 @@ public sealed partial class VersionPageViewModel : ObservableObject
 
     [ObservableProperty]
     private string _maxMemoryInput = "";
+
+    [ObservableProperty]
+    private IsolationModeOption _isolationMode = new(FollowGlobalId, "跟随全局");
+
+    /// <summary>该版本当前的隔离状态说明：手动开关、自动判定来源，以及存档与 Mod 的实际位置。</summary>
+    [ObservableProperty]
+    private string _isolationStatusText = "";
 
     [ObservableProperty]
     private string _javaPathInput = "";
@@ -448,6 +464,7 @@ public sealed partial class VersionPageViewModel : ObservableObject
             _versionManager.SetHidden(CurrentFolder, item.Id, false);
             _versionManager.SetDescription(CurrentFolder, item.Id, "");
             _versionManager.SetInstanceLaunchSettings(CurrentFolder, item.Id, null, "", "", "");
+            _versionManager.SetInstanceIsolation(CurrentFolder, item.Id, null);
             item.Apply(_versionManager.LoadSettings(CurrentFolder, item.Id));
             LoadSelectedDetails(item);
             ApplyGroups();
@@ -657,6 +674,8 @@ public sealed partial class VersionPageViewModel : ObservableObject
             JvmArgumentsInput = settings.JvmArguments ?? "";
             GameArgumentsInput = settings.GameArguments ?? "";
             ExportName = item.Id;
+            IsolationMode = IsolationModeOptions.First(option =>
+                option.Id == ResolveIsolationModeId(settings.Independent));
         }
         finally
         {
@@ -665,6 +684,83 @@ public sealed partial class VersionPageViewModel : ObservableObject
 
         LoadMods();
         UpdateInstanceJavaHint(item);
+        UpdateIsolationStatus(item);
+    }
+
+    private static string ResolveIsolationModeId(bool? independent) => independent switch
+    {
+        true => IsolationOnId,
+        false => IsolationOffId,
+        null => FollowGlobalId,
+    };
+
+    /// <summary>
+    /// 版本隔离的状态说明：说清现在是开是关、为什么，以及存档和 Mod 实际写在哪里。
+    /// 隔离失败最常见的抱怨是"存档不见了"，多半是把 Mod 装到了公共目录。
+    /// </summary>
+    private void UpdateIsolationStatus(VersionItemViewModel item)
+    {
+        var globalDefault = _settingsService.Load().VersionIsolationDefault;
+        var isolated = VersionIsolationResolver.IsIsolated(item.Version, globalDefault, item.Settings);
+        string reason;
+        if (item.Settings.Independent is { } manual)
+        {
+            reason = manual ? "该版本手动开启了隔离" : "该版本手动关闭了隔离";
+        }
+        else if (VersionIsolationResolver.HasModsOrSaves(item.Version.Folder))
+        {
+            reason = "版本目录内已有 Mod 或存档，自动开启";
+        }
+        else
+        {
+            reason = "跟随全局默认：" + DescribeGlobalIsolation(globalDefault);
+        }
+
+        var location = isolated
+            ? "存档、Mod、资源包保存在版本目录：" + item.Version.Folder
+            : "存档、Mod、资源包与其他版本共用：" + CurrentFolder;
+        IsolationStatusText = isolated
+            ? $"当前：已开启版本隔离（{reason}）。{location}"
+            : $"当前：未启用版本隔离（{reason}）。{location}";
+    }
+
+    private static string DescribeGlobalIsolation(VersionIsolationDefault value) => value switch
+    {
+        VersionIsolationDefault.Off => "关闭",
+        VersionIsolationDefault.ModdableOnly => "仅隔离可安装 Mod 的版本",
+        VersionIsolationDefault.SnapshotOnly => "仅隔离非正式版",
+        VersionIsolationDefault.SnapshotAndModdable => "隔离非正式版与可安装 Mod 的版本",
+        _ => "隔离所有版本",
+    };
+
+    partial void OnIsolationModeChanged(IsolationModeOption value)
+    {
+        if (_isLoadingDetails || SelectedItem is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var independent = value.Id switch
+            {
+                IsolationOnId => true,
+                IsolationOffId => false,
+                _ => (bool?)null,
+            };
+            _versionManager.SetInstanceIsolation(CurrentFolder, SelectedItem.Id, independent);
+            SelectedItem.Apply(_versionManager.LoadSettings(CurrentFolder, SelectedItem.Id));
+            UpdateIsolationStatus(SelectedItem);
+            StatusMessage = value.Id == FollowGlobalId
+                ? $"已让 {SelectedItem.Id} 的版本隔离跟随全局默认"
+                : independent == true
+                    ? $"已开启 {SelectedItem.Id} 的版本隔离，其存档与 Mod 将保存在版本目录内"
+                    : $"已关闭 {SelectedItem.Id} 的版本隔离，其存档与 Mod 将使用公共游戏目录";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = "保存版本隔离设置失败：" + ErrorMessageFormatter.Describe(ex);
+        }
     }
 
     /// <summary>
@@ -1027,3 +1123,5 @@ public sealed partial class VersionItemViewModel : ObservableObject
 public sealed record DisplayTypeOption(InstanceDisplayType Value, string Label);
 
 public sealed record MemoryModeOption(string Id, string Label);
+
+public sealed record IsolationModeOption(string Id, string Label);

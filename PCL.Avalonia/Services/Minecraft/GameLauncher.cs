@@ -45,6 +45,13 @@ public sealed class GameLauncher : IGameLauncher
         }
 
         var minecraftFolder = settings.MinecraftFolder.Trim();
+        // 版本隔离：每版本手动开关优先，否则按 mods/saves 探测与全局默认自动判定。
+        // 隔离后 ${game_directory} 与进程工作目录指向 versions/<版本名>/，
+        // 资源与库目录仍基于公共游戏目录，和上游 PathIndie 的用法一致。
+        var gameDirectory = VersionIsolationResolver.ResolveGameDirectory(
+            minecraftFolder, version, settings.VersionIsolationDefault, versionSettings);
+        ValidateGamePath(gameDirectory);
+        ValidateGamePath(version.Folder);
         var chain = LoadVersionChain(minecraftFolder, version);
         var root = chain[^1];
         var rootId = root.Id ?? version.Id;
@@ -120,7 +127,7 @@ public sealed class GameLauncher : IGameLauncher
         var replacements = BuildReplacements(
             version,
             settings,
-            minecraftFolder,
+            gameDirectory,
             librariesRoot,
             nativesDirectory,
             assetsRoot,
@@ -153,7 +160,7 @@ public sealed class GameLauncher : IGameLauncher
         return new LaunchPlan
         {
             JavaExecutable = javaExecutable,
-            WorkingDirectory = minecraftFolder,
+            WorkingDirectory = gameDirectory,
             NativesDirectory = nativesDirectory,
             ClassPath = string.Join(Path.PathSeparator, classPathEntries),
             MainClass = mainClass,
@@ -543,10 +550,22 @@ public sealed class GameLauncher : IGameLauncher
         }
     }
 
+    /// <summary>
+    /// 上游启动前会拒绝含 ! 或 ; 的路径：这两个字符会破坏 JVM 参数解析，必须提前拦住。
+    /// </summary>
+    private static void ValidateGamePath(string path)
+    {
+        if (path.Contains('!') || path.Contains(';'))
+        {
+            throw new InvalidOperationException(
+                $"游戏路径中不可包含 ! 或 ;（{path}）。可尝试：把游戏目录、版本名称中的这些字符去掉后再启动");
+        }
+    }
+
     private IReadOnlyDictionary<string, string> BuildReplacements(
         MinecraftVersion version,
         AppSettings settings,
-        string minecraftFolder,
+        string gameDirectory,
         string librariesRoot,
         string nativesDirectory,
         string assetsRoot,
@@ -570,7 +589,7 @@ public sealed class GameLauncher : IGameLauncher
             ["${launcher_name}"] = "PCL2.Avalonia",
             ["${launcher_version}"] = _launcherVersion,
             ["${version_name}"] = version.Id,
-            ["${game_directory}"] = minecraftFolder,
+            ["${game_directory}"] = gameDirectory,
             ["${assets_root}"] = assetsRoot,
             ["${assets_index_name}"] = assetsIndexName,
             ["${user_properties}"] = "{}",

@@ -191,7 +191,18 @@ public sealed class LaunchPageViewModelTests
         public List<(string Folder, string Id, bool IsFavorite)> Favorites { get; } = [];
         public List<(string Folder, string Id)> Deleted { get; } = [];
 
-        public VersionSettings LoadSettings(string minecraftFolder, string versionId) => new();
+        /// <summary>置上后 <see cref="LoadSettings"/> 抛异常，用来模拟外置卷 I/O 抖动。</summary>
+        public Exception? LoadError { get; init; }
+
+        public VersionSettings LoadSettings(string minecraftFolder, string versionId)
+        {
+            if (LoadError is not null)
+            {
+                throw LoadError;
+            }
+
+            return new();
+        }
 
         public void SetFavorite(string minecraftFolder, string versionId, bool isFavorite)
         {
@@ -213,6 +224,10 @@ public sealed class LaunchPageViewModelTests
             string? javaPath,
             string? jvmArguments,
             string? gameArguments)
+        {
+        }
+
+        public void SetInstanceIsolation(string minecraftFolder, string versionId, bool? independent)
         {
         }
 
@@ -340,6 +355,23 @@ public sealed class LaunchPageViewModelTests
         Assert.Contains("正常退出", viewModel.StatusMessage);
         Assert.DoesNotContain("排查建议", viewModel.LogText);
         Assert.Equal(1, launch.DisposeCount);
+    }
+
+    [Fact]
+    public async Task LaunchAsync_LogOutputFlipsTheLogPanelOutOfItsEmptyState()
+    {
+        var launch = new FakeGameLaunch();
+        var launcher = new FakeLauncher { LaunchResult = launch };
+        var viewModel = CreateViewModel(launcher, new SessionState { SelectedVersion = SelectedVersion() }, new SyncDispatcher());
+
+        Assert.False(viewModel.HasLogContent);
+
+        await viewModel.LaunchCommand.ExecuteAsync(null);
+        launch.ExitTcs.SetResult(0);
+        await launch.DisposeTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.True(viewModel.HasLogContent);
+        Assert.NotEmpty(viewModel.LogText);
     }
 
     [Fact]
@@ -518,7 +550,9 @@ public sealed class LaunchPageViewModelTests
 
         Assert.False(viewModel.JavaStatusIsError);
         Assert.Contains("Java 25", viewModel.JavaStatusText);
-        Assert.Contains("/games/java", viewModel.JavaStatusText);
+        // 左列只有 276px，完整路径只进 ToolTip，可见文案得能一眼读完。
+        Assert.DoesNotContain("/games/java", viewModel.JavaStatusText);
+        Assert.Contains("/games/java", viewModel.JavaStatusTip);
     }
 
     [Fact]
@@ -549,6 +583,81 @@ public sealed class LaunchPageViewModelTests
 
         Assert.True(viewModel.JavaStatusIsError);
         Assert.Contains("未检测到 Java", viewModel.JavaStatusText);
+    }
+
+    [Fact]
+    public void IsolationStatus_WhenNotIsolated_KeepsRowShortAndExposesPathInTip()
+    {
+        var viewModel = CreateViewModelWithSettings(
+            new AppSettings { MinecraftFolder = "/games/mc", VersionIsolationDefault = VersionIsolationDefault.Off },
+            SelectedVersion());
+
+        Assert.Contains("未开启", viewModel.IsolationStatusText);
+        // 左列净宽 276px，文案塞下完整路径必然被省略号吃掉，路径只能进 ToolTip。
+        Assert.DoesNotContain("/games/mc", viewModel.IsolationStatusText);
+        Assert.Contains("/games/mc", viewModel.IsolationStatusTip);
+    }
+
+    [Fact]
+    public void IsolationStatus_WhenIsolated_PointsAtTheVersionFolder()
+    {
+        var viewModel = CreateViewModelWithSettings(
+            new AppSettings { MinecraftFolder = "/games/mc", VersionIsolationDefault = VersionIsolationDefault.All },
+            SelectedVersion());
+
+        Assert.Contains("已开启", viewModel.IsolationStatusText);
+        Assert.Contains("/games/mc/versions/1.20.1", viewModel.IsolationStatusTip);
+    }
+
+    private static LaunchPageViewModel CreateViewModelWithSettings(
+        AppSettings settings,
+        MinecraftVersion version,
+        IVersionManagerService? versionManager = null)
+        => new(
+            new FakeSettingsService { Settings = settings },
+            new FakeJavaService(),
+            new FakeLauncher(),
+            new SessionState { SelectedVersion = version },
+            new SyncDispatcher(),
+            new FakeMicrosoftAuthenticationService(),
+            new FakeAccountService(),
+            versionManager ?? new FakeVersionManager(),
+            new FakeVersionCatalog(),
+            new FakePlatform(),
+            new FakeFolderOpener(),
+            new FakeJavaListService());
+
+    [Fact]
+    public void GameFolderRow_ShowsShortPathAndListsEveryFolderInTip()
+    {
+        var viewModel = CreateViewModelWithSettings(
+            new AppSettings
+            {
+                MinecraftFolder = "/games/mc",
+                LaunchFolders = [new MinecraftFolder("mc2", "/games/mc2")],
+            },
+            SelectedVersion());
+
+        // 标签行自带"游戏目录"字样，路径行就不要再重复一遍前缀。
+        Assert.DoesNotContain("游戏目录：", viewModel.GameFolderPathText);
+        Assert.Contains("/games/mc", viewModel.GameFolderPathText);
+        Assert.Contains("另有 1 个目录", viewModel.GameFolderPathText);
+        Assert.Contains("/games/mc", viewModel.GameFolderPathTip);
+        Assert.Contains("/games/mc2", viewModel.GameFolderPathTip);
+    }
+
+    [Fact]
+    public void IsolationStatus_WhenVersionSettingsUnreadable_StillKeepsTheRow()
+    {
+        var viewModel = CreateViewModelWithSettings(
+            new AppSettings { MinecraftFolder = "/games/mc", VersionIsolationDefault = VersionIsolationDefault.All },
+            SelectedVersion(),
+            new FakeVersionManager { LoadError = new IOException("volume busy") });
+
+        // 读不到每版本设置也不能让这一行消失：退回全局默认，并把原因说清楚。
+        Assert.Contains("已开启", viewModel.IsolationStatusText);
+        Assert.Contains("volume busy", viewModel.IsolationStatusTip);
+        Assert.Contains("全局默认", viewModel.IsolationStatusTip);
     }
 
     [Fact]

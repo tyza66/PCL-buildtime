@@ -106,4 +106,30 @@ public sealed class VersionManagerServiceTests : IDisposable
 
         Assert.False(Directory.Exists(Path.Combine(_versionsRoot, "1.20.1")));
     }
+
+    [Fact]
+    public void SetInstanceIsolation_RoundTripsBothDirections()
+    {
+        CreateVersion("1.20.1");
+        _service.SetDescription(_root, "1.20.1", "整合包");
+
+        _service.SetInstanceIsolation(_root, "1.20.1", true);
+        Assert.True(_service.LoadSettings(_root, "1.20.1").Independent);
+
+        _service.SetInstanceIsolation(_root, "1.20.1", false);
+        Assert.False(_service.LoadSettings(_root, "1.20.1").Independent);
+        // 其他实例设置不能被隔离开关清掉。
+        Assert.Equal("整合包", _service.LoadSettings(_root, "1.20.1").Description);
+    }
+
+    [Fact]
+    public void SetInstanceIsolation_NullRestoresGlobalDefault()
+    {
+        CreateVersion("1.20.1");
+
+        _service.SetInstanceIsolation(_root, "1.20.1", true);
+        _service.SetInstanceIsolation(_root, "1.20.1", null);
+
+        Assert.Null(_service.LoadSettings(_root, "1.20.1").Independent);
+    }
 }

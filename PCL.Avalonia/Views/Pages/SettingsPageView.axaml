@@ -30,6 +30,33 @@
                             Text="{Binding MinecraftFolder}"
                             Watermark="例如：~/.minecraft"
                             Foreground="{DynamicResource TextPrimaryBrush}" />
+
+                        <TextBlock
+                            Text="版本隔离"
+                            FontSize="13"
+                            FontWeight="SemiBold"
+                            Margin="0,14,0,0"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <ComboBox
+                            HorizontalAlignment="Stretch"
+                            ItemsSource="{Binding VersionIsolationDefaults}"
+                            SelectedItem="{Binding VersionIsolationMode}"
+                            ToolTip.Tip="{Binding VersionIsolationMode.Description}"
+                            Foreground="{DynamicResource TextPrimaryBrush}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:VersionIsolationOption">
+                                    <TextBlock
+                                        Text="{Binding Label}"
+                                        Foreground="{DynamicResource TextPrimaryBrush}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <TextBlock
+                            Text="决定新安装版本的默认隔离策略；已有版本可在版本页的“设置”页签单独调整。"
+                            FontSize="11"
+                            TextWrapping="Wrap"
+                            Margin="0,2,0,0"
+                            Foreground="{DynamicResource TextSecondaryBrush}" />
                         <TextBlock
                             Text="Java 路径"
                             FontSize="13"

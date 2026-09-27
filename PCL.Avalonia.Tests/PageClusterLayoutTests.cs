@@ -27,6 +27,7 @@ namespace PCL.Avalonia.Tests;
 public sealed class PageClusterLayoutTests
 {
     private const double FormControlHeight = 34;
+    private const double InstalledVersionListMaxHeight = 420;
 
     [AvaloniaFact]
     public void VersionDetailTabsSitAboveTheirContentWithoutOverlap()
@@ -120,7 +121,10 @@ public sealed class PageClusterLayoutTests
             var buttons = row.Children.OfType<Button>().ToList();
             Assert.True(buttons.Count >= 2, "an action row needs at least two buttons");
             Assert.Single(buttons.Select(button => button.Bounds.Top).Distinct());
-            Assert.Single(buttons.Select(button => button.Bounds.Width).Distinct());
+            // 星号列按可用宽度整除，除不尽时最后 1px 会落到某一列上，所以按 1px 容差比较。
+            Assert.True(
+                buttons.Max(button => button.Bounds.Width) - buttons.Min(button => button.Bounds.Width) <= 1,
+                "the buttons in an action row do not share one width");
             Assert.Single(buttons.Select(button => button.Bounds.Height).Distinct());
             // A label that wraps onto two lines grows its button, so this keeps them one line tall.
             Assert.Equal(FormControlHeight, buttons[0].Bounds.Height, 3);
@@ -158,10 +162,11 @@ public sealed class PageClusterLayoutTests
 
         // The version column used to be wrapped in a Panel, which silently dropped the
         // Grid.Column assignment and stacked the version list on top of the folder column.
-        Assert.Equal(190d, grid.ColumnDefinitions[0].Width.Value, 1);
-        Assert.Equal(280d, grid.ColumnDefinitions[1].Width.Value, 1);
-        Assert.Equal(190d, folderCard.Bounds.Width, 1);
-        Assert.Equal(280d, versionColumn.Bounds.Width, 1);
+        // 版本详情卡里新增了版本隔离下拉与状态说明，列宽从 190/280 放宽到 200/330 才不裁字。
+        Assert.Equal(200d, grid.ColumnDefinitions[0].Width.Value, 1);
+        Assert.Equal(330d, grid.ColumnDefinitions[1].Width.Value, 1);
+        Assert.Equal(200d, folderCard.Bounds.Width, 1);
+        Assert.Equal(330d, versionColumn.Bounds.Width, 1);
 
         var origin = new Point(0, 0);
         var folderLeft = folderCard.TranslatePoint(origin, window)!.Value;
@@ -293,22 +298,28 @@ public sealed class PageClusterLayoutTests
     {
         var window = Show(new LaunchPageView());
 
-        var leftColumn = window.GetVisualDescendants().OfType<Grid>()
-            .First(grid => grid.RowDefinitions.Count == 4);
-        Assert.Equal(4, leftColumn.Children.Count);
+        // 左栏正文三行：版本卡片、Java 状态、目录块。旧结构里版本卡片占一整行还会把剩余
+        // 空间全吃掉，现在它只在 Auto 行里长到 420 为止。
+        var leftBody = window.GetVisualDescendants().OfType<Grid>()
+            .First(grid => grid.RowDefinitions.Count == 3
+                           && grid.ColumnDefinitions.Count == 0
+                           && grid.Children.Count == 3
+                           && grid.Children[0] is Panel);
+        Assert.Equal(3, leftBody.Children.Count);
 
-        var header = leftColumn.Children[0];
-        var list = leftColumn.Children[1];
-        var javaRow = leftColumn.Children[2];
-        var footer = leftColumn.Children[3];
+        var list = leftBody.Children[0];
+        var javaRow = leftBody.Children[1];
+        var folder = leftBody.Children[2];
 
-        // A Panel with no Dock used to fall back to LastChildFill, which let the version list
-        // share the row with the folder info block.
-        Assert.True(list.Bounds.Top >= header.Bounds.Bottom - 1, "version list overlaps its header");
         Assert.True(javaRow.Bounds.Top >= list.Bounds.Bottom - 1, "java status overlaps the version list");
-        Assert.True(footer.Bounds.Top >= javaRow.Bounds.Bottom - 1, "folder info overlaps the java status");
-        Assert.Equal(leftColumn.Bounds.Bottom, footer.Bounds.Bottom, 1);
-        Assert.True(list.Bounds.Height > header.Bounds.Height, "the list is not the row that stretches");
+        Assert.True(folder.Bounds.Top >= javaRow.Bounds.Bottom - 1, "folder info overlaps the java status");
+        Assert.True(
+            list.Bounds.Height <= InstalledVersionListMaxHeight + 1,
+            $"the version list grew to {list.Bounds.Height} and leaves an empty slab");
+        Assert.True(list.Bounds.Height > 0, "the version list collapsed");
+        Assert.True(
+            folder.Bounds.Bottom <= leftBody.Bounds.Bottom + 1,
+            "the folder card overflows the column");
     }
 
     [AvaloniaFact]
@@ -316,42 +327,126 @@ public sealed class PageClusterLayoutTests
     {
         var window = Show(new LaunchPageView());
 
+        // 两栏页眉同处一行：四个子元素依次是左页眉、右页眉、左正文、右日志。
         var columns = window.GetVisualDescendants().OfType<Grid>()
             .First(grid => grid.ColumnDefinitions.Count == 2
-                           && grid.Children.Count == 2
-                           && grid.Children.All(child => child is Grid));
-        var left = (Grid)columns.Children[0];
-        var right = (Grid)columns.Children[1];
+                           && grid.RowDefinitions.Count == 2
+                           && grid.Children.Count == 4);
+        var leftHeader = (Panel)columns.Children[0];
+        var rightHeader = (Panel)columns.Children[1];
+        var leftBody = (Grid)columns.Children[2];
+        var rightLog = (Panel)columns.Children[3];
 
-        var leftHeader = (Panel)left.Children[0];
-        var rightHeader = (Panel)right.Children[0];
-        var leftCard = ((Panel)left.Children[1]).Children.OfType<Border>().First();
-        var rightCard = (Border)right.Children[1];
+        var leftCard = ((Panel)leftBody.Children[0]).Children.OfType<Border>().First();
+        var rightCard = rightLog.Children.OfType<Border>().First();
 
         // Both columns open with a header row of the same height, so the two cards below share one
-        // top edge instead of starting at unrelated offsets.
-        Assert.Equal(
-            Top(leftHeader, columns) + leftHeader.Bounds.Height,
-            Top(rightHeader, columns) + rightHeader.Bounds.Height, 1);
-        Assert.Equal(Top(leftCard, columns), Top(rightCard, columns), 1);
+        // top edge instead of starting at unrelated offsets. 页眉共处一行之后，卡片的上沿是
+        // 同一行排出来的，同一个 Rect，不再允许各自舍入差出 1px。
+        var lh = (Grid)leftHeader;
+        var rh = (Grid)rightHeader;
+        Assert.Equal(lh.Bounds.Height, rh.Bounds.Height, 1);
+        Assert.True(
+            Math.Abs(Top(leftCard, columns) - Top(rightCard, columns)) < 0.5,
+            $"left card sits at {Top(leftCard, columns)} but right card at {Top(rightCard, columns)}");
 
-        // The folder block is a single row: the path stays on one line beside its button rather
-        // than wrapping into a tall card with a full-width action underneath.
-        var javaRow = (Border)left.Children[2];
+        // Java 状态还是一行讲完：只报版本和架构，完整路径进 ToolTip，不给左列添堵。
+        var javaRow = (Border)leftBody.Children[1];
         var javaRowGrid = (Grid)javaRow.Child!;
         Assert.Equal(2, javaRowGrid.Children.Count);
         Assert.True(((TextBlock)javaRowGrid.Children[1]).Bounds.Height < FormControlHeight,
             "the java status text wrapped onto more lines");
 
-        var folder = (Border)left.Children[3];
-        var folderRow = (Grid)folder.Child!;
-        var path = (TextBlock)folderRow.Children[0];
-        var openFolder = (Button)folderRow.Children[1];
-        Assert.Single(folderRow.Children.OfType<TextBlock>());
-        Assert.True(path.Bounds.Height < FormControlHeight, "the folder path wrapped onto more lines");
+        // 目录块拆三行：标签 + 按钮、路径、隔离判定。路径终于能换行，不再被省略号啃成
+        // "/Users/tyza66/Libr..." 这种看不出是什么的半截字。
+        var folder = (Border)leftBody.Children[2];
+        var folderGrid = (Grid)folder.Child!;
+        Assert.Equal(3, folderGrid.RowDefinitions.Count);
+        Assert.Equal(3, folderGrid.Children.Count);
+
+        var labelRow = (Grid)folderGrid.Children[0];
+        var folderLabel = (TextBlock)labelRow.Children[0];
+        var openFolder = (Button)labelRow.Children[1];
+        Assert.Equal("游戏目录", folderLabel.Text);
+        Assert.Single(labelRow.Children.OfType<TextBlock>());
         Assert.Equal(FormControlHeight, openFolder.Bounds.Height, 3);
-        Assert.Equal(folderRow.Bounds.Height / 2, openFolder.Bounds.Center.Y, 1);
-        Assert.Equal(folderRow.Bounds.Height / 2, path.Bounds.Center.Y, 1);
+        // 子像素舍入会让两者差 0.5px 左右，真正要防的是标签被挤到按钮上方另一条线上。
+        Assert.True(
+            Math.Abs(folderLabel.Bounds.Center.Y - openFolder.Bounds.Center.Y) < 1,
+            $"the folder label sits at {folderLabel.Bounds.Center.Y} but the button at {openFolder.Bounds.Center.Y}");
+        // 按钮贴卡片右沿，和上方"刷新"按钮落在同一条竖线上。
+        Assert.Equal(labelRow.Bounds.Width, openFolder.Bounds.Right, 1);
+
+        // 路径最多折两行，再多就是版面失控；宽度也不许越过卡片内边距。
+        var path = (TextBlock)folderGrid.Children[1];
+        Assert.True(path.Bounds.Height <= FormControlHeight, "the folder path grew past two lines");
+        Assert.True(path.Bounds.Width <= labelRow.Bounds.Width + 1, "the folder path overflows the card");
+
+        // 版本隔离状态挂在路径行正下方，自成一行：既说明存档写在哪，又不挤占路径行。
+        var isolationStatus = (TextBlock)folderGrid.Children[2];
+        Assert.True(
+            Top(isolationStatus, folderGrid) >= Top(path, folderGrid) + path.Bounds.Height - 1,
+            "the isolation status row overlaps the folder path row");
+        Assert.True(
+            isolationStatus.Bounds.Bottom <= folderGrid.Bounds.Height + 1,
+            "the isolation status row overflows the card");
+    }
+
+    [AvaloniaFact]
+    public void LaunchPageKeepsTheVersionListFromInflatingIntoAnEmptySlab()
+    {
+        var window = Show(new LaunchPageView());
+
+        var columns = window.GetVisualDescendants().OfType<Grid>()
+            .First(grid => grid.ColumnDefinitions.Count == 2
+                           && grid.RowDefinitions.Count == 2
+                           && grid.Children.Count == 4);
+        var leftBody = (Grid)columns.Children[2];
+
+        // 版本卡片跟着内容长，最多到 420pt：只有两个版本时不该出现一大块空白板。
+        var listPanel = (Panel)leftBody.Children[0];
+        var listCard = listPanel.Children.OfType<Border>().First();
+        Assert.True(listPanel.Bounds.Height <= InstalledVersionListMaxHeight + 1,
+            $"the version list grew to {listPanel.Bounds.Height} and leaves an empty slab");
+        Assert.True(
+            listCard.Bounds.Width <= listPanel.Bounds.Width + 1,
+            "the version card is wider than its row");
+        Assert.True(
+            listPanel.Bounds.Height <= listCard.Bounds.Height + 1,
+            "the version card is smaller than the space it was given");
+
+        // 列表项离卡片边缘留了边，选中高亮不再啃到圆角上。
+        var listBox = listCard.GetVisualDescendants().OfType<ListBox>().First();
+        Assert.True(listBox.Padding.Left > 0, "list items touch the rounded card edge");
+        Assert.True(listBox.Padding.Left <= 8, $"the list inset {listBox.Padding.Left} is too roomy");
+    }
+
+    [AvaloniaFact]
+    public void LaunchPageLogPanelExplainsItselfWhileEmpty()
+    {
+        var viewModel = CreateLaunchPageViewModel(null);
+        var view = new LaunchPageView { DataContext = viewModel };
+        var window = Show(view);
+
+        var columns = window.GetVisualDescendants().OfType<Grid>()
+            .First(grid => grid.ColumnDefinitions.Count == 2
+                           && grid.RowDefinitions.Count == 2
+                           && grid.Children.Count == 4);
+        var logPanel = (Panel)columns.Children[3];
+        var hint = logPanel.Children.OfType<TextBlock>().First();
+        var logBox = logPanel.Children.OfType<Border>().First()
+            .GetVisualDescendants().OfType<TextBox>().First();
+
+        // 空日志时给一句说明，有输出后提示让位给真正的日志内容。
+        Assert.True(hint.IsVisible, "the empty log panel shows no hint");
+        Assert.False(viewModel.HasLogContent);
+        Assert.Equal(0, logBox.Text?.Length ?? 1);
+
+        viewModel.LogText = "[20:00:00] [main/INFO]: 第一行输出";
+        window.UpdateLayout();
+
+        Assert.True(viewModel.HasLogContent);
+        Assert.False(hint.IsVisible, "the log hint stays on top of real output");
     }
 
     [AvaloniaFact]
@@ -624,6 +719,10 @@ public sealed class PageClusterLayoutTests
             string? javaPath,
             string? jvmArguments,
             string? gameArguments)
+        {
+        }
+
+        public void SetInstanceIsolation(string minecraftFolder, string versionId, bool? independent)
         {
         }
 

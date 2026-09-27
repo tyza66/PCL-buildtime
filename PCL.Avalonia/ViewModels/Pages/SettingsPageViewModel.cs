@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PCL.Avalonia.Services;
+using PCL.Avalonia.Services.Minecraft;
 using System.Collections.ObjectModel;
 
 namespace PCL.Avalonia.ViewModels.Pages;
@@ -39,6 +40,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
         OptimizeMemoryBeforeLaunch = settings.OptimizeMemoryBeforeLaunch;
         LinkLatencyMode = LinkLatencyModes.First(option => option.Mode == settings.LinkLatencyMode);
         LinkCustomPeer = settings.LinkCustomPeer;
+        VersionIsolationMode = VersionIsolationDefaults.First(option => option.Value == settings.VersionIsolationDefault);
         _lastSaved = Snapshot();
         RefreshJavaList();
     }
@@ -190,6 +192,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
             OptimizeMemoryBeforeLaunch = OptimizeMemoryBeforeLaunch,
             LinkLatencyMode = LinkLatencyMode.Mode,
             LinkCustomPeer = LinkCustomPeer.Trim(),
+            VersionIsolationDefault = VersionIsolationMode.Value,
         };
     }
 
@@ -211,8 +214,27 @@ public sealed partial class SettingsPageViewModel : ObservableObject
     partial void OnDownloadThreadsChanged(int value) => ScheduleAutoSave();
     partial void OnDownloadSpeedLimitKbpsChanged(int value) => ScheduleAutoSave();
     partial void OnOptimizeMemoryBeforeLaunchChanged(bool value) => ScheduleAutoSave();
+    public IReadOnlyList<VersionIsolationOption> VersionIsolationDefaults { get; } =
+    [
+        new(VersionIsolationDefault.Off, "关闭",
+            "所有版本共用同一份存档、Mod、资源包。多个装了 Mod 的版本共存时可能互相冲突。"),
+        new(VersionIsolationDefault.ModdableOnly, "隔离可安装 Mod 的版本",
+            "Forge、Fabric 等可安装 Mod 的版本互相独立，避免 Mod 冲突；原版等其他版本不被隔离。"),
+        new(VersionIsolationDefault.SnapshotOnly, "隔离非正式版",
+            "把快照、预发布版、远古版本、愚人节版本与其他版本隔离开。"),
+        new(VersionIsolationDefault.SnapshotAndModdable, "隔离可安装 Mod 的版本与非正式版",
+            "可安装 Mod 的版本与快照、预发布版、远古版本、愚人节版本都会被隔离。"),
+        new(VersionIsolationDefault.All, "隔离所有版本",
+            "每个版本的存档、Mod、资源包都独立。不同原版版本间的存档将不能共用。"),
+    ];
+
+    /// <summary>新安装版本默认的版本隔离策略；已有版本可在版本页单独调整。</summary>
+    [ObservableProperty]
+    private VersionIsolationOption _versionIsolationMode = new(VersionIsolationDefault.All, "隔离所有版本", "");
+
     partial void OnLinkLatencyModeChanged(LinkLatencyModeOption value) => ScheduleAutoSave();
     partial void OnLinkCustomPeerChanged(string value) => ScheduleAutoSave();
+    partial void OnVersionIsolationModeChanged(VersionIsolationOption value) => ScheduleAutoSave();
 
     private void ScheduleAutoSave()
     {
@@ -236,3 +258,5 @@ public sealed record DownloadSourceOption(DownloadSource Source, string Label);
 public sealed record SettingsSectionOption(string Id, string Title);
 
 public sealed record LinkLatencyModeOption(LinkLatencyMode Mode, string Label);
+
+public sealed record VersionIsolationOption(VersionIsolationDefault Value, string Label, string Description);

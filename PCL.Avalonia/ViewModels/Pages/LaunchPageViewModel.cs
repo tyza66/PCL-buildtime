@@ -53,7 +53,7 @@ public sealed partial class LaunchPageViewModel : ObservableObject, IPageActivat
         _session.VersionInstalled += OnVersionInstalled;
         _session.PropertyChanged += OnSessionPropertyChanged;
         SelectedVersion = _session.SelectedVersion;
-        GameFolderText = ResolveGameFolder();
+        UpdateGameFolderText();
         UpdateVersionStatus();
         _ = RefreshInstalledAsync();
     }
@@ -85,6 +85,29 @@ public sealed partial class LaunchPageViewModel : ObservableObject, IPageActivat
     [ObservableProperty]
     private string _javaStatusText = "";
 
+    /// <summary>Java 状态行 ToolTip：可见文案只放版本号，完整路径悬停时才展开。</summary>
+    [ObservableProperty]
+    private string _javaStatusTip = "";
+
+    /// <summary>游戏目录行：只放缩略路径，一双眼就能读完。</summary>
+    [ObservableProperty]
+    private string _gameFolderPathText = "";
+
+    /// <summary>游戏目录行 ToolTip：放完整路径，多个目录时逐行列出。</summary>
+    [ObservableProperty]
+    private string _gameFolderPathTip = "";
+
+    /// <summary>
+    /// 版本隔离状态行：存档写在哪是用户最常懵的问题，隔离开启时说清"在版本目录里"，
+    /// 关闭时说清"在公共游戏目录"，免得 Mod 装错地方还怪启动器丢档。
+    /// </summary>
+    [ObservableProperty]
+    private string _isolationStatusText = "";
+
+    /// <summary>状态行 ToolTip：存档与 Mod 的完整保存路径，文案里放不下就放这里。</summary>
+    [ObservableProperty]
+    private string _isolationStatusTip = "";
+
     partial void OnSelectedInstalledVersionChanged(LaunchVersionItemViewModel? value)
     {
         if (value is null || ReferenceEquals(value.Version, SelectedVersion))
@@ -106,6 +129,11 @@ public sealed partial class LaunchPageViewModel : ObservableObject, IPageActivat
 
     [ObservableProperty]
     private string _logText = "";
+
+    /// <summary>日志面板空着的时候给一句提示，别让一大块白卡片看着像没加载完。</summary>
+    public bool HasLogContent => !string.IsNullOrWhiteSpace(LogText);
+
+    partial void OnLogTextChanged(string value) => OnPropertyChanged(nameof(HasLogContent));
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(LaunchCommand))]
@@ -133,15 +161,7 @@ public sealed partial class LaunchPageViewModel : ObservableObject, IPageActivat
             return;
         }
 
-        var settings = _settingsService.Load();
-        var folders = ResolveGameFolders(settings);
-        GameFolderText = folders.Count == 0
-            ? "尚未设置游戏目录"
-            : $"游戏目录：{folders[0]}";
-        if (folders.Count > 1)
-        {
-            GameFolderText += $"（另有 {folders.Count - 1} 个目录）";
-        }
+        var folders = UpdateGameFolderText();
 
         IsRefreshing = true;
         try
@@ -312,6 +332,52 @@ public sealed partial class LaunchPageViewModel : ObservableObject, IPageActivat
                 : "请选择一个版本"
             : $"当前版本：{SelectedVersion.Id}";
         UpdateJavaStatus();
+        UpdateIsolationStatus();
+    }
+
+    /// <summary>依赖版本设置与全局默认判定当前隔离状态，在目录行下方常驻显示。</summary>
+    private void UpdateIsolationStatus()
+    {
+        if (SelectedVersion is null)
+        {
+            IsolationStatusText = "";
+            IsolationStatusTip = "";
+            return;
+        }
+
+        var isolated = false;
+        try
+        {
+            var settings = _settingsService.Load();
+            var gameFolder = GetMinecraftFolder(settings);
+            var versionSettings = _versionManager.LoadSettings(gameFolder, SelectedVersion.Id);
+            isolated = VersionIsolationResolver.IsIsolated(
+                SelectedVersion, settings.VersionIsolationDefault, versionSettings);
+            // 左列净宽只有 276px，文案必须短，完整路径放 ToolTip 里悬停补全。
+            IsolationStatusTip = isolated
+                ? $"存档与 Mod 保存路径：{SelectedVersion.Folder}"
+                : $"存档与 Mod 保存路径：{gameFolder}";
+        }
+        catch (Exception ex)
+        {
+            // 每版本设置读不出来（外置卷 I/O 抖动、INI 损坏等）也不能让这一行凭空消失：
+            // 退回全局默认给出判定，并把原因写进 ToolTip，启动逻辑本身仍按全局默认走。
+            try
+            {
+                isolated = VersionIsolationResolver.IsIsolated(
+                    SelectedVersion, _settingsService.Load().VersionIsolationDefault);
+            }
+            catch
+            {
+                isolated = false;
+            }
+
+            IsolationStatusTip = "暂时按全局默认处理：" + ErrorMessageFormatter.Describe(ex);
+        }
+
+        IsolationStatusText = isolated
+            ? "版本隔离：已开启，存档与 Mod 存在版本目录"
+            : "版本隔离：未开启，存档与 Mod 存在公共目录";
     }
 
     /// <summary>
@@ -333,12 +399,14 @@ public sealed partial class LaunchPageViewModel : ObservableObject, IPageActivat
             {
                 // 用户在设置页手填了路径，扫描列表里没有它，版本号未知但照样能用。
                 JavaStatusIsError = false;
-                JavaStatusText = $"Java（自定义路径，未识别版本）：{javaPath}";
+                JavaStatusText = "Java（自定义路径，未识别版本）";
+                JavaStatusTip = $"使用自定义 Java 路径：{javaPath}";
                 return;
             }
 
             JavaStatusIsError = true;
             JavaStatusText = NotInstalledJavaHint();
+            JavaStatusTip = JavaStatusText;
             return;
         }
 
@@ -346,13 +414,19 @@ public sealed partial class LaunchPageViewModel : ObservableObject, IPageActivat
         {
             JavaStatusIsError = true;
             JavaStatusText = $"Java 版本过低：该版本需要 Java {required}，当前可用的是 Java {java.MajorVersion}，请到设置页更换或安装新的 Java";
+            JavaStatusTip = JavaStatusText;
             return;
         }
 
         JavaStatusIsError = false;
+        // 可见文案只留版本（左列只有 276px，路径一拼就被截成 "/opt/home..."），
+        // 版本 + 架构 + 完整路径都放 ToolTip，需要排查时悬停就能抄。
         JavaStatusText = java.Version.Length > 0
-            ? $"Java {java.MajorVersion}（{java.Version} · {java.Architecture}） · {java.Path}"
-            : $"Java {java.MajorVersion} · {java.Path}";
+            ? $"Java {java.MajorVersion}（{java.Version} · {java.Architecture}）"
+            : $"Java {java.MajorVersion}";
+        JavaStatusTip = java.Path.Length > 0
+            ? $"{JavaStatusText} · {java.Path}"
+            : JavaStatusText;
     }
 
     private static string NotInstalledJavaHint()
@@ -384,11 +458,45 @@ public sealed partial class LaunchPageViewModel : ObservableObject, IPageActivat
         return folders;
     }
 
-    private string ResolveGameFolder()
+    /// <summary>
+    /// 刷新目录行：可见文案只放缩略路径（家目录折叠成 ~），完整路径与多目录清单放 ToolTip，
+    /// 免得左列那点宽度被一串绝对路径挤成 "/Users/tyza66/Libr..." 这种没法看的样子。
+    /// </summary>
+    private List<string> UpdateGameFolderText()
     {
-        return string.IsNullOrWhiteSpace(_settingsService.Load().MinecraftFolder)
-            ? _platform.GetDefaultMinecraftFolder()
-            : _settingsService.Load().MinecraftFolder.Trim();
+        var settings = _settingsService.Load();
+        var folders = ResolveGameFolders(settings);
+        if (folders.Count == 0)
+        {
+            GameFolderPathText = "尚未设置游戏目录";
+            GameFolderPathTip = "到设置页指定 Minecraft 目录后即可启动游戏";
+            return folders;
+        }
+
+        var display = AbbreviateHome(folders[0]);
+        if (folders.Count > 1)
+        {
+            display += $"（另有 {folders.Count - 1} 个目录）";
+        }
+
+        GameFolderPathText = display;
+        GameFolderPathTip = string.Join('\n', folders);
+
+        return folders;
+    }
+
+    /// <summary>把用户主目录折叠成 ~，路径短一截才好在一行里读完。</summary>
+    private static string AbbreviateHome(string path)
+    {
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (!string.IsNullOrEmpty(home)
+            && path.Length > home.Length
+            && path.StartsWith(home, StringComparison.OrdinalIgnoreCase))
+        {
+            return "~" + path[home.Length..];
+        }
+
+        return path;
     }
 
     [RelayCommand(CanExecute = nameof(CanLaunch))]
