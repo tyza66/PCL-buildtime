@@ -78,11 +78,13 @@
                     Background="Transparent"
                     BorderThickness="0">
                     <!-- 13 个导航项必须在默认 720pt 窗口高度下完整可见：容器高度固定，行高不随字体行距膨胀。
-                         文字垂直居中，靠 TextBlock 自身的左内边距留出缩进。 -->
+                         文字垂直居中，靠 TextBlock 自身的左内边距留出缩进。
+                         行距按 32+1+1 收住：窗口压到最小高度 600pt 时，页眉与主题按钮的自动高度
+                         在不同平台的字体度量下能差出 8pt 上下，留足余量才不致某个平台恰好露出滚动条。 -->
                     <ListBox.Styles>
                         <Style Selector="ListBoxItem" x:DataType="vm:NavItemViewModel">
-                            <Setter Property="Height" Value="33" />
-                            <Setter Property="Margin" Value="8,2" />
+                            <Setter Property="Height" Value="32" />
+                            <Setter Property="Margin" Value="8,1" />
                             <Setter Property="Padding" Value="0" />
                             <Setter Property="VerticalContentAlignment" Value="Center" />
                             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
