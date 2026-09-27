@@ -38,16 +38,16 @@ public sealed class JavaInstallServiceTests : IDisposable
 
         Assert.Equal(21, release.MajorVersion);
         Assert.Equal("jdk-21.0.5+11", release.Version);
-        Assert.Contains("OpenJDK21U-jdk_aarch64_mac_hotspot_21.0.5_11.tar.gz", release.PackageUrl);
+        Assert.Contains(HotspotFileName(21, "jdk-21.0.5+11", "aarch64"), release.PackageUrl);
         Assert.Equal(123456, release.PackageSize);
         Assert.Contains("aarch64", client.RequestedUrls[0]);
-        Assert.Contains("os=mac", client.RequestedUrls[0]);
+        Assert.Contains($"os={OsToken}", client.RequestedUrls[0]);
     }
 
     [Fact]
     public async Task FetchLatestAsync_AsksForMachineArchitecture()
     {
-        var client = new FakeDownloadClient(X86MacSampleJson);
+        var client = new FakeDownloadClient(X86HostSampleJson);
         var service = CreateService(client, Architecture.X86);
 
         var release = await service.FetchLatestAsync(17);
@@ -81,7 +81,7 @@ public sealed class JavaInstallServiceTests : IDisposable
     [Fact]
     public async Task InstallAsync_SkipsDownload_WhenSameVersionAlreadyInstalled()
     {
-        var existing = Path.Combine(_root, "jdk-21.0.5+11", "bin", "java");
+        var existing = Path.Combine(_root, "jdk-21.0.5+11", "bin", JavaExecutableName);
         Directory.CreateDirectory(Path.GetDirectoryName(existing)!);
         await File.WriteAllTextAsync(existing, "#!/bin/sh");
 
@@ -107,13 +107,13 @@ public sealed class JavaInstallServiceTests : IDisposable
             // 真实 tar/zip 会多套一层 jdk-21.0.5+11 目录，替身照抄这个布局。
             var bin = Path.Combine(target, "jdk-21.0.5+11", "bin");
             Directory.CreateDirectory(bin);
-            File.WriteAllText(Path.Combine(bin, "java"), "#!/bin/sh");
+            File.WriteAllText(Path.Combine(bin, JavaExecutableName), "#!/bin/sh");
             return Task.CompletedTask;
         });
 
         var java = await service.InstallAsync(21, progress);
 
-        Assert.EndsWith("jdk-21.0.5+11/bin/java", java.Replace('\\', '/'));
+        Assert.EndsWith($"jdk-21.0.5+11/bin/{JavaExecutableName}", java.Replace('\\', '/'));
         Assert.True(File.Exists(java), "返回的 java 路径应真实存在");
         Assert.Equal(1, extractorCalls);
         Assert.Contains(stages, text => text.Contains("正在下载"));
@@ -136,7 +136,7 @@ public sealed class JavaInstallServiceTests : IDisposable
     [Fact]
     public void FindJavaExecutable_FindsNestedHome()
     {
-        var nested = Path.Combine(_root, "jdk-17", "bin", "java");
+        var nested = Path.Combine(_root, "jdk-17", "bin", JavaExecutableName);
         Directory.CreateDirectory(Path.GetDirectoryName(nested)!);
         File.WriteAllText(nested, "#!/bin/sh");
 
@@ -155,7 +155,7 @@ public sealed class JavaInstallServiceTests : IDisposable
 
         Assert.Equal(21, release.MajorVersion);
         var fallback = client.RequestedUrls[1];
-        Assert.Contains("os=mac", fallback);
+        Assert.Contains($"os={OsToken}", fallback);
         Assert.Contains("architecture=aarch64", fallback);
         Assert.DoesNotContain("vendor=eclipse", fallback);
     }
@@ -167,7 +167,7 @@ public sealed class JavaInstallServiceTests : IDisposable
 
         var release = await service.FetchLatestAsync(21);
 
-        Assert.Contains("aarch64_mac", release.PackageUrl);
+        Assert.Contains($"aarch64_{OsToken}", release.PackageUrl);
     }
 
     [Fact]
@@ -191,8 +191,8 @@ public sealed class JavaInstallServiceTests : IDisposable
 
         var request = client.DownloadedRequests[0];
         Assert.Equal(
-            "https://mirrors.tuna.tsinghua.edu.cn/Adoptium/21/jdk/aarch64/mac/"
-            + "OpenJDK21U-jdk_aarch64_mac_hotspot_21.0.5_11.tar.gz",
+            $"https://mirrors.tuna.tsinghua.edu.cn/Adoptium/21/jdk/aarch64/{OsToken}/"
+            + HotspotFileName(21, "jdk-21.0.5+11", "aarch64"),
             request.Urls[0]);
         Assert.Contains(request.Urls, url => url.StartsWith("https://github.com/adoptium/"));
         // 接口给了包大小就校验：下到一半被截断的 180MB 比直接失败更难查。
@@ -238,7 +238,14 @@ public sealed class JavaInstallServiceTests : IDisposable
         }
         finally
         {
-            Directory.Delete(configDirectory, recursive: true);
+            try
+            {
+                Directory.Delete(configDirectory, recursive: true);
+            }
+            catch (DirectoryNotFoundException)
+            {
+                // 安装中途失败时目录可能压根没建出来，清理失败不该盖住用例结论。
+            }
         }
     }
 
@@ -257,7 +264,7 @@ public sealed class JavaInstallServiceTests : IDisposable
                 // 这样安装流程能一路走完，镜像顺序用例断言的就是最终发出的下载请求。
                 var bin = Path.Combine(target, "jdk-21.0.5+11", "bin");
                 Directory.CreateDirectory(bin);
-                File.WriteAllText(Path.Combine(bin, "java"), "#!/bin/sh");
+                File.WriteAllText(Path.Combine(bin, JavaExecutableName), "#!/bin/sh");
                 return Task.CompletedTask;
             }),
             () => downloadSource);
@@ -266,113 +273,52 @@ public sealed class JavaInstallServiceTests : IDisposable
     {
         var home = Path.Combine(root, "jdk-21.0.5+11");
         Directory.CreateDirectory(Path.Combine(home, "bin"));
-        File.WriteAllText(Path.Combine(home, "bin", "java"), "#!/bin/sh\n");
+        File.WriteAllText(Path.Combine(home, "bin", JavaExecutableName), "#!/bin/sh\n");
         return home;
     }
 
-    private const string SampleJson = """
-    [
-      {
-        "release_name": "jdk-21.0.5+11",
-        "version": { "major": 21, "minor": 0, "security": 5 },
-        "binary": {
-          "os": "mac",
-          "architecture": "aarch64",
-          "image_type": "jdk",
-          "package": {
-            "name": "OpenJDK21U-jdk_aarch64_mac_hotspot_21.0.5_11.tar.gz",
-            "link": "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.5%2B11/OpenJDK21U-jdk_aarch64_mac_hotspot_21.0.5_11.tar.gz",
-            "size": 123456
-          }
-        }
-      }
-    ]
-    """;
+    // 夹具跟着运行平台走：服务按本机 os/架构过滤条目，写死 mac 在 Windows/Linux runner 上必然不匹配。
+    private static string OsToken
+        => OperatingSystem.IsWindows() ? "windows" : OperatingSystem.IsLinux() ? "linux" : "mac";
 
-    private const string MixedPlatformJson = """
-    [
-      {
-        "release_name": "jdk-21.0.5+11",
-        "version": { "major": 21 },
-        "binary": {
-          "os": "windows",
-          "architecture": "x64",
-          "image_type": "jdk",
-          "package": {
-            "link": "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.5%2B11/OpenJDK21U-jdk_x64_windows_hotspot_21.0.5_11.zip",
-            "size": 1
-          }
-        }
-      },
-      {
-        "release_name": "jdk-21.0.5+11",
-        "version": { "major": 21 },
-        "binary": {
-          "os": "mac",
-          "architecture": "aarch64",
-          "image_type": "jdk",
-          "package": {
-            "link": "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.5%2B11/OpenJDK21U-jdk_aarch64_mac_hotspot_21.0.5_11.tar.gz",
-            "size": 2
-          }
-        }
-      }
-    ]
-    """;
+    private static string JavaExecutableName => OperatingSystem.IsWindows() ? "java.exe" : "java";
 
-    private const string WindowsOnlyJson = """
-    [
-    {
-      "release_name": "jdk-21.0.5+11",
-      "version": { "major": 21 },
-      "binary": {
-        "os": "windows",
-        "architecture": "x64",
-        "image_type": "jdk",
-        "package": {
-          "link": "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.5%2B11/OpenJDK21U-jdk_x64_windows_hotspot_21.0.5_11.zip",
-          "size": 1
-        }
-      }
-    }
-    ]
-    """;
+    /// <summary>Adoptium 热点包文件名，os 片段用本机的：windows / mac / linux。</summary>
+    private static string HotspotFileName(int major, string release, string arch, string extension = "tar.gz")
+        => $"OpenJDK{major}U-jdk_{arch}_{OsToken}_hotspot_{release.Replace("jdk-", "").Replace('+', '_')}.{extension}";
 
-    private const string X86MacSampleJson = """
-    [
-      {
-        "release_name": "jdk-17.0.13+11",
-        "version": { "major": 17 },
-        "binary": {
-          "os": "mac",
-          "architecture": "x86",
-          "image_type": "jdk",
-          "package": {
-            "link": "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.13%2B11/OpenJDK17U-jdk_x86-32_mac_hotspot_17.0.13_11.tar.gz",
-            "size": 999
+    private static string AssetJson(int major, string release, string os, string arch, long size, string extension = "tar.gz")
+        => $$"""
+        {
+          "release_name": "{{release}}",
+          "version": { "major": {{major}} },
+          "binary": {
+            "os": "{{os}}",
+            "architecture": "{{arch}}",
+            "image_type": "jdk",
+            "package": {
+              "name": "{{HotspotFileName(major, release, arch, extension)}}",
+              "link": "https://github.com/adoptium/temurin{{major}}-binaries/releases/download/{{Uri.EscapeDataString(release)}}/{{HotspotFileName(major, release, arch, extension)}}",
+              "size": {{size}}
+            }
           }
         }
-      }
-    ]
-    """;
+        """;
 
-    private const string ZipSampleJson = """
-    [
-      {
-        "release_name": "jdk-21.0.5+11",
-        "version": { "major": 21 },
-        "binary": {
-          "os": "mac",
-          "architecture": "aarch64",
-          "image_type": "jdk",
-          "package": {
-            "link": "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.5%2B11/OpenJDK21U-jdk_aarch64_mac_hotspot_21.0.5_11.zip",
-            "size": 3
-          }
-        }
-      }
-    ]
-    """;
+    private static string JsonAssets(params string[] assets)
+        => "[" + string.Join(",", assets) + "]";
+
+    private static string SampleJson => JsonAssets(AssetJson(21, "jdk-21.0.5+11", OsToken, "aarch64", 123456));
+
+    private static string MixedPlatformJson => JsonAssets(
+        AssetJson(21, "jdk-21.0.5+11", "windows", "x64", 1),
+        AssetJson(21, "jdk-21.0.5+11", OsToken, "aarch64", 2));
+
+    private static string WindowsOnlyJson => JsonAssets(AssetJson(21, "jdk-21.0.5+11", "windows", "x64", 1));
+
+    private static string ZipSampleJson => JsonAssets(AssetJson(21, "jdk-21.0.5+11", OsToken, "aarch64", 3, "zip"));
+
+    private static string X86HostSampleJson => JsonAssets(AssetJson(17, "jdk-17.0.13+11", OsToken, "x86", 999));
 
     private sealed class FakeDownloadClient : IDownloadClient
     {
