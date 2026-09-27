@@ -27,7 +27,6 @@ namespace PCL.Avalonia.Tests;
 public sealed class PageClusterLayoutTests
 {
     private const double FormControlHeight = 34;
-    private const double InstalledVersionListMaxHeight = 420;
 
     [AvaloniaFact]
     public void VersionDetailTabsSitAboveTheirContentWithoutOverlap()
@@ -298,13 +297,16 @@ public sealed class PageClusterLayoutTests
     {
         var window = Show(new LaunchPageView());
 
-        // 左栏正文三行：版本卡片、Java 状态、目录块。旧结构里版本卡片占一整行还会把剩余
-        // 空间全吃掉，现在它只在 Auto 行里长到 420 为止。
+        // 左栏正文三行：版本卡片、Java 状态、目录块。版本卡片占 * 行，接管左栏剩余高度，
+        // 只留紧凑的 Java / 目录行贴在底端，版面底部不再空出一大块。
         var leftBody = window.GetVisualDescendants().OfType<Grid>()
             .First(grid => grid.RowDefinitions.Count == 3
                            && grid.ColumnDefinitions.Count == 0
                            && grid.Children.Count == 3
                            && grid.Children[0] is Panel);
+        Assert.Equal(GridUnitType.Star, leftBody.RowDefinitions[0].Height.GridUnitType);
+        Assert.True(leftBody.RowDefinitions[1].Height.GridUnitType == GridUnitType.Auto, "java row should hug its content");
+        Assert.True(leftBody.RowDefinitions[2].Height.GridUnitType == GridUnitType.Auto, "folder row should hug its content");
         Assert.Equal(3, leftBody.Children.Count);
 
         var list = leftBody.Children[0];
@@ -313,10 +315,14 @@ public sealed class PageClusterLayoutTests
 
         Assert.True(javaRow.Bounds.Top >= list.Bounds.Bottom - 1, "java status overlaps the version list");
         Assert.True(folder.Bounds.Top >= javaRow.Bounds.Bottom - 1, "folder info overlaps the java status");
-        Assert.True(
-            list.Bounds.Height <= InstalledVersionListMaxHeight + 1,
-            $"the version list grew to {list.Bounds.Height} and leaves an empty slab");
         Assert.True(list.Bounds.Height > 0, "the version list collapsed");
+        // 版本卡片上端贴着页眉下沿、下端贴着 Java 行上沿：左栏这 200 多像素必须用它吃掉。
+        Assert.True(
+            list.Bounds.Bottom + leftBody.RowSpacing >= javaRow.Bounds.Top - 1,
+            $"the version list stops at {list.Bounds.Bottom} but the java row starts at {javaRow.Bounds.Top}");
+        Assert.True(
+            list.Bounds.Height >= 200,
+            $"the version list only takes {list.Bounds.Height} of the column and leaves a slab below");
         Assert.True(
             folder.Bounds.Bottom <= leftBody.Bounds.Bottom + 1,
             "the folder card overflows the column");
@@ -393,7 +399,7 @@ public sealed class PageClusterLayoutTests
     }
 
     [AvaloniaFact]
-    public void LaunchPageKeepsTheVersionListFromInflatingIntoAnEmptySlab()
+    public void LaunchPageVersionCardFillsTheLeftColumn()
     {
         var window = Show(new LaunchPageView());
 
@@ -403,17 +409,15 @@ public sealed class PageClusterLayoutTests
                            && grid.Children.Count == 4);
         var leftBody = (Grid)columns.Children[2];
 
-        // 版本卡片跟着内容长，最多到 420pt：只有两个版本时不该出现一大块空白板。
+        // 版本卡片铺满所在行：空白留在卡片内部由滚动条解决，版面底部不再突然截断。
         var listPanel = (Panel)leftBody.Children[0];
         var listCard = listPanel.Children.OfType<Border>().First();
-        Assert.True(listPanel.Bounds.Height <= InstalledVersionListMaxHeight + 1,
-            $"the version list grew to {listPanel.Bounds.Height} and leaves an empty slab");
         Assert.True(
-            listCard.Bounds.Width <= listPanel.Bounds.Width + 1,
-            "the version card is wider than its row");
+            Math.Abs(listCard.Bounds.Height - listPanel.Bounds.Height) < 1,
+            $"the version card is {listCard.Bounds.Height} tall but was given {listPanel.Bounds.Height}");
         Assert.True(
-            listPanel.Bounds.Height <= listCard.Bounds.Height + 1,
-            "the version card is smaller than the space it was given");
+            Math.Abs(listCard.Bounds.Width - listPanel.Bounds.Width) < 1,
+            "the version card is narrower than its row");
 
         // 列表项离卡片边缘留了边，选中高亮不再啃到圆角上。
         var listBox = listCard.GetVisualDescendants().OfType<ListBox>().First();

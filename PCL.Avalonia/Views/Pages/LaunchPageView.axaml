@@ -93,9 +93,11 @@
             <Grid
                 Grid.Row="1"
                 Grid.Column="0"
-                RowDefinitions="Auto,Auto,Auto"
+                RowDefinitions="*,Auto,Auto"
                 RowSpacing="10">
-                <Panel VerticalAlignment="Top" MaxHeight="420">
+                <!-- 版本卡片接管左栏剩余高度：只有一两个版本时空白留在卡片里，
+                     版面底部不会突然空出一大块，滚动条也在卡片内部解决。 -->
+                <Panel>
                     <Border
                         Background="{DynamicResource CardBackgroundBrush}"
                         CornerRadius="8">

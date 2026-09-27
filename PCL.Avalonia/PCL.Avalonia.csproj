@@ -9,7 +9,8 @@
     <RootNamespace>PCL.Avalonia</RootNamespace>
     <Version>1.0.20261010</Version>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
-    <FileVersion>1.0.0.0</FileVersion>
+    <!-- 文件版本跟随产品版本，dmg / exe 的属性面板里显示的是真实版本号 -->
+    <FileVersion>$(Version)</FileVersion>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
     <ApplicationIcon>icon.ico</ApplicationIcon>

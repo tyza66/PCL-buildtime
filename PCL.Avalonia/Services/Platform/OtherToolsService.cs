@@ -8,7 +8,7 @@ public sealed class OtherToolsService : IOtherToolsService
 
     public OtherEnvironmentInfo GetEnvironmentInfo(string minecraftFolder, string configDirectory)
     {
-        var version = typeof(OtherToolsService).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
+        var version = AppVersionInfo.Version;
         return new OtherEnvironmentInfo(
             version,
             RuntimeInformation.FrameworkDescription,

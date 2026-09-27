@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.IO.Compression;
-using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -19,7 +18,7 @@ public sealed class GameLauncher : IGameLauncher
     {
         _catalog = catalog;
         _memoryOptimizer = memoryOptimizer;
-        _launcherVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0";
+        _launcherVersion = AppVersionInfo.Version;
     }
 
     public LaunchPlan BuildLaunchPlan(
