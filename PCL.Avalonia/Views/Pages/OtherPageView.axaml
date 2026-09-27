@@ -5,6 +5,8 @@
     xmlns:vm="clr-namespace:PCL.Avalonia.ViewModels.Pages;assembly=PCL2.Avalonia"
     xmlns:svc="clr-namespace:PCL.Avalonia.Services;assembly=PCL2.Avalonia"
     x:DataType="vm:OtherPageViewModel">
+    <!-- 俩当用卡片分区：工具与环境信息并排，自检与关于占满宽。
+         原来单列窄栏在宽窗口下右边一大片留白，内容也和其他页的卡片风格不一致。 -->
     <ScrollViewer>
         <StackPanel Margin="32" Spacing="12">
             <TextBlock
@@ -12,130 +14,166 @@
                 FontSize="26"
                 FontWeight="SemiBold"
                 Foreground="{DynamicResource TextPrimaryBrush}" />
-
-            <TextBlock
-                Text="工具"
-                FontSize="16"
-                FontWeight="SemiBold"
-                Margin="0,14,0,0"
-                Foreground="{DynamicResource TextPrimaryBrush}" />
-            <StackPanel
-                Orientation="Horizontal"
-                Spacing="10">
-                <Button
-                    Content="打开游戏目录"
-                    Command="{Binding OpenGameFolderCommand}"
-                    Background="{DynamicResource ButtonBackgroundBrush}"
-                    Foreground="{DynamicResource TextPrimaryBrush}" />
-                <Button
-                    Content="打开启动器文件夹"
-                    Command="{Binding OpenConfigFolderCommand}"
-                    Background="{DynamicResource ButtonBackgroundBrush}"
-                    Foreground="{DynamicResource TextPrimaryBrush}" />
-                <Button
-                    Content="扫描临时文件"
-                    Command="{Binding ScanGarbageCommand}"
-                    Background="{DynamicResource ButtonBackgroundBrush}"
-                    Foreground="{DynamicResource TextPrimaryBrush}" />
-                <Button
-                    Content="清理临时文件"
-                    Command="{Binding CleanGarbageCommand}"
-                    Background="{DynamicResource ButtonBackgroundBrush}"
-                    Foreground="{DynamicResource TextPrimaryBrush}" />
-            </StackPanel>
-            <TextBlock
-                Text="{Binding StatusMessage}"
-                FontSize="13"
-                TextWrapping="Wrap"
-                Foreground="{DynamicResource TextSecondaryBrush}" />
-            <TextBlock
-                Text="{Binding GarbageFileCount, StringFormat='临时文件数量：{0}'}"
-                FontSize="13"
-                Foreground="{DynamicResource TextSecondaryBrush}" />
-            <TextBlock
-                Text="{Binding GarbageSizeText, StringFormat='占用空间：{0}'}"
-                FontSize="13"
-                Foreground="{DynamicResource TextSecondaryBrush}" />
-
-            <TextBlock
-                Text="环境信息"
-                FontSize="16"
-                FontWeight="SemiBold"
-                Margin="0,14,0,0"
-                Foreground="{DynamicResource TextPrimaryBrush}" />
-            <Grid ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="8">
-                <TextBlock Grid.Row="0" Grid.Column="0" Text="版本" Foreground="{DynamicResource TextSecondaryBrush}" />
-                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding AppVersion}" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" />
-                <TextBlock Grid.Row="1" Grid.Column="0" Text="运行时" Foreground="{DynamicResource TextSecondaryBrush}" />
-                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Runtime}" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" />
-                <TextBlock Grid.Row="2" Grid.Column="0" Text="操作系统" Foreground="{DynamicResource TextSecondaryBrush}" />
-                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding OperatingSystem}" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" />
-                <TextBlock Grid.Row="3" Grid.Column="0" Text="游戏目录" Foreground="{DynamicResource TextSecondaryBrush}" />
-                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding MinecraftFolder}" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" />
-                <TextBlock Grid.Row="4" Grid.Column="0" Text="配置目录" Foreground="{DynamicResource TextSecondaryBrush}" />
-                <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding ConfigDirectory}" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" />
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                <Border
+                    Grid.Column="0"
+                    Background="{DynamicResource CardBackgroundBrush}"
+                    CornerRadius="8"
+                    Padding="16">
+                    <StackPanel Spacing="10">
+                        <TextBlock
+                            Text="工具"
+                            FontSize="16"
+                            FontWeight="SemiBold"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="8">
+                            <Button
+                                Grid.Row="0"
+                                Grid.Column="0"
+                                Content="打开游戏目录"
+                                HorizontalContentAlignment="Center"
+                                Command="{Binding OpenGameFolderCommand}"
+                                Background="{DynamicResource ButtonBackgroundBrush}"
+                                Foreground="{DynamicResource TextPrimaryBrush}" />
+                            <Button
+                                Grid.Row="0"
+                                Grid.Column="1"
+                                Content="打开启动器文件夹"
+                                HorizontalContentAlignment="Center"
+                                Command="{Binding OpenConfigFolderCommand}"
+                                Background="{DynamicResource ButtonBackgroundBrush}"
+                                Foreground="{DynamicResource TextPrimaryBrush}" />
+                            <Button
+                                Grid.Row="1"
+                                Grid.Column="0"
+                                Content="扫描临时文件"
+                                HorizontalContentAlignment="Center"
+                                Command="{Binding ScanGarbageCommand}"
+                                Background="{DynamicResource ButtonBackgroundBrush}"
+                                Foreground="{DynamicResource TextPrimaryBrush}" />
+                            <Button
+                                Grid.Row="1"
+                                Grid.Column="1"
+                                Content="清理临时文件"
+                                HorizontalContentAlignment="Center"
+                                Command="{Binding CleanGarbageCommand}"
+                                Background="{DynamicResource ButtonBackgroundBrush}"
+                                Foreground="{DynamicResource TextPrimaryBrush}" />
+                        </Grid>
+                        <TextBlock
+                            Text="{Binding StatusMessage}"
+                            FontSize="13"
+                            TextWrapping="Wrap"
+                            Foreground="{DynamicResource TextSecondaryBrush}" />
+                        <TextBlock
+                            Text="{Binding GarbageFileCount, StringFormat='临时文件数量：{0}'}"
+                            FontSize="13"
+                            Foreground="{DynamicResource TextSecondaryBrush}" />
+                        <TextBlock
+                            Text="{Binding GarbageSizeText, StringFormat='占用空间：{0}'}"
+                            FontSize="13"
+                            Foreground="{DynamicResource TextSecondaryBrush}" />
+                    </StackPanel>
+                </Border>
+                <Border
+                    Grid.Column="1"
+                    Background="{DynamicResource CardBackgroundBrush}"
+                    CornerRadius="8"
+                    Padding="16">
+                    <StackPanel Spacing="10">
+                        <TextBlock
+                            Text="环境信息"
+                            FontSize="16"
+                            FontWeight="SemiBold"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <Grid ColumnDefinitions="76,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="8">
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="版本" Foreground="{DynamicResource TextSecondaryBrush}" />
+                            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding AppVersion}" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" />
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="运行时" Foreground="{DynamicResource TextSecondaryBrush}" />
+                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Runtime}" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" />
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="操作系统" Foreground="{DynamicResource TextSecondaryBrush}" />
+                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding OperatingSystem}" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" />
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="游戏目录" Foreground="{DynamicResource TextSecondaryBrush}" />
+                            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding MinecraftFolder}" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" />
+                            <TextBlock Grid.Row="4" Grid.Column="0" Text="配置目录" Foreground="{DynamicResource TextSecondaryBrush}" />
+                            <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding ConfigDirectory}" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
             </Grid>
-
-            <TextBlock
-                Text="启动自检"
-                FontSize="16"
-                FontWeight="SemiBold"
-                Margin="0,14,0,0"
-                Foreground="{DynamicResource TextPrimaryBrush}" />
-            <Button
-                Content="开始检查"
-                Command="{Binding RunDiagnosticsCommand}"
-                Background="{DynamicResource ButtonBackgroundBrush}"
-                Foreground="{DynamicResource TextPrimaryBrush}" />
-            <TextBlock
-                Text="{Binding DiagnosticSummary}"
-                FontSize="13"
-                TextWrapping="Wrap"
-                Foreground="{DynamicResource TextSecondaryBrush}" />
-            <ItemsControl ItemsSource="{Binding DiagnosticItems}" IsVisible="{Binding HasDiagnostics}">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="svc:DiagnosticItem">
-                        <StackPanel Margin="0,6,0,0">
-                            <Grid ColumnDefinitions="Auto,*">
-                                <TextBlock
-                                    Grid.Column="0"
-                                    Text="✔"
-                                    IsVisible="{Binding IsOk}"
-                                    Foreground="{DynamicResource AccentBrush}"
-                                    Margin="0,0,6,0" />
-                                <TextBlock
-                                    Grid.Column="0"
-                                    Text="✘"
-                                    IsVisible="{Binding !IsOk}"
-                                    Foreground="{DynamicResource DangerBrush}"
-                                    Margin="0,0,6,0" />
-                                <TextBlock
-                                    Grid.Column="1"
-                                    Text="{Binding Title}"
-                                    FontWeight="SemiBold"
-                                    Foreground="{DynamicResource TextPrimaryBrush}" />
-                            </Grid>
-                            <TextBlock
-                                Text="{Binding Detail}"
-                                TextWrapping="Wrap"
-                                Margin="22,2,0,0"
-                                Foreground="{DynamicResource TextSecondaryBrush}" />
-                        </StackPanel>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-
-            <TextBlock
-                Text="关于"
-                FontSize="16"
-                FontWeight="SemiBold"
-                Margin="0,14,0,0"
-                Foreground="{DynamicResource TextPrimaryBrush}" />
-            <TextBlock
-                Text="这是 PCL2 的 Avalonia 跨平台复刻版，可在 Windows、macOS 与 Linux 上运行。核心单机功能已实现；联机因依赖的公共节点服务下线暂不可用，帮助库与部分高级功能仍在逐步补齐。"
-                FontSize="13"
-                TextWrapping="Wrap"
-                Foreground="{DynamicResource TextSecondaryBrush}" />
+            <Border
+                Background="{DynamicResource CardBackgroundBrush}"
+                CornerRadius="8"
+                Padding="16">
+                <StackPanel Spacing="10">
+                    <TextBlock
+                        Text="启动自检"
+                        FontSize="16"
+                        FontWeight="SemiBold"
+                        Foreground="{DynamicResource TextPrimaryBrush}" />
+                    <Button
+                        Content="开始检查"
+                        HorizontalAlignment="Left"
+                        Padding="16,6"
+                        Command="{Binding RunDiagnosticsCommand}"
+                        Background="{DynamicResource ButtonBackgroundBrush}"
+                        Foreground="{DynamicResource TextPrimaryBrush}" />
+                    <TextBlock
+                        Text="{Binding DiagnosticSummary}"
+                        FontSize="13"
+                        TextWrapping="Wrap"
+                        Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <ItemsControl ItemsSource="{Binding DiagnosticItems}" IsVisible="{Binding HasDiagnostics}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="svc:DiagnosticItem">
+                                <StackPanel Margin="0,2,0,0">
+                                    <Grid ColumnDefinitions="Auto,*">
+                                        <TextBlock
+                                            Grid.Column="0"
+                                            Text="✔"
+                                            IsVisible="{Binding IsOk}"
+                                            Foreground="{DynamicResource AccentBrush}"
+                                            Margin="0,0,6,0" />
+                                        <TextBlock
+                                            Grid.Column="0"
+                                            Text="✘"
+                                            IsVisible="{Binding !IsOk}"
+                                            Foreground="{DynamicResource DangerBrush}"
+                                            Margin="0,0,6,0" />
+                                        <TextBlock
+                                            Grid.Column="1"
+                                            Text="{Binding Title}"
+                                            FontWeight="SemiBold"
+                                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                                    </Grid>
+                                    <TextBlock
+                                        Text="{Binding Detail}"
+                                        TextWrapping="Wrap"
+                                        Margin="22,2,0,0"
+                                        Foreground="{DynamicResource TextSecondaryBrush}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+            <Border
+                Background="{DynamicResource CardBackgroundBrush}"
+                CornerRadius="8"
+                Padding="16">
+                <StackPanel Spacing="6">
+                    <TextBlock
+                        Text="关于"
+                        FontSize="16"
+                        FontWeight="SemiBold"
+                        Foreground="{DynamicResource TextPrimaryBrush}" />
+                    <TextBlock
+                        Text="这是 PCL2 的 Avalonia 跨平台复刻版，可在 Windows、macOS 与 Linux 上运行。核心单机功能已实现；联机因依赖的公共节点服务下线暂不可用，帮助库与部分高级功能仍在逐步补齐。"
+                        FontSize="13"
+                        TextWrapping="Wrap"
+                        Foreground="{DynamicResource TextSecondaryBrush}" />
+                </StackPanel>
+            </Border>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

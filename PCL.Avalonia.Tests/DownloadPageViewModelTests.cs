@@ -577,4 +577,53 @@ public sealed class DownloadPageViewModelTests
 
         Assert.Empty(viewModel.JavaRequirementText);
     }
+
+    [Fact]
+    public async Task Placeholder_ExplainsWhatToDo_WhenManifestNeverArrived()
+    {
+        var manifest = new FakeManifestService
+        {
+            Exception = new HttpRequestException("boom"),
+        };
+        var viewModel = CreateViewModel(
+            new FakeSettingsService(),
+            manifest,
+            new FakeInstaller(),
+            new FakeCatalog());
+
+        await viewModel.RefreshCommand.ExecuteAsync(null);
+
+        Assert.Empty(viewModel.Versions);
+        Assert.True(viewModel.IsListPlaceholderVisible);
+        Assert.Equal("还没有获取到版本列表", viewModel.ListPlaceholderTitle);
+        Assert.Contains("刷新", viewModel.ListPlaceholderDescription);
+        Assert.Contains("下载源", viewModel.ListPlaceholderDescription);
+    }
+
+    [Fact]
+    public async Task Placeholder_SuggestsAnotherKeyword_WhenSearchMisses()
+    {
+        var manifest = new FakeManifestService
+        {
+            Manifest = new VersionManifest
+            {
+                Versions = [new VersionManifestEntry { Id = "1.20.1", Type = "release" }],
+            },
+        };
+        var viewModel = CreateViewModel(
+            new FakeSettingsService(),
+            manifest,
+            new FakeInstaller(),
+            new FakeCatalog());
+
+        await viewModel.RefreshCommand.ExecuteAsync(null);
+        Assert.False(viewModel.IsListPlaceholderVisible);
+
+        viewModel.SearchText = "不存在的版本";
+
+        Assert.Empty(viewModel.Versions);
+        Assert.True(viewModel.IsListPlaceholderVisible);
+        Assert.Equal("没有匹配的版本", viewModel.ListPlaceholderTitle);
+        Assert.Contains("关键词", viewModel.ListPlaceholderDescription);
+    }
 }

@@ -111,15 +111,18 @@
         <Grid
             ColumnDefinitions="200,330,*"
             ColumnSpacing="12">
-            <Border
+            <!-- 左栏拆成三张卡片：添加表单、目录列表、目录操作。列表卡吃剩余高度，
+                 空白只落在列表卡片内部，不再把表单和按钮劈到页面两端。 -->
+            <Grid
                 Grid.Column="0"
-                Background="{DynamicResource CardBackgroundBrush}"
-                CornerRadius="8">
-                <DockPanel>
-                    <StackPanel
-                        DockPanel.Dock="Top"
-                        Margin="12"
-                        Spacing="6">
+                RowDefinitions="Auto,Auto,*"
+                RowSpacing="12">
+                <Border
+                    Grid.Row="0"
+                    Background="{DynamicResource CardBackgroundBrush}"
+                    CornerRadius="8"
+                    Padding="12">
+                    <StackPanel Spacing="6">
                         <TextBlock
                             Text="游戏目录"
                             FontSize="14"
@@ -142,28 +145,12 @@
                             Background="{DynamicResource ButtonBackgroundBrush}"
                             Foreground="{DynamicResource TextPrimaryBrush}" />
                     </StackPanel>
-                    <StackPanel
-                        DockPanel.Dock="Bottom"
-                        Margin="12,0,12,12"
-                        Spacing="6">
-                        <Button
-                            Classes="formaction"
-                            Content="打开目录"
-                            Command="{Binding OpenCurrentFolderCommand}"
-                            Background="{DynamicResource ButtonBackgroundBrush}"
-                            Foreground="{DynamicResource TextPrimaryBrush}" />
-                        <Button
-                            Classes="formaction"
-                            Content="移除目录"
-                            Command="{Binding RemoveFolderCommand}"
-                            Background="{DynamicResource ButtonBackgroundBrush}"
-                            Foreground="{DynamicResource TextPrimaryBrush}" />
-                    </StackPanel>
-                    <Border
-                        DockPanel.Dock="Top"
-                        Height="1"
-                        Margin="12,0"
-                        Background="{DynamicResource HoverBrush}" />
+                </Border>
+                <Border
+                    Grid.Row="1"
+                    Background="{DynamicResource CardBackgroundBrush}"
+                    CornerRadius="8"
+                    MinHeight="120">
                     <Panel>
                         <ListBox
                             ItemsSource="{Binding Folders}"
@@ -225,8 +212,29 @@
                                 Foreground="{DynamicResource TextSecondaryBrush}" />
                         </StackPanel>
                     </Panel>
-                </DockPanel>
-            </Border>
+                </Border>
+                <Border
+                    Grid.Row="2"
+                    Background="{DynamicResource CardBackgroundBrush}"
+                    CornerRadius="8"
+                    Padding="12"
+                    VerticalAlignment="Bottom">
+                    <StackPanel Spacing="6">
+                        <Button
+                            Classes="formaction"
+                            Content="打开目录"
+                            Command="{Binding OpenCurrentFolderCommand}"
+                            Background="{DynamicResource ButtonBackgroundBrush}"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <Button
+                            Classes="formaction"
+                            Content="移除目录"
+                            Command="{Binding RemoveFolderCommand}"
+                            Background="{DynamicResource ButtonBackgroundBrush}"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+                    </StackPanel>
+                </Border>
+            </Grid>
             <Border
                 Grid.Column="1"
                 Background="{DynamicResource CardBackgroundBrush}"

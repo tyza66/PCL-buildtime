@@ -146,7 +146,10 @@ public sealed class PageClusterLayoutTests
         var folderCard = window.GetVisualDescendants().OfType<TextBlock>()
             .First(text => text.Text == "游戏目录")
             .GetVisualAncestors().OfType<Border>().First();
-        var grid = (Grid)folderCard.GetVisualParent()!;
+        // 左栏现在是表单/目录列表/操作三张卡片，同放在 Grid.Column="0" 的内层 Grid 里，
+        // 三列布局的那个 Grid 要再往上找一层（认 ColumnDefinitions 数量，不写死层数）。
+        var grid = folderCard.GetVisualAncestors().OfType<Grid>()
+            .First(ancestor => ancestor.ColumnDefinitions.Count == 3);
         // 直接按 Border 搜会先命中版本列那一层（"选择"按钮的祖先也算"包含它"），
         // 所以从按钮出发向上取第一层 Border 才是卡片，再往上找直接挂在 grid 上的列。
         var card = window.GetVisualDescendants().OfType<Button>()

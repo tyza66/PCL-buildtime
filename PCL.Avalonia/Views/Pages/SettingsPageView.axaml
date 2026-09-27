@@ -74,9 +74,9 @@
                             Margin="0,14,0,0"
                             Foreground="{DynamicResource TextPrimaryBrush}" />
                         <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
-                            <ListBox
-                                Grid.Column="0"
-                                ItemsSource="{Binding JavaEntries}"
+                            <Panel Grid.Column="0" MinHeight="140">
+                                <ListBox
+                                    ItemsSource="{Binding JavaEntries}"
                                 SelectedItem="{Binding SelectedJava}"
                                 MaxHeight="140"
                                 Background="{DynamicResource CardBackgroundBrush}"
@@ -109,6 +109,27 @@
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
                             </ListBox>
+                                <StackPanel
+                                    IsVisible="{Binding JavaEntries.Count, Converter={StaticResource IsEmptyCount}}"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Margin="18"
+                                    Spacing="2">
+                                    <TextBlock
+                                        Text="没有检测到 Java"
+                                        FontSize="12"
+                                        FontWeight="SemiBold"
+                                        TextAlignment="Center"
+                                        Foreground="{DynamicResource TextPrimaryBrush}" />
+                                    <TextBlock
+                                        Text="点右侧「刷新」重新扫描；还是检不出来，就用下面的按钮安装"
+                                        FontSize="11"
+                                        TextAlignment="Center"
+                                        TextWrapping="Wrap"
+                                        MaxWidth="320"
+                                        Foreground="{DynamicResource TextSecondaryBrush}" />
+                                </StackPanel>
+                            </Panel>
                             <StackPanel Grid.Column="1" Margin="8,0,0,0" Spacing="6">
                                 <Button
                                     Content="刷新"

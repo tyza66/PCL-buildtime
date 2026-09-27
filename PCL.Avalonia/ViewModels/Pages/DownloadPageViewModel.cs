@@ -63,6 +63,24 @@ public sealed partial class DownloadPageViewModel : ObservableObject, IPageActiv
 
     public ObservableCollection<DownloadVersionItemViewModel> Versions { get; } = [];
 
+    /// <summary>
+    /// 列表空着的时候（清单还没拉到、或搜索词没命中）不剩一张白卡片，
+    /// 给一句能照着做的说明，别让用户猜是卡了还是坏了。
+    /// </summary>
+    public bool IsListPlaceholderVisible => Versions.Count == 0;
+
+    public string ListPlaceholderTitle => IsRefreshing
+        ? "正在获取版本列表"
+        : _allVersions.Count == 0
+            ? "还没有获取到版本列表"
+            : "没有匹配的版本";
+
+    public string ListPlaceholderDescription => IsRefreshing
+        ? "首次获取可能需要几秒，请稍等"
+        : _allVersions.Count == 0
+            ? "点右上角「刷新」重试；持续失败可以到设置页切换下载源"
+            : "换个关键词试试，版本号形如 1.20.1、24w14a";
+
     [ObservableProperty]
     private string _searchText = "";
 
@@ -104,6 +122,18 @@ public sealed partial class DownloadPageViewModel : ObservableObject, IPageActiv
     partial void OnSelectedVersionChanged(DownloadVersionItemViewModel? value)
     {
         _ = LoadJavaRequirementAsync(value);
+    }
+
+    partial void OnIsRefreshingChanged(bool value)
+    {
+        NotifyListPlaceholderChanged();
+    }
+
+    private void NotifyListPlaceholderChanged()
+    {
+        OnPropertyChanged(nameof(IsListPlaceholderVisible));
+        OnPropertyChanged(nameof(ListPlaceholderTitle));
+        OnPropertyChanged(nameof(ListPlaceholderDescription));
     }
 
     /// <summary>
@@ -311,6 +341,7 @@ public sealed partial class DownloadPageViewModel : ObservableObject, IPageActiv
                 Versions.Add(item);
             }
         }
+        NotifyListPlaceholderChanged();
     }
 
     private HashSet<string> GetInstalledIds(AppSettings settings)
