@@ -283,6 +283,15 @@ public sealed class JavaInstallServiceTests : IDisposable
 
     private static string JavaExecutableName => OperatingSystem.IsWindows() ? "java.exe" : "java";
 
+    // 公共构造函数不带替身架构，走真实 RuntimeInformation，夹具必须按本机架构生成。
+    private static string HostArchToken => RuntimeInformation.OSArchitecture switch
+    {
+        Architecture.X64 => "x64",
+        Architecture.Arm64 => "aarch64",
+        Architecture.X86 => "x86",
+        _ => "x64",
+    };
+
     /// <summary>Adoptium 热点包文件名，os 片段用本机的：windows / mac / linux。</summary>
     private static string HotspotFileName(int major, string release, string arch, string extension = "tar.gz")
         => $"OpenJDK{major}U-jdk_{arch}_{OsToken}_hotspot_{release.Replace("jdk-", "").Replace('+', '_')}.{extension}";
@@ -316,7 +325,7 @@ public sealed class JavaInstallServiceTests : IDisposable
 
     private static string WindowsOnlyJson => JsonAssets(AssetJson(21, "jdk-21.0.5+11", "windows", "x64", 1));
 
-    private static string ZipSampleJson => JsonAssets(AssetJson(21, "jdk-21.0.5+11", OsToken, "aarch64", 3, "zip"));
+    private static string ZipSampleJson => JsonAssets(AssetJson(21, "jdk-21.0.5+11", OsToken, HostArchToken, 3, "zip"));
 
     private static string X86HostSampleJson => JsonAssets(AssetJson(17, "jdk-17.0.13+11", OsToken, "x86", 999));
 
