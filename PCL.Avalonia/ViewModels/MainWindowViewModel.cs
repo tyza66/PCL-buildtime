@@ -110,7 +110,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 instancePackExporter,
                 modsService)),
             new NavItemViewModel("Mod管理", new ModsPageViewModel(settingsService, modsService, platformService)),
-            new NavItemViewModel("联机", new LinkPageViewModel(linkService, settingsService, dispatcher)),
+            new NavItemViewModel("联机", new LinkPageViewModel(linkService, settingsService, dispatcher), false, "联机暂不可用：依赖的公共节点服务已下线"),
             new NavItemViewModel("设置", new SettingsPageViewModel(settingsService, platformService, _themeService, javaListService, dispatcher)),
             new NavItemViewModel("其他", new OtherPageViewModel(
                 settingsService,

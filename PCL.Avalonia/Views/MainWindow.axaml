@@ -80,12 +80,18 @@
                     <!-- 13 个导航项必须在默认 720pt 窗口高度下完整可见：容器高度固定，行高不随字体行距膨胀。
                          文字垂直居中，靠 TextBlock 自身的左内边距留出缩进。 -->
                     <ListBox.Styles>
-                        <Style Selector="ListBoxItem">
+                        <Style Selector="ListBoxItem" x:DataType="vm:NavItemViewModel">
                             <Setter Property="Height" Value="33" />
                             <Setter Property="Margin" Value="8,2" />
                             <Setter Property="Padding" Value="0" />
                             <Setter Property="VerticalContentAlignment" Value="Center" />
                             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            <Setter Property="IsEnabled" Value="{Binding IsEnabled}" />
+                            <Setter Property="ToolTip.Tip" Value="{Binding DisabledHint}" />
+                        </Style>
+                        <!-- 功能依赖的服务下线时整条置灰：IsEnabled=false 同时挡住点击，Opacity 给出可见的退出态。 -->
+                        <Style Selector="ListBoxItem:disabled">
+                            <Setter Property="Opacity" Value="0.45" />
                         </Style>
                     </ListBox.Styles>
                     <ListBox.ItemTemplate>

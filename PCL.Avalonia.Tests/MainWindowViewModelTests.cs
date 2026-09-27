@@ -582,6 +582,23 @@ public sealed class MainWindowViewModelTests
     }
 
     [Fact]
+    public void LinkNavItem_IsDisabledWithHint_WhenPublicNodeServiceIsDown()
+    {
+        var (_, _, viewModel) = CreateViewModel(useDarkTheme: false);
+
+        var link = viewModel.Items.Single(item => item.Title == "联机");
+
+        Assert.False(link.IsEnabled);
+        Assert.False(string.IsNullOrWhiteSpace(link.DisabledHint));
+
+        foreach (var item in viewModel.Items.Where(item => !ReferenceEquals(item, link)))
+        {
+            Assert.True(item.IsEnabled);
+            Assert.Null(item.DisabledHint);
+        }
+    }
+
+    [Fact]
     public void ToggleThemeCommand_FlipsTheme_AppliesAndPersists()
     {
         var settings = new FakeSettingsService
