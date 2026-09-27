@@ -224,7 +224,8 @@ public sealed class ForgelikeLoaderService : IForgelikeLoaderService
             }
             catch (Exception ex2)
             {
-                errors.Add($"运行 {displayName} 安装器失败：{ex2.Message}");
+                // 安装器抛出来的多半是整段英文堆栈，直接拼进去用户只会看到乱码一样的一坨。
+                errors.Add($"运行 {displayName} 安装器失败：{ErrorMessageFormatter.Brief(ex2)}");
             }
 
             progress?.Report(new ForgelikeInstallProgress(ForgelikeInstallStage.Injector, versionId, 1, 1));

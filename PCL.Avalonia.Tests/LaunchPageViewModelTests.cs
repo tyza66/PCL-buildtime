@@ -395,6 +395,53 @@ public sealed class LaunchPageViewModelTests
     }
 
     [Fact]
+    public async Task LaunchAsync_BlockedWhenResolvedJavaIsTooOld()
+    {
+        var launch = new FakeGameLaunch();
+        var launcher = new FakeLauncher { LaunchResult = launch };
+        // 版本清单点名要 Java 25，本机却只有 Java 17：以前照样点启动、JVM 起不来就莫名闪退。
+        var viewModel = CreateViewModel(
+            launcher,
+            new SessionState { SelectedVersion = SelectedVersion("26.3") },
+            new SyncDispatcher(),
+            java: new FakeJavaService { Resolved = "/games/java17" },
+            versionCatalog: new FakeVersionCatalog { MajorVersion = 25 },
+            javaList: new FakeJavaListService(new JavaInfo("/games/java17", "17.0.9", "x64", 17, true)));
+
+        await viewModel.LaunchCommand.ExecuteAsync(null);
+
+        Assert.False(viewModel.IsRunning);
+        Assert.Equal(0, launcher.LaunchCount);
+        Assert.Contains("启动失败", viewModel.StatusMessage);
+        Assert.Contains("需要 Java 25", viewModel.StatusMessage);
+        Assert.Contains("Java 17", viewModel.StatusMessage);
+        Assert.Contains("可尝试：安装 Java 25", viewModel.StatusMessage);
+        Assert.Contains("启动失败", viewModel.LogText);
+    }
+
+    [Fact]
+    public async Task LaunchAsync_StartsWhenJavaMajorMatchesRequirement()
+    {
+        var launch = new FakeGameLaunch();
+        var launcher = new FakeLauncher { LaunchResult = launch };
+        var viewModel = CreateViewModel(
+            launcher,
+            new SessionState { SelectedVersion = SelectedVersion("26.3") },
+            new SyncDispatcher(),
+            java: new FakeJavaService { Resolved = "/games/java25" },
+            versionCatalog: new FakeVersionCatalog { MajorVersion = 25 },
+            javaList: new FakeJavaListService(new JavaInfo("/games/java25", "25.0.1", "aarch64", 25, true)));
+
+        await viewModel.LaunchCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.IsRunning);
+        Assert.Equal(1, launcher.LaunchCount);
+
+        launch.ExitTcs.SetResult(0);
+        await launch.DisposeTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
     public async Task Cancel_KillsAndStopsGame()
     {
         var launch = new FakeGameLaunch();
@@ -512,7 +559,10 @@ public sealed class LaunchPageViewModelTests
             new SessionState { SelectedVersion = SelectedVersion() },
             new SyncDispatcher(),
             java: java,
-            versionCatalog: new FakeVersionCatalog { MajorVersion = 25 });
+            versionCatalog: new FakeVersionCatalog { MajorVersion = 25 },
+            // 解析结果得够版本要求的 25，否则会被启动前的 Java 大版本预检拦下，
+            // 这条断言的本意就没法验证了（拦截路径另有一条用例专门覆盖）。
+            javaList: new FakeJavaListService(new JavaInfo("/games/java", "25.0.1", "aarch64", 25, true)));
 
         await viewModel.LaunchCommand.ExecuteAsync(null);
 

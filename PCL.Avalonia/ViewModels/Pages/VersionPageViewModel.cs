@@ -514,7 +514,14 @@ public sealed partial class VersionPageViewModel : ObservableObject
                 item.Settings);
             var fileName = OperatingSystem.IsWindows() ? "launch.bat" : "launch.sh";
             var result = _scriptExporter.Export(plan, Path.Combine(CurrentFolder, fileName));
-            StatusMessage = $"已导出启动脚本：{result}";
+            // 脚本照样导，但 Java 大版本对不上必须当场说清：玩家照着脚本跑只会莫名闪退。
+            var javaMismatch = JavaHints.DescribeMismatch(
+                item.Id,
+                requiredJavaMajor,
+                _javaList.GetJava(java)?.MajorVersion);
+            StatusMessage = javaMismatch is null
+                ? $"已导出启动脚本：{result}"
+                : $"已导出启动脚本：{result}。注意：{javaMismatch}，脚本现在直接跑会启动失败";
         }
         catch (Exception ex)
         {

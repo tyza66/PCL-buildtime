@@ -419,6 +419,27 @@ public sealed class VersionPageViewModelTests
         Assert.Contains("已导出启动脚本", viewModel.StatusMessage);
     }
 
+    [Fact]
+    public void ExportScript_WarnsWhenResolvedJavaIsTooOld()
+    {
+        var launcher = new FakeGameLauncher();
+        var exporter = new FakeScriptExporter();
+        var (_, _, viewModel) = CreateViewModel(
+            JavaHintCatalog(21),
+            new SessionState(),
+            launcher: launcher,
+            exporter: exporter,
+            javaList: new FakeJavaListService(new JavaInfo("/usr/bin/java", "17.0.9", "x86_64", 17, true)));
+
+        viewModel.ExportScriptCommand.Execute(null);
+
+        // 脚本仍然导出（调试用途），但必须把"现在直接跑会启动失败"讲在状态栏
+        Assert.Single(exporter.Exported);
+        Assert.Contains("已导出启动脚本", viewModel.StatusMessage);
+        Assert.Contains("需要 Java 21", viewModel.StatusMessage);
+        Assert.Contains("现在直接跑会启动失败", viewModel.StatusMessage);
+    }
+
     private static FakeCatalog JavaHintCatalog(int majorVersion)
         => new()
         {

@@ -61,4 +61,23 @@ public readonly record struct JavaHints(JavaHintLevel Level, string Text, string
             $"Java {required}",
             $"该版本需要 Java {required}，当前 Java {bestMajor} 满足要求");
     }
+
+    /// <summary>
+    /// Java 大版本不满足时的一句"不能就这么跑"的原因，放行返回 null。
+    /// 找不到匹配大版本时 JavaService 会退回默认 Java，不拦下来游戏只会莫名崩溃，玩家看不出是 Java 的锅。
+    /// 启动和导出启动脚本都要先过这一关：一个直接终止启动，一个也要把风险讲在状态栏。
+    /// </summary>
+    public static string? DescribeMismatch(string versionId, int? requiredMajor, int? actualMajor)
+    {
+        if (requiredMajor is not { } required
+            || actualMajor is not { } actual
+            || actual <= 0
+            || actual >= required)
+        {
+            return null;
+        }
+
+        return $"{versionId} 需要 Java {required}，当前只会用到 Java {actual}。"
+            + $"可尝试：安装 Java {required}，或到设置页把 Java 路径指定到 Java {required}";
+    }
 }

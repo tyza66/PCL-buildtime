@@ -64,4 +64,23 @@ public sealed class JavaHintsTests
         Assert.Equal("Java 17", hint.Text);
         Assert.Contains("满足要求", hint.Detail);
     }
+
+    [Fact]
+    public void DescribeMismatch_BlocksOnlyWhenJavaIsTooOld()
+    {
+        // 太低了要拦，且必须点明差距、装哪个版本、去哪儿改。
+        var blocked = JavaHints.DescribeMismatch("26.3", 25, 17);
+        Assert.NotNull(blocked);
+        Assert.Contains("26.3 需要 Java 25", blocked);
+        Assert.Contains("只会用到 Java 17", blocked);
+        Assert.Contains("安装 Java 25", blocked);
+        Assert.Contains("设置页", blocked);
+
+        // 持平、更高、版本没给要求、Java 版本号未知，一律放行：别拿猜测拦玩家的正常启动。
+        Assert.Null(JavaHints.DescribeMismatch("26.3", 25, 25));
+        Assert.Null(JavaHints.DescribeMismatch("26.3", 25, 26));
+        Assert.Null(JavaHints.DescribeMismatch("26.3", null, 8));
+        Assert.Null(JavaHints.DescribeMismatch("26.3", 25, null));
+        Assert.Null(JavaHints.DescribeMismatch("26.3", 25, 0));
+    }
 }

@@ -576,6 +576,19 @@ public sealed partial class LaunchPageViewModel : ObservableObject, IPageActivat
                 return;
             }
 
+            // 状态栏的黄字只是提醒，点启动时必须真拦住：Java 大版本不够的版本起不来，
+            // 不拦的话玩家看到的是莫名闪退，而不是一句"需要 Java 25"。
+            var javaMismatch = JavaHints.DescribeMismatch(
+                version.Id,
+                requiredJavaMajor,
+                _javaListService.GetJava(java)?.MajorVersion);
+            if (javaMismatch is not null)
+            {
+                LogLine("启动失败：" + javaMismatch);
+                StatusMessage = "启动失败：" + javaMismatch;
+                return;
+            }
+
             LogLine($"使用 Java：{java}");
             var launchAccount = account;
             var plan = await Task.Run(() => _launcher.BuildLaunchPlan(
