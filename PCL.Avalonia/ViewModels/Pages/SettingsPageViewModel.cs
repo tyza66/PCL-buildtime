@@ -133,7 +133,10 @@ public sealed partial class SettingsPageViewModel : ObservableObject
         {
             var java = _javaListService.Scan();
             JavaEntries.Clear();
-            foreach (var entry in java.OrderByDescending(j => j.Version))
+            // 按主版本号排，不能按 Version 字符串排：字符串序会把 "9.0.4" 排到 "21.0.1" 前面。
+            foreach (var entry in java
+                .OrderByDescending(j => j.MajorVersion)
+                .ThenByDescending(j => j.Version, StringComparer.OrdinalIgnoreCase))
             {
                 JavaEntries.Add(entry);
             }
@@ -249,6 +252,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject
 
             _lastSaved = snapshot;
             Commit(snapshot);
+            // 自动落盘是静默的，给行反馈用户才知道改动已经生效，不用疑心要不要再点保存。
+            StatusMessage = $"已自动保存 {DateTime.Now:HH:mm:ss}";
         });
     }
 }

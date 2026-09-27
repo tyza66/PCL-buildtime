@@ -35,7 +35,11 @@ public sealed class SettingsPageViewModelTests
 
     private sealed class FakeJavaListService : IJavaListService
     {
-        public IReadOnlyList<JavaInfo> Scan() => [];
+        private readonly List<JavaInfo> _infos;
+
+        public FakeJavaListService(params JavaInfo[] infos) => _infos = infos.ToList();
+
+        public IReadOnlyList<JavaInfo> Scan() => _infos;
 
         public JavaInfo? GetJava(string path) => null;
 
@@ -55,11 +59,24 @@ public sealed class SettingsPageViewModelTests
         }
     }
 
+    private sealed class ImmediateDispatcher : IUiDispatcher
+    {
+        public void Post(Action action) => action();
+
+        public void Debounce(string key, TimeSpan delay, Action action) => action();
+    }
+
     private static SettingsPageViewModel CreateViewModel(
         FakeSettingsService settings,
-        FakeThemeService? theme = null)
+        FakeThemeService? theme = null,
+        params JavaInfo[] javas)
     {
-        return new SettingsPageViewModel(settings, new FakePlatformService(), theme ?? new FakeThemeService(), new FakeJavaListService(), new NoopDispatcher());
+        return new SettingsPageViewModel(
+            settings,
+            new FakePlatformService(),
+            theme ?? new FakeThemeService(),
+            new FakeJavaListService(javas),
+            new NoopDispatcher());
     }
 
     [Fact]
@@ -199,5 +216,41 @@ public sealed class SettingsPageViewModelTests
         viewModel.SelectedSection = viewModel.Sections.Single(section => section.Id == "Link");
 
         Assert.Equal("联机", viewModel.SelectedSection.Title);
+    }
+
+    [Fact]
+    public void RefreshJavaList_OrdersByMajorVersion_NotStringOrder()
+    {
+        // 按 Version 字符串排会把 "9.0.4" 排到 "21.0.1" 前面，选 Java 的用户看得别扭。
+        var viewModel = CreateViewModel(new FakeSettingsService(), javas:
+        [
+            new JavaInfo("/jdk9/bin/java", "9.0.4", "x64", 9, true),
+            new JavaInfo("/jdk21/bin/java", "21.0.1", "aarch64", 21, true),
+            new JavaInfo("/jdk8/bin/java", "1.8.0_392", "x64", 8, true),
+        ]);
+
+        viewModel.RefreshJavaListCommand.Execute(null);
+
+        Assert.Equal(21, viewModel.JavaEntries[0].MajorVersion);
+        Assert.Equal(9, viewModel.JavaEntries[1].MajorVersion);
+        Assert.Equal(8, viewModel.JavaEntries[2].MajorVersion);
+    }
+
+    [Fact]
+    public void ChangingSetting_Autosaves_AndReportsTimestamp()
+    {
+        var settings = new FakeSettingsService();
+        var viewModel = new SettingsPageViewModel(
+            settings,
+            new FakePlatformService(),
+            new FakeThemeService(),
+            new FakeJavaListService(),
+            new ImmediateDispatcher());
+
+        viewModel.MaxMemoryMb = 8192;
+
+        // 防抖回调立即执行：改动应当已经落盘，状态行还要告诉用户保存过了。
+        Assert.Equal(8192, settings.Settings.MaxMemoryMb);
+        Assert.Contains("已自动保存", viewModel.StatusMessage);
     }
 }

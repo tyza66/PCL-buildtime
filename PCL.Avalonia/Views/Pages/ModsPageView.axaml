@@ -5,6 +5,11 @@
     xmlns:vm="clr-namespace:PCL.Avalonia.ViewModels.Pages;assembly=PCL2.Avalonia"
     xmlns:ctl="clr-namespace:PCL.Avalonia.Controls;assembly=PCL2.Avalonia"
     x:DataType="vm:ModsPageViewModel">
+    <UserControl.Styles>
+        <Style Selector="Button.deleteConfirm">
+            <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
+        </Style>
+    </UserControl.Styles>
     <DockPanel Margin="32">
         <Grid
             DockPanel.Dock="Top"
@@ -82,9 +87,11 @@
                                 Foreground="{DynamicResource TextPrimaryBrush}" />
                             <Button
                                 Grid.Column="2"
-                                Content="删除"
+                                Content="{Binding DeleteButtonText}"
                                 VerticalAlignment="Center"
                                 Command="{Binding DeleteCommand}"
+                                Classes.deleteConfirm="{Binding IsConfirmingDelete}"
+                                ToolTip.Tip="从磁盘删除该 Mod 文件，需点击两次确认"
                                 Background="{DynamicResource ButtonBackgroundBrush}"
                                 Foreground="{DynamicResource TextPrimaryBrush}" />
                         </Grid>

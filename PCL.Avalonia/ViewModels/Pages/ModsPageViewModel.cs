@@ -105,6 +105,8 @@ public sealed partial class ModsPageViewModel : ObservableObject
         {
             var updated = await Task.Run(() => _modsService.SetEnabled(item.Mod, !item.IsEnabled));
             item.Apply(updated);
+            // 启用/禁用跟删除是两码事，把armed的确认态收掉，避免按钮一直红着。
+            item.CancelDeleteConfirmation();
             StatusMessage = updated.IsEnabled ? $"已启用 {item.DisplayName}" : $"已禁用 {item.DisplayName}";
         }
         catch (Exception ex)
@@ -121,6 +123,14 @@ public sealed partial class ModsPageViewModel : ObservableObject
     {
         if (IsBusy)
         {
+            return;
+        }
+
+        // 第一击只武装确认态、不碰磁盘：列表里误触一下不该让 Mod 文件直接没了。
+        if (!item.IsConfirmingDelete)
+        {
+            item.EnterDeleteConfirmation();
+            StatusMessage = $"再点一次「确认删除」删除 {item.DisplayName}，点错的话刷新列表即可取消";
             return;
         }
 
@@ -230,6 +240,17 @@ public sealed partial class ModItemViewModel : ObservableObject
     public string EnabledText => IsEnabled ? "已启用" : "已禁用";
 
     public string ToggleButtonText => IsEnabled ? "禁用" : "启用";
+
+    /// <summary>第一击只武装确认态，按钮变红字"确认删除"，第二击才真的删文件。</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DeleteButtonText))]
+    private bool _isConfirmingDelete;
+
+    public string DeleteButtonText => IsConfirmingDelete ? "确认删除" : "删除";
+
+    public void EnterDeleteConfirmation() => IsConfirmingDelete = true;
+
+    public void CancelDeleteConfirmation() => IsConfirmingDelete = false;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(EnabledText))]

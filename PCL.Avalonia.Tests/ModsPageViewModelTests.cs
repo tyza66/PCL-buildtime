@@ -166,7 +166,7 @@ public sealed class ModsPageViewModelTests
     }
 
     [Fact]
-    public async Task DeleteCommand_CallsServiceAndRemovesItem()
+    public async Task DeleteCommand_FirstClickOnlyArmsConfirmation()
     {
         var service = new FakeModsService { ScanResult = [Mod("example")] };
         var viewModel = CreateViewModel(service);
@@ -174,9 +174,44 @@ public sealed class ModsPageViewModelTests
 
         await item.DeleteCommand.ExecuteAsync(null);
 
+        // 第一击不许碰磁盘：误触一下不该让 Mod 文件直接没了。
+        Assert.Empty(service.DeleteCalls);
+        Assert.Single(viewModel.Mods);
+        Assert.True(item.IsConfirmingDelete);
+        Assert.Equal("确认删除", item.DeleteButtonText);
+        Assert.Contains("再点一次", viewModel.StatusMessage);
+    }
+
+    [Fact]
+    public async Task DeleteCommand_SecondClickCallsServiceAndRemovesItem()
+    {
+        var service = new FakeModsService { ScanResult = [Mod("example")] };
+        var viewModel = CreateViewModel(service);
+        var item = viewModel.Mods[0];
+
+        await item.DeleteCommand.ExecuteAsync(null);
+        await item.DeleteCommand.ExecuteAsync(null);
+
         Assert.Single(service.DeleteCalls);
         Assert.Empty(viewModel.Mods);
         Assert.Contains("已删除", viewModel.StatusMessage);
+    }
+
+    [Fact]
+    public async Task ToggleCommand_CancelsPendingDeleteConfirmation()
+    {
+        var service = new FakeModsService { ScanResult = [Mod("example")] };
+        var viewModel = CreateViewModel(service);
+        var item = viewModel.Mods[0];
+        await item.DeleteCommand.ExecuteAsync(null);
+
+        await item.ToggleCommand.ExecuteAsync(null);
+
+        // 改成禁用说明用户改主意了，确认态收回，按钮恢复普通"删除"。
+        Assert.False(item.IsConfirmingDelete);
+        Assert.Equal("删除", item.DeleteButtonText);
+        Assert.Empty(service.DeleteCalls);
+        Assert.Contains("已禁用", viewModel.StatusMessage);
     }
 
     [Fact]
