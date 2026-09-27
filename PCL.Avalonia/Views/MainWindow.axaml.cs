@@ -45,6 +45,7 @@ public partial class MainWindow : Window
         var versionJavaInfo = new VersionJavaInfoService(downloadClient);
         var modsService = new ModsService();
         var fabricLoaderService = new FabricLoaderService(downloadClient, versionInstaller);
+        var startupDiagnostics = new StartupDiagnosticsService();
         var forgelikeInstallRunner = new JavaForgelikeInstallRunner(settings, new JavaService());
         var forgelikeLoaderService = new ForgelikeLoaderService(downloadClient, versionInstaller, forgelikeInstallRunner);
         var curseForgeModpackService = new CurseForgeModpackService(curseForgeApi, downloadClient);
@@ -84,6 +85,7 @@ public partial class MainWindow : Window
             new LaunchScriptExporter(),
             new OtherToolsService(),
             linkService,
-            javaListService);
+            javaListService,
+            startupDiagnostics);
     }
 }

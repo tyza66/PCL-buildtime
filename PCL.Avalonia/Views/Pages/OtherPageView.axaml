@@ -3,6 +3,7 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="clr-namespace:PCL.Avalonia.ViewModels.Pages;assembly=PCL2.Avalonia"
+    xmlns:svc="clr-namespace:PCL.Avalonia.Services;assembly=PCL2.Avalonia"
     x:DataType="vm:OtherPageViewModel">
     <ScrollViewer>
         <StackPanel Margin="32" Spacing="12">
@@ -74,6 +75,55 @@
                 <TextBlock Grid.Row="4" Grid.Column="0" Text="配置目录" Foreground="{DynamicResource TextSecondaryBrush}" />
                 <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding ConfigDirectory}" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" />
             </Grid>
+
+            <TextBlock
+                Text="启动自检"
+                FontSize="16"
+                FontWeight="SemiBold"
+                Margin="0,14,0,0"
+                Foreground="{DynamicResource TextPrimaryBrush}" />
+            <Button
+                Content="开始检查"
+                Command="{Binding RunDiagnosticsCommand}"
+                Background="{DynamicResource ButtonBackgroundBrush}"
+                Foreground="{DynamicResource TextPrimaryBrush}" />
+            <TextBlock
+                Text="{Binding DiagnosticSummary}"
+                FontSize="13"
+                TextWrapping="Wrap"
+                Foreground="{DynamicResource TextSecondaryBrush}" />
+            <ItemsControl ItemsSource="{Binding DiagnosticItems}" IsVisible="{Binding HasDiagnostics}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="svc:DiagnosticItem">
+                        <StackPanel Margin="0,6,0,0">
+                            <Grid ColumnDefinitions="Auto,*">
+                                <TextBlock
+                                    Grid.Column="0"
+                                    Text="✔"
+                                    IsVisible="{Binding IsOk}"
+                                    Foreground="{DynamicResource AccentBrush}"
+                                    Margin="0,0,6,0" />
+                                <TextBlock
+                                    Grid.Column="0"
+                                    Text="✘"
+                                    IsVisible="{Binding !IsOk}"
+                                    Foreground="{DynamicResource DangerBrush}"
+                                    Margin="0,0,6,0" />
+                                <TextBlock
+                                    Grid.Column="1"
+                                    Text="{Binding Title}"
+                                    FontWeight="SemiBold"
+                                    Foreground="{DynamicResource TextPrimaryBrush}" />
+                            </Grid>
+                            <TextBlock
+                                Text="{Binding Detail}"
+                                TextWrapping="Wrap"
+                                Margin="22,2,0,0"
+                                Foreground="{DynamicResource TextSecondaryBrush}" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
 
             <TextBlock
                 Text="关于"

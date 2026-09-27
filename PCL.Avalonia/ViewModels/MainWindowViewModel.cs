@@ -50,7 +50,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
        ILaunchScriptExporter scriptExporter,
        IOtherToolsService otherToolsService,
         ILinkService linkService,
-        IJavaListService javaListService)
+        IJavaListService javaListService,
+        IStartupDiagnosticsService startupDiagnostics)
     {
         _settingsService = settingsService;
         _themeService = themeService;
@@ -116,7 +117,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 settingsService,
                 platformService,
                 otherToolsService,
-                folderOpener)),
+                folderOpener,
+                javaListService,
+                versionCatalogService,
+                startupDiagnostics)),
         ];
 
         SelectedItem = Items[0];

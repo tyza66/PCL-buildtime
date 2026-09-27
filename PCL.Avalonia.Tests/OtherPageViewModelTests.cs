@@ -1,4 +1,5 @@
 using PCL.Avalonia.Services;
+using PCL.Avalonia.Services.Minecraft;
 using PCL.Avalonia.Services.Platform;
 using PCL.Avalonia.ViewModels.Pages;
 
@@ -60,6 +61,28 @@ public sealed class OtherPageViewModelTests
         public void Open(string path) => Opened.Add(path);
     }
 
+    private sealed class FakeJavaListService : IJavaListService
+    {
+        private readonly JavaInfo[] _items;
+
+        public FakeJavaListService(params JavaInfo[] items) => _items = items;
+
+        public IReadOnlyList<JavaInfo> Scan() => _items;
+
+        public JavaInfo? GetJava(string path) => _items.FirstOrDefault(item => item.Path == path);
+
+        public void Refresh()
+        {
+        }
+    }
+
+    private sealed class FakeVersionCatalogService : IVersionCatalogService
+    {
+        public IReadOnlyList<MinecraftVersion> Scan(string minecraftFolder) => [];
+
+        public MinecraftVersionJson? LoadJson(string minecraftFolder, string id) => null;
+    }
+
     private static (FakeOtherToolsService Tools, FakeFolderOpener Opener, OtherPageViewModel ViewModel) CreateViewModel()
     {
         var tools = new FakeOtherToolsService();
@@ -68,8 +91,24 @@ public sealed class OtherPageViewModelTests
             new FakeSettingsService(),
             new FakePlatformService(),
             tools,
-            opener);
+            opener,
+            new FakeJavaListService(new JavaInfo("/java/21/bin/java", "21.0.1", "aarch64", 21, IsValid: true)),
+            new FakeVersionCatalogService(),
+            new StartupDiagnosticsService());
         return (tools, opener, viewModel);
+    }
+
+    [Fact]
+    public void RunDiagnostics_FillsItemsAndSummary()
+    {
+        var (_, _, viewModel) = CreateViewModel();
+        Assert.False(viewModel.HasDiagnostics);
+
+        viewModel.RunDiagnosticsCommand.Execute(null);
+
+        Assert.True(viewModel.HasDiagnostics);
+        Assert.Contains("检查完成", viewModel.DiagnosticSummary);
+        Assert.Equal(viewModel.DiagnosticSummary, viewModel.StatusMessage);
     }
 
     [Fact]
