@@ -121,4 +121,53 @@ public sealed class ErrorMessageFormatterTests
         Assert.Equal("文件缺失", ErrorMessageFormatter.Brief(new FileNotFoundException("x")));
         Assert.Equal("目录缺失", ErrorMessageFormatter.Brief(new DirectoryNotFoundException("x")));
     }
+
+    [Fact]
+    public void Describe_JavaProcessFailure_SuggestsJavaFixInsteadOfDownloadSource()
+    {
+        // "Java 进程启动失败"按类型会被建议"切换到其他下载源"，那是文不对题。
+        var text = ErrorMessageFormatter.Describe(new InvalidOperationException("Java 进程启动失败"));
+
+        Assert.Contains("Java 路径", text);
+        Assert.Contains("安装", text);
+        Assert.DoesNotContain("下载源", text);
+    }
+
+    [Fact]
+    public void Describe_JavaTooOld_KeepsDetectedVersionAndPointsToInstall()
+    {
+        var text = ErrorMessageFormatter.Describe(
+            new InvalidOperationException("Forge 安装需要 Java 8 或更高版本，当前为 7"));
+
+        Assert.Contains("当前为 7", text);
+        Assert.Contains("安装", text);
+        Assert.DoesNotContain("下载源", text);
+    }
+
+    [Fact]
+    public void Describe_GameFolderFailure_SuggestsResettingFolder()
+    {
+        var text = ErrorMessageFormatter.Describe(new InvalidOperationException("游戏目录不可写入"));
+
+        Assert.Contains("游戏目录", text);
+        Assert.Contains("写入权限", text);
+        Assert.DoesNotContain("下载源", text);
+    }
+
+    [Fact]
+    public void Brief_JavaFailure_KeepsFirstClause()
+    {
+        Assert.Equal(
+            "Java 进程启动失败",
+            ErrorMessageFormatter.Brief(new InvalidOperationException("Java 进程启动失败")));
+    }
+
+    [Fact]
+    public void Describe_LinkModuleFailure_SuggestsReconnectInsteadOfDownloadSource()
+    {
+        var text = ErrorMessageFormatter.Describe(new InvalidOperationException("联机模块进程启动失败"));
+
+        Assert.Contains("重新连接", text);
+        Assert.DoesNotContain("下载源", text);
+    }
 }

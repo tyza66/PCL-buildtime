@@ -30,7 +30,7 @@ public static class ErrorMessageFormatter
             _ => $"发生了未预期的错误：{OneLine(exception)}。可尝试：重启启动器后重试；若反复出现，请在设置页更换下载源或更新启动器",
         };
 
-    /// <summary>中文业务消息多半只说了"出了什么事"，这里按类型补一句"接下来怎么办"。</summary>
+    /// <summary>中文业务消息多半只说了"出了什么事"，这里按消息内容补一句"接下来怎么办"。</summary>
     private static string WithAdvice(Exception exception)
     {
         var message = OneLine(exception).TrimEnd('.', '。');
@@ -40,8 +40,32 @@ public static class ErrorMessageFormatter
             return message;
         }
 
-        var advice = AdviceFor(exception);
+        // 消息点名了具体对象时，对象相关的建议优先于按异常类型猜的建议：
+        // 否则"Java 进程启动失败"后面跟一句"切换到其他下载源"，用户照做也白费。
+        var advice = KeywordAdvice(message) ?? AdviceFor(exception);
         return advice.Length == 0 ? message : $"{message}。{advice}";
+    }
+
+    /// <summary>按消息里点名的对象给对应的解决办法；认不出来就返回 null 交回类型判断。</summary>
+    private static string? KeywordAdvice(string message)
+    {
+        if (message.Contains("Java", StringComparison.OrdinalIgnoreCase))
+        {
+            return "可尝试：在设置页确认 Java 路径指向可用的 Java，按提示安装所需版本，"
+                + "或查看运行日志里 Java 的具体报错";
+        }
+
+        if (message.Contains("游戏目录"))
+        {
+            return "可尝试：在设置页重新指定游戏目录，或换一个有写入权限的目录";
+        }
+
+        if (message.Contains("联机"))
+        {
+            return "可尝试：重新连接一次，或更新启动器到最新版本";
+        }
+
+        return null;
     }
 
     private static string AdviceFor(Exception exception)
