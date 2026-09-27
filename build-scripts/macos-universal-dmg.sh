@@ -120,6 +120,8 @@ stage="$work/dmg-stage"
 mkdir -p "$stage"
 cp -R "$approot" "$stage/"
 ln -s /Applications "$stage/Applications"
+# Volume icon so the mounted disk shows the PCL logo instead of a generic disk
+cp "$approot/Contents/Resources/PCL2-R.icns" "$stage/.VolumeIcon.icns"
 hdiutil create -volname "PCL2-R" -srcfolder "$stage" -ov -format UDZO "$dmg_name"
 
 # Structural gates on the assembled bundle and the DMG contents
@@ -163,6 +165,10 @@ if [ ! -L "$mount_dir/Applications" ]; then
 fi
 if [ ! -f "$mount_dir/$app/Contents/Resources/PCL2-R.icns" ]; then
   echo "::error::App bundle is missing PCL2-R.icns" >&2
+  exit 1
+fi
+if ! plutil -extract CFBundleIconFile raw "$mount_dir/$app/Contents/Info.plist" > /dev/null 2>&1; then
+  echo "::error::Info.plist does not declare CFBundleIconFile; Finder will show a generic icon" >&2
   exit 1
 fi
 if [ ! -f "$mount_dir/$app/Contents/MacOS/osx-x64/$app_exe" ] || [ ! -f "$mount_dir/$app/Contents/MacOS/osx-arm64/$app_exe" ]; then

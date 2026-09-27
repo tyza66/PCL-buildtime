@@ -16,6 +16,8 @@
 	<string>APPL</string>
 	<key>CFBundleExecutable</key>
 	<string>PCL2.Avalonia</string>
+	<key>CFBundleIconFile</key>
+	<string>PCL2-R.icns</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>10.15</string>
 	<key>NSHighResolutionCapable</key>
