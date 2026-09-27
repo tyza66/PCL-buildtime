@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PCL.Avalonia.Services;
 using PCL.Avalonia.Services.Downloads;
+using PCL.Avalonia.Services.Minecraft;
 using PCL.Avalonia.Services.Mods;
 
 namespace PCL.Avalonia.ViewModels.Pages;
@@ -21,6 +22,8 @@ public sealed partial class ModsDownloadPageViewModel : ObservableObject
     private readonly IModsDownloadService _modrinthInstaller;
     private readonly ICurseForgeDownloadService _curseForgeInstaller;
     private readonly IPlatformService _platform;
+    private readonly SessionState _session;
+    private readonly IVersionManagerService _versionManager;
     private CancellationTokenSource? _cancellationTokenSource;
 
     public ModsDownloadPageViewModel(
@@ -28,6 +31,8 @@ public sealed partial class ModsDownloadPageViewModel : ObservableObject
         IModrinthApi modrinthApi,
         IModsDownloadService modrinthInstaller,
         IPlatformService platform,
+        SessionState session,
+        IVersionManagerService versionManager,
         ICurseForgeApi? curseForgeApi = null,
         ICurseForgeDownloadService? curseForgeInstaller = null)
     {
@@ -37,6 +42,19 @@ public sealed partial class ModsDownloadPageViewModel : ObservableObject
         _curseForgeInstaller = curseForgeInstaller ?? new UnavailableCurseForgeInstaller();
         _modrinthInstaller = modrinthInstaller;
         _platform = platform;
+        _session = session;
+        _versionManager = versionManager;
+        // 启动页切换选中版本后，安装目标目录要跟着换成该版本的 Mod 目录。
+        _session.PropertyChanged += OnSessionPropertyChanged;
+        UpdateInstallTargetText();
+    }
+
+    private void OnSessionPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(SessionState.SelectedVersion))
+        {
+            UpdateInstallTargetText();
+        }
     }
 
     public ObservableCollection<DownloadProjectItemViewModel> Projects { get; } = [];
@@ -63,6 +81,10 @@ public sealed partial class ModsDownloadPageViewModel : ObservableObject
         : "";
 
     partial void OnGameVersionChanged(string value) => OnPropertyChanged(nameof(JavaHintText));
+
+    /// <summary>Mod 的安装目标目录，随选中版本与版本隔离设置变化。</summary>
+    [ObservableProperty]
+    private string _installTargetText = "";
 
     [ObservableProperty]
     private string _loader = "fabric";
@@ -214,8 +236,7 @@ public sealed partial class ModsDownloadPageViewModel : ObservableObject
             throw new InvalidOperationException("没有适配当前版本的下载");
         }
 
-        var settings = _settingsService.Load();
-        var folder = Path.Combine(GetMinecraftFolder(settings), "mods");
+        var folder = ResolveModsFolder().ModsFolder;
         var progress = new Progress<DownloadProgress>(OnDownloadProgress);
         await _modrinthInstaller.InstallAsync(selected, folder, progress, _cancellationTokenSource.Token);
     }
@@ -235,8 +256,7 @@ public sealed partial class ModsDownloadPageViewModel : ObservableObject
             throw new InvalidOperationException("没有适配当前版本的下载");
         }
 
-        var settings = _settingsService.Load();
-        var folder = Path.Combine(GetMinecraftFolder(settings), "mods");
+        var folder = ResolveModsFolder().ModsFolder;
         var progress = new Progress<DownloadProgress>(OnDownloadProgress);
         await _curseForgeInstaller.InstallAsync(selected, folder, progress, _cancellationTokenSource.Token);
     }
@@ -248,6 +268,57 @@ public sealed partial class ModsDownloadPageViewModel : ObservableObject
         return string.IsNullOrWhiteSpace(settings.MinecraftFolder)
             ? _platform.GetDefaultMinecraftFolder()
             : settings.MinecraftFolder;
+    }
+
+    /// <summary>
+    /// 按当前选中版本解析 Mod 目录，与启动逻辑同一套隔离判定：装进隔离版本
+    /// 专属目录，游戏才加载得到。每版本设置读取失败时按全局默认判定。
+    /// </summary>
+    private ModsFolderResolver.Resolved ResolveModsFolder()
+    {
+        var settings = _settingsService.Load();
+        var gameFolder = GetMinecraftFolder(settings);
+        var version = _session.SelectedVersion;
+        if (version is null)
+        {
+            return ModsFolderResolver.Resolve(gameFolder, null, settings.VersionIsolationDefault);
+        }
+
+        VersionSettings? versionSettings = null;
+        try
+        {
+            versionSettings = _versionManager.LoadSettings(gameFolder, version.Id);
+        }
+        catch
+        {
+            // 读不出每版本设置时静默按全局默认走，安装本身不中断。
+        }
+
+        return ModsFolderResolver.Resolve(
+            gameFolder,
+            version,
+            settings.VersionIsolationDefault,
+            versionSettings);
+    }
+
+    private void UpdateInstallTargetText()
+    {
+        ModsFolderResolver.Resolved resolved;
+        try
+        {
+            resolved = ResolveModsFolder();
+        }
+        catch (Exception ex)
+        {
+            InstallTargetText = $"无法确定安装目录：{ErrorMessageFormatter.Brief(ex)}";
+            return;
+        }
+
+        InstallTargetText = _session.SelectedVersion is null
+            ? $"未选择版本，Mod 将安装到公共目录：{resolved.ModsFolder}"
+            : resolved.Isolated
+                ? $"Mod 将安装到「{_session.SelectedVersion.Id}」的隔离目录：{resolved.ModsFolder}"
+                : $"Mod 将安装到：{resolved.ModsFolder}";
     }
 
     private void OnDownloadProgress(DownloadProgress value)

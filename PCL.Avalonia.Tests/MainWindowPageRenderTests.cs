@@ -97,6 +97,22 @@ public sealed class MainWindowPageRenderTests : IDisposable
     }
 
     [AvaloniaFact]
+    public void ModsDownloadPage_ShowsInstallTargetLine()
+    {
+        Select("Mod下载");
+        Dispatcher.UIThread.RunJobs();
+
+        var target = _window.GetVisualDescendants().OfType<TextBlock>()
+            .FirstOrDefault(text => (text.Text as string)?.Contains("Mod 将安装到") == true);
+        Assert.True(target is not null, $"Mod下载页缺少安装目录提示行。Log: {_sink.Describe()}");
+        Assert.False(string.IsNullOrWhiteSpace((string?)target!.Text), "安装目录提示内容不应为空");
+
+        Assert.True(
+            _sink.SevereEntries.Count == 0,
+            "Binding errors while rendering the mod download page: " + string.Join(" | ", _sink.SevereEntries));
+    }
+
+    [AvaloniaFact]
     public void SettingsPage_LinkTab_DisablesControls_WhilePublicNodeServiceIsDown()
     {
         Select("设置");

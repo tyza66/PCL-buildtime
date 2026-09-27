@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PCL.Avalonia.Services;
+using PCL.Avalonia.Services.Minecraft;
 using PCL.Avalonia.Services.Mods;
 
 namespace PCL.Avalonia.ViewModels.Pages;
@@ -11,17 +12,33 @@ public sealed partial class ModsPageViewModel : ObservableObject
     private readonly ISettingsService _settingsService;
     private readonly IModsService _modsService;
     private readonly IPlatformService _platform;
+    private readonly SessionState _session;
+    private readonly IVersionManagerService _versionManager;
     private readonly List<ModItemViewModel> _allMods = [];
 
     public ModsPageViewModel(
         ISettingsService settingsService,
         IModsService modsService,
-        IPlatformService platformService)
+        IPlatformService platformService,
+        SessionState session,
+        IVersionManagerService versionManager)
     {
         _settingsService = settingsService;
         _modsService = modsService;
         _platform = platformService;
+        _session = session;
+        _versionManager = versionManager;
+        // 启动页切换选中版本后，Mod 列表要跟着换成该版本目录里的内容。
+        _session.PropertyChanged += OnSessionPropertyChanged;
         Refresh();
+    }
+
+    private void OnSessionPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(SessionState.SelectedVersion))
+        {
+            Refresh();
+        }
     }
 
     public ObservableCollection<ModItemViewModel> Mods { get; } = [];
@@ -46,8 +63,8 @@ public sealed partial class ModsPageViewModel : ObservableObject
         IsBusy = true;
         try
         {
-            var folder = GetMinecraftFolder(_settingsService.Load());
-            var scanned = _modsService.Scan(folder);
+            var (resolved, warning) = ResolveModsFolder();
+            var scanned = _modsService.Scan(resolved.ModsFolder);
             _allMods.Clear();
             foreach (var mod in scanned)
             {
@@ -55,7 +72,11 @@ public sealed partial class ModsPageViewModel : ObservableObject
             }
 
             ApplyFilter();
-            StatusMessage = $"已找到 {_allMods.Count} 个 Mod：{Path.Combine(folder, "mods")}";
+            // 隔离设置读取失败的提示不能丢掉，拼在数量行后面，用户知道判定规则退过一步。
+            var status = resolved.Isolated
+                ? $"已找到 {_allMods.Count} 个 Mod（当前版本隔离目录）：{resolved.ModsFolder}"
+                : $"已找到 {_allMods.Count} 个 Mod：{resolved.ModsFolder}";
+            StatusMessage = warning is null ? status : status + "（" + warning + "）";
         }
         catch (Exception ex)
         {
@@ -140,6 +161,42 @@ public sealed partial class ModsPageViewModel : ObservableObject
         return string.IsNullOrWhiteSpace(settings.MinecraftFolder)
             ? _platform.GetDefaultMinecraftFolder()
             : settings.MinecraftFolder;
+    }
+
+    /// <summary>
+    /// 按当前选中版本解析 Mod 目录：与启动逻辑同一套隔离判定，隔离版本的 Mod
+    /// 在 versions/&lt;版本名&gt;/mods 下。每版本设置读取失败时按全局默认判定，
+    /// 不阻断列表刷新。
+    /// </summary>
+    private (ModsFolderResolver.Resolved Resolved, string? Warning) ResolveModsFolder()
+    {
+        var settings = _settingsService.Load();
+        var gameFolder = GetMinecraftFolder(settings);
+        var version = _session.SelectedVersion;
+        if (version is null)
+        {
+            return (ModsFolderResolver.Resolve(gameFolder, null, settings.VersionIsolationDefault), null);
+        }
+
+        VersionSettings? versionSettings = null;
+        string? warning = null;
+        try
+        {
+            versionSettings = _versionManager.LoadSettings(gameFolder, version.Id);
+        }
+        catch (Exception ex)
+        {
+            // 每版本设置读不出来（外置卷 I/O 抖动、配置损坏）时不阻断刷新，
+            // 按全局默认规则判定，并把原因带回状态行告知用户。
+            warning = $"读取版本隔离设置失败，已按默认规则判断：{ErrorMessageFormatter.Brief(ex)}";
+        }
+
+        var resolved = ModsFolderResolver.Resolve(
+            gameFolder,
+            version,
+            settings.VersionIsolationDefault,
+            versionSettings);
+        return (resolved, warning);
     }
 }
 

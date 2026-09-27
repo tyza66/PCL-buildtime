@@ -1,5 +1,6 @@
 using PCL.Avalonia.Services;
 using PCL.Avalonia.Services.Downloads;
+using PCL.Avalonia.Services.Minecraft;
 using PCL.Avalonia.Services.Mods;
 using PCL.Avalonia.ViewModels.Pages;
 
@@ -250,16 +251,71 @@ public sealed class ModsDownloadPageViewModelTests
         Assert.Contains("没有适配", viewModel.StatusMessage);
     }
 
+    private sealed class FakeVersionManager : IVersionManagerService
+    {
+        public Dictionary<string, VersionSettings> Settings { get; } = [];
+
+        public VersionSettings LoadSettings(string minecraftFolder, string versionId)
+            => Settings.TryGetValue(versionId, out var value) ? value : new();
+
+        public void SetFavorite(string minecraftFolder, string versionId, bool isFavorite)
+        {
+        }
+
+        public void SetHidden(string minecraftFolder, string versionId, bool isHidden)
+        {
+        }
+
+        public void SetDisplayType(string minecraftFolder, string versionId, InstanceDisplayType displayType)
+        {
+        }
+
+        public void SetInstanceLaunchSettings(
+            string minecraftFolder,
+            string versionId,
+            int? maxMemoryMb,
+            string? javaPath,
+            string? jvmArguments,
+            string? gameArguments)
+        {
+        }
+
+        public void SetInstanceIsolation(string minecraftFolder, string versionId, bool? independent)
+        {
+        }
+
+        public void SetDescription(string minecraftFolder, string versionId, string description)
+        {
+        }
+
+        public string Rename(string minecraftFolder, string versionId, string newName) => newName;
+
+        public void Delete(string minecraftFolder, string versionId)
+        {
+        }
+    }
+
+    private static MinecraftVersion Version(string id) => new()
+    {
+        Id = id,
+        Folder = $"/games/mc/versions/{id}",
+        JsonPath = $"/games/mc/versions/{id}/{id}.json",
+    };
+
     private static ModsDownloadPageViewModel CreateViewModel(
         FakeApi api,
         FakeInstaller installer,
         FakeCurseForgeApi? curseForgeApi = null,
-        FakeCurseForgeInstaller? curseForgeInstaller = null)
+        FakeCurseForgeInstaller? curseForgeInstaller = null,
+        SessionState? session = null,
+        FakeVersionManager? versionManager = null)
         => new(
             new FakeSettingsService(),
             api,
             installer,
             new FakePlatformService(),
+            session ?? new SessionState(),
+            versionManager ?? new FakeVersionManager(),
             curseForgeApi,
             curseForgeInstaller);
 
@@ -272,5 +328,42 @@ public sealed class ModsDownloadPageViewModelTests
 
         viewModel.GameVersion = "1.21.4";
         Assert.Equal("1.21.4 需要 Java 21", viewModel.JavaHintText);
+    }
+
+    [Fact]
+    public async Task InstallCommand_InstallsIntoIsolatedVersionFolder()
+    {
+        var installer = new FakeInstaller();
+        var api = new FakeApi { Projects = [Project()], Versions = [Version()] };
+        var session = new SessionState { SelectedVersion = Version("1.20.1-fabric") };
+        var versionManager = new FakeVersionManager
+        {
+            Settings = { ["1.20.1-fabric"] = new VersionSettings { Independent = true } },
+        };
+        var viewModel = CreateViewModel(api, installer, session: session, versionManager: versionManager);
+
+        Assert.Contains("隔离目录", viewModel.InstallTargetText);
+        Assert.Contains("/games/mc/versions/1.20.1-fabric/mods", viewModel.InstallTargetText);
+
+        viewModel.SearchText = "JEI";
+        await viewModel.SearchCommand.ExecuteAsync(null);
+        await viewModel.Projects[0].InstallCommand.ExecuteAsync(null);
+
+        Assert.Equal("/games/mc/versions/1.20.1-fabric/mods", installer.LastFolder);
+    }
+
+    [Fact]
+    public void InstallTargetText_FollowsSelectedVersionChange()
+    {
+        var session = new SessionState();
+        var viewModel = CreateViewModel(new FakeApi(), new FakeInstaller(), session: session);
+
+        Assert.Contains("未选择版本", viewModel.InstallTargetText);
+        Assert.Contains("/games/mc/mods", viewModel.InstallTargetText);
+
+        session.SelectedVersion = Version("1.20.1-fabric");
+
+        Assert.Contains("1.20.1-fabric", viewModel.InstallTargetText);
+        Assert.Contains("/games/mc/versions/1.20.1-fabric/mods", viewModel.InstallTargetText);
     }
 }

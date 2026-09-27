@@ -87,7 +87,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 javaListService)),
             new NavItemViewModel("Fabric", new FabricLoaderPageViewModel(settingsService, fabricLoaderService, platformService, session)),
             new NavItemViewModel("Forge", new ForgelikeLoaderPageViewModel(settingsService, forgelikeLoaderService, platformService, session)),
-            new NavItemViewModel("Mod下载", new ModsDownloadPageViewModel(settingsService, modrinthApi, modsDownloadService, platformService, curseForgeApi, curseForgeDownloadService)),
+            new NavItemViewModel("Mod下载", new ModsDownloadPageViewModel(settingsService, modrinthApi, modsDownloadService, platformService, session, versionManager, curseForgeApi, curseForgeDownloadService)),
             new NavItemViewModel("资源下载", new ResourceDownloadPageViewModel(
                 settingsService,
                 resourceSearchService,
@@ -110,7 +110,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 scriptExporter,
                 instancePackExporter,
                 modsService)),
-            new NavItemViewModel("Mod管理", new ModsPageViewModel(settingsService, modsService, platformService)),
+            new NavItemViewModel("Mod管理", new ModsPageViewModel(settingsService, modsService, platformService, session, versionManager)),
             new NavItemViewModel("联机", new LinkPageViewModel(linkService, settingsService, dispatcher), false, "联机暂不可用：依赖的公共节点服务已下线"),
             new NavItemViewModel("设置", new SettingsPageViewModel(settingsService, platformService, _themeService, javaListService, dispatcher)),
             new NavItemViewModel("其他", new OtherPageViewModel(

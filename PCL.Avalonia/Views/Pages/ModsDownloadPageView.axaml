@@ -30,6 +30,13 @@
                     TextWrapping="Wrap"
                     Foreground="{DynamicResource TextSecondaryBrush}"
                     ToolTip.Tip="{Binding JavaHintText}" />
+                <TextBlock
+                    Text="{Binding InstallTargetText}"
+                    IsVisible="{Binding InstallTargetText, Converter={StaticResource StringNotEmpty}}"
+                    FontSize="12"
+                    TextWrapping="Wrap"
+                    Foreground="{DynamicResource TextSecondaryBrush}"
+                    ToolTip.Tip="{Binding InstallTargetText}" />
             </StackPanel>
             <Grid
                 Grid.Row="1"

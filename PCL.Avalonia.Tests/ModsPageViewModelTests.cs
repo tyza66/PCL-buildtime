@@ -1,4 +1,5 @@
 using PCL.Avalonia.Services;
+using PCL.Avalonia.Services.Minecraft;
 using PCL.Avalonia.Services.Mods;
 using PCL.Avalonia.ViewModels.Pages;
 
@@ -23,7 +24,13 @@ public sealed class ModsPageViewModelTests
 
         public List<ModInfo> DeleteCalls { get; } = [];
 
-        public IReadOnlyList<ModInfo> Scan(string minecraftFolder) => ScanResult;
+        public List<string> ScannedFolders { get; } = [];
+
+        public IReadOnlyList<ModInfo> Scan(string minecraftFolder)
+        {
+            ScannedFolders.Add(minecraftFolder);
+            return ScanResult;
+        }
 
         public ModInfo SetEnabled(ModInfo mod, bool enabled)
         {
@@ -48,8 +55,76 @@ public sealed class ModsPageViewModelTests
         LastModifiedUtc = DateTime.UtcNow,
     };
 
-    private static ModsPageViewModel CreateViewModel(FakeModsService service)
-        => new(new FakeSettingsService(), service, new FakePlatformService());
+    private sealed class FakeVersionManager : IVersionManagerService
+    {
+        public Dictionary<string, VersionSettings> Settings { get; } = [];
+
+        public Exception? LoadError { get; init; }
+
+        public VersionSettings LoadSettings(string minecraftFolder, string versionId)
+        {
+            if (LoadError is not null)
+            {
+                throw LoadError;
+            }
+
+            return Settings.TryGetValue(versionId, out var value) ? value : new();
+        }
+
+        public void SetFavorite(string minecraftFolder, string versionId, bool isFavorite)
+        {
+        }
+
+        public void SetHidden(string minecraftFolder, string versionId, bool isHidden)
+        {
+        }
+
+        public void SetDisplayType(string minecraftFolder, string versionId, InstanceDisplayType displayType)
+        {
+        }
+
+        public void SetInstanceLaunchSettings(
+            string minecraftFolder,
+            string versionId,
+            int? maxMemoryMb,
+            string? javaPath,
+            string? jvmArguments,
+            string? gameArguments)
+        {
+        }
+
+        public void SetInstanceIsolation(string minecraftFolder, string versionId, bool? independent)
+        {
+        }
+
+        public void SetDescription(string minecraftFolder, string versionId, string description)
+        {
+        }
+
+        public string Rename(string minecraftFolder, string versionId, string newName) => newName;
+
+        public void Delete(string minecraftFolder, string versionId)
+        {
+        }
+    }
+
+    private static MinecraftVersion Version(string id) => new()
+    {
+        Id = id,
+        Folder = $"/games/mc/versions/{id}",
+        JsonPath = $"/games/mc/versions/{id}/{id}.json",
+    };
+
+    private static ModsPageViewModel CreateViewModel(
+        FakeModsService service,
+        SessionState? session = null,
+        FakeVersionManager? versionManager = null)
+        => new(
+            new FakeSettingsService(),
+            service,
+            new FakePlatformService(),
+            session ?? new SessionState(),
+            versionManager ?? new FakeVersionManager());
 
     private sealed class FakePlatformService : IPlatformService
     {
@@ -115,5 +190,72 @@ public sealed class ModsPageViewModelTests
 
         var item = Assert.Single(viewModel.Mods);
         Assert.Equal("OptiFine", item.DisplayName);
+    }
+
+    [Fact]
+    public void Refresh_ScansIsolatedVersionFolder_WhenSelectedVersionIsIsolated()
+    {
+        var service = new FakeModsService { ScanResult = [Mod("Sodium")] };
+        var session = new SessionState { SelectedVersion = Version("1.20.1-fabric") };
+        var versionManager = new FakeVersionManager
+        {
+            Settings = { ["1.20.1-fabric"] = new VersionSettings { Independent = true } },
+        };
+
+        var viewModel = CreateViewModel(service, session, versionManager);
+
+        Assert.Equal("/games/mc/versions/1.20.1-fabric/mods", service.ScannedFolders[^1]);
+        Assert.Contains("隔离目录", viewModel.StatusMessage);
+        Assert.Contains("/games/mc/versions/1.20.1-fabric/mods", viewModel.StatusMessage);
+    }
+
+    [Fact]
+    public void Refresh_ScansSharedFolder_WhenIsolationSwitchedOffForVersion()
+    {
+        var service = new FakeModsService { ScanResult = [Mod("Sodium")] };
+        var session = new SessionState { SelectedVersion = Version("1.20.1-fabric") };
+        var versionManager = new FakeVersionManager
+        {
+            Settings = { ["1.20.1-fabric"] = new VersionSettings { Independent = false } },
+        };
+
+        var viewModel = CreateViewModel(service, session, versionManager);
+
+        Assert.Equal("/games/mc/mods", service.ScannedFolders[^1]);
+        Assert.DoesNotContain("隔离目录", viewModel.StatusMessage);
+    }
+
+    [Fact]
+    public void SelectedVersionChange_RescansModsForNewVersion()
+    {
+        var service = new FakeModsService { ScanResult = [] };
+        var session = new SessionState();
+        var viewModel = CreateViewModel(service, session);
+        Assert.Equal("/games/mc/mods", service.ScannedFolders[^1]);
+
+        session.SelectedVersion = Version("1.20.1-neoforge");
+
+        Assert.Equal(2, service.ScannedFolders.Count);
+        Assert.Equal("/games/mc/versions/1.20.1-neoforge/mods", service.ScannedFolders[^1]);
+    }
+
+    [Fact]
+    public void Refresh_VersionSettingsUnreadable_FallsBackToGlobalDefault()
+    {
+        var service = new FakeModsService { ScanResult = [] };
+        var session = new SessionState { SelectedVersion = Version("1.20.1") };
+        var versionManager = new FakeVersionManager { LoadError = new IOException("外置卷 I/O 抖动") };
+        var settings = new AppSettings { MinecraftFolder = "/games/mc" };
+
+        var viewModel = new ModsPageViewModel(
+            new FakeSettingsService { Settings = settings },
+            service,
+            new FakePlatformService(),
+            session,
+            versionManager);
+
+        Assert.Contains("读取版本隔离设置失败", viewModel.StatusMessage);
+        // 全局默认 All：读不出每版本设置时仍按默认规则隔离，不阻断列表。
+        Assert.Equal("/games/mc/versions/1.20.1/mods", service.ScannedFolders[^1]);
     }
 }
