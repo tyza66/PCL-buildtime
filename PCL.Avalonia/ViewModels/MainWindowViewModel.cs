@@ -52,10 +52,15 @@ public sealed partial class MainWindowViewModel : ObservableObject
         ILinkService linkService,
         IJavaListService javaListService,
         IStartupDiagnosticsService startupDiagnostics,
-        IConfirmationService confirmationService)
+        IConfirmationService confirmationService,
+        IJavaInstallService javaInstallService)
     {
         _settingsService = settingsService;
         _themeService = themeService;
+        var suggestedJavaMajor = ResolveSuggestedJavaMajor(
+            settingsService,
+            versionCatalogService,
+            platformService);
 
         var settings = settingsService.Load();
         UseDarkTheme = settings.UseDarkTheme;
@@ -115,7 +120,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 confirmationService)),
             new NavItemViewModel("Mod管理", new ModsPageViewModel(settingsService, modsService, platformService, session, versionManager)),
             new NavItemViewModel("联机", new LinkPageViewModel(linkService, settingsService, dispatcher), false, "联机暂不可用：依赖的公共节点服务已下线"),
-            new NavItemViewModel("设置", new SettingsPageViewModel(settingsService, platformService, _themeService, javaListService, dispatcher)),
+            new NavItemViewModel("设置", new SettingsPageViewModel(
+                settingsService,
+                platformService,
+                _themeService,
+                javaListService,
+                dispatcher,
+                javaInstallService,
+                suggestedJavaMajor)),
             new NavItemViewModel("其他", new OtherPageViewModel(
                 settingsService,
                 platformService,
@@ -127,6 +139,42 @@ public sealed partial class MainWindowViewModel : ObservableObject
         ];
 
         SelectedItem = Items[0];
+    }
+
+    /// <summary>
+    /// 设置页推荐装哪个 Java：按用户自己已装版本的需求取最高要求，一个版本都没装才退回 21。
+    /// 写死一个数不行——装了一堆 1.7.10 旧版的人会被天天催着装 Java 21，指错了反而烦。
+    /// </summary>
+    private static int ResolveSuggestedJavaMajor(
+        ISettingsService settingsService,
+        IVersionCatalogService versionCatalogService,
+        IPlatformService platformService)
+    {
+        const int fallback = 21;
+        try
+        {
+            var settings = settingsService.Load();
+            var gameFolder = string.IsNullOrWhiteSpace(settings.MinecraftFolder)
+                ? platformService.GetDefaultMinecraftFolder()
+                : settings.MinecraftFolder;
+            if (!Directory.Exists(gameFolder))
+            {
+                return fallback;
+            }
+
+            return versionCatalogService.Scan(gameFolder)
+                .Select(version => versionCatalogService.LoadJson(gameFolder, version.Id)?.JavaVersion?.MajorVersion
+                    ?? MinecraftJavaRequirement.GetRequiredMajor(version.Id))
+                .Where(major => major is > 0)
+                .Select(major => major!.Value)
+                .DefaultIfEmpty(fallback)
+                .Max();
+        }
+        catch (Exception)
+        {
+            // 目录扫描或版本 JSON 解析失败都不该拦住启动器，退回默认推荐版本。
+            return fallback;
+        }
     }
 
     public ObservableCollection<NavItemViewModel> Items { get; }

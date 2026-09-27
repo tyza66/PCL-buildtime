@@ -514,7 +514,8 @@ public sealed class MainWindowViewModelTests
             new FakeLinkService(),
             new FakeJavaListService(),
             new StartupDiagnosticsService(),
-            new FakeConfirmationService());
+            new FakeConfirmationService(),
+            new FakeJavaInstallService());
         return (settings, theme, viewModel);
     }
 
@@ -642,7 +643,8 @@ public sealed class MainWindowViewModelTests
             new FakeLinkService(),
             new FakeJavaListService(),
             new StartupDiagnosticsService(),
-            new FakeConfirmationService());
+            new FakeConfirmationService(),
+            new FakeJavaInstallService());
 
         viewModel.ToggleThemeCommand.Execute(null);
 
@@ -674,5 +676,25 @@ public sealed class MainWindowViewModelTests
             string versionId,
             CancellationToken cancellationToken = default)
             => Task.FromResult(RequiredMajor);
+    }
+
+    private sealed class FakeJavaInstallService : IJavaInstallService
+    {
+        public Task<JavaRelease> FetchLatestAsync(
+            int majorVersion,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(new JavaRelease(
+                $"jdk-{majorVersion}.0.1+1",
+                majorVersion,
+                "https://example.invalid/jdk.tar.gz",
+                1,
+                "aarch64",
+                "mac"));
+
+        public Task<string> InstallAsync(
+            int majorVersion,
+            IProgress<JavaInstallProgress>? progress = null,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult($"/java/jdk-{majorVersion}/bin/java");
     }
 }

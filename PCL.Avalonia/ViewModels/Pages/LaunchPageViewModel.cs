@@ -451,7 +451,8 @@ public sealed partial class LaunchPageViewModel : ObservableObject, IPageActivat
     }
 
     private static string NotInstalledJavaHint()
-        => "未检测到 Java：请到设置页扫描或指定 Java 路径，否则无法启动游戏";
+        // 设置页现在能一键装 Java，这里就别说"去装"这种用户无处下手的建议。
+        => "未检测到 Java：请到设置页一键安装或指定 Java 路径，否则无法启动游戏";
 
     private int? ResolveRequiredJavaMajor(string gameFolder, MinecraftVersion version)
         => _catalog.LoadJson(gameFolder, version.Id)?.JavaVersion?.MajorVersion;
@@ -570,8 +571,8 @@ public sealed partial class LaunchPageViewModel : ObservableObject, IPageActivat
             if (java is null)
             {
                 var javaHint = requiredJavaMajor is { } required
-                    ? $"未找到 Java：{version.Id} 需要 Java {required}，请先安装该版本或到设置页指定 Java 路径"
-                    : "未找到 Java：请先安装 Java 或到设置页指定 Java 路径";
+                    ? $"未找到 Java：{version.Id} 需要 Java {required}，可到设置页一键安装 Java {required} 或手动指定路径"
+                    : "未找到 Java：可到设置页一键安装 Java 或手动指定路径";
                 LogLine(javaHint);
                 StatusMessage = javaHint;
                 return;

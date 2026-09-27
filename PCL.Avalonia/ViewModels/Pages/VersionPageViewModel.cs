@@ -501,8 +501,8 @@ public sealed partial class VersionPageViewModel : ObservableObject
             if (java is null)
             {
                 StatusMessage = requiredJavaMajor is { } required
-                    ? $"未找到 Java：{item.Id} 需要 Java {required}，请先安装该版本，或到设置页指定 Java 路径"
-                    : "未找到 Java：请先安装 Java，或到设置页指定 Java 路径";
+                    ? $"未找到 Java：{item.Id} 需要 Java {required}，可到设置页一键安装 Java {required} 或手动指定路径"
+                    : "未找到 Java：可到设置页一键安装 Java 或手动指定路径";
                 return;
             }
 
@@ -822,7 +822,7 @@ public sealed partial class VersionPageViewModel : ObservableObject
         if (java is null)
         {
             JavaHintIsWarning = true;
-            JavaHintText = $"该版本需要 Java {required}，但当前没有检测到 Java。请先安装 Java {required}，再到设置页指定路径";
+            JavaHintText = $"该版本需要 Java {required}，但当前没有检测到 Java。请先安装 Java {required}：设置页可一键安装或手动指定路径";
             return;
         }
 

@@ -180,7 +180,7 @@ public sealed partial class DownloadPageViewModel : ObservableObject, IPageActiv
             JavaRequirementIsWarning = true;
             JavaRequirementText =
                 $"{item.Id} 需要 Java {required}，但本机没有检测到 Java。"
-                + $"请先安装 Java {required}，再到设置页指定路径，否则装完也启动不了";
+                + $"请先安装 Java {required}：设置页可一键安装或手动指定路径，否则装完也启动不了";
             return;
         }
 

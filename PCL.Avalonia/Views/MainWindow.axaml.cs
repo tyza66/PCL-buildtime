@@ -34,6 +34,8 @@ public partial class MainWindow : Window
         var dispatcher = new AvaloniaUiDispatcher();
         var catalog = new VersionCatalogService();
         var downloadClient = new HttpDownloadClient();
+        // 设置页的"一键安装 Java"：和下载版本共用同一个下载客户端，限速、重试的行为一致。
+        var javaInstallService = new JavaInstallService(downloadClient, platform, settings);
         var accountService = new JsonAccountService(Path.Combine(platform.GetConfigDirectory(), "accounts.json"));
         var microsoftAuthentication = new MicrosoftAuthenticationService(new DefaultBrowserLauncher());
         var modrinthApi = new ModrinthApi(downloadClient);
@@ -87,6 +89,7 @@ public partial class MainWindow : Window
             linkService,
             javaListService,
             startupDiagnostics,
-            new AvaloniaConfirmationService());
+            new AvaloniaConfirmationService(),
+            javaInstallService);
     }
 }

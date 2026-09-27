@@ -123,6 +123,31 @@
                                     Foreground="{DynamicResource TextPrimaryBrush}" />
                             </StackPanel>
                         </Grid>
+                        <StackPanel
+                            x:Name="JavaInstallPanel"
+                            IsVisible="{Binding ShowJavaInstallButton}"
+                            Margin="0,8,0,0"
+                            Spacing="6">
+                            <Button
+                                Content="{Binding SuggestedJavaMajor, StringFormat='下载并安装 Java {0}'}"
+                                Command="{Binding InstallJavaCommand}"
+                                CommandParameter="{Binding SuggestedJavaMajor}"
+                                IsEnabled="{Binding !IsInstallingJava}"
+                                HorizontalAlignment="Left"
+                                Padding="16,6"
+                                Background="{DynamicResource ButtonBackgroundBrush}"
+                                Foreground="{DynamicResource TextPrimaryBrush}" />
+                            <ProgressBar
+                                IsVisible="{Binding IsInstallingJava}"
+                                Minimum="0"
+                                Maximum="1"
+                                Value="{Binding JavaInstallFraction}" />
+                            <TextBlock
+                                Text="{Binding JavaInstallProgressText}"
+                                FontSize="11"
+                                TextWrapping="Wrap"
+                                Foreground="{DynamicResource TextSecondaryBrush}" />
+                        </StackPanel>
                         <TextBlock
                             Text="用户名"
                             FontSize="13"

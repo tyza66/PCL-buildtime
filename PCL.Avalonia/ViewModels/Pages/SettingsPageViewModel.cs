@@ -13,18 +13,24 @@ public sealed partial class SettingsPageViewModel : ObservableObject
     private readonly IThemeService _themeService;
     private readonly IJavaListService _javaListService;
     private readonly IUiDispatcher _dispatcher;
+    private readonly IJavaInstallService? _javaInstallService;
+    private readonly int _suggestedJavaMajor;
 
     public SettingsPageViewModel(
         ISettingsService settingsService,
         IPlatformService platformService,
         IThemeService themeService,
         IJavaListService javaListService,
-        IUiDispatcher dispatcher)
+        IUiDispatcher dispatcher,
+        IJavaInstallService? javaInstallService = null,
+        int suggestedJavaMajor = 21)
     {
         _settingsService = settingsService;
         _themeService = themeService;
         _javaListService = javaListService;
         _dispatcher = dispatcher;
+        _javaInstallService = javaInstallService;
+        _suggestedJavaMajor = suggestedJavaMajor;
         var settings = settingsService.Load();
         MinecraftFolder = string.IsNullOrWhiteSpace(settings.MinecraftFolder)
             ? platformService.GetDefaultMinecraftFolder()
@@ -144,15 +150,105 @@ public sealed partial class SettingsPageViewModel : ObservableObject
 
             SelectedJava = JavaEntries.FirstOrDefault(j =>
                 j.Path.Equals(JavaPath, StringComparison.OrdinalIgnoreCase));
+            // 状态行要说清下一步：缺 Java 时直接指到一键安装按钮，用户不用自己去猜去哪儿装。
+            var bestMajor = JavaHints.BestMajor(JavaEntries);
             StatusMessage = JavaEntries.Count == 0
-                ? "未检测到 Java，请手动指定路径"
-                : $"检测到 {JavaEntries.Count} 个 Java";
+                ? ShowJavaInstallButton
+                    ? $"未检测到 Java，可用下方按钮一键安装 Java {_suggestedJavaMajor}"
+                    : "未检测到 Java，请手动指定路径"
+                : bestMajor < _suggestedJavaMajor
+                    ? $"检测到 {JavaEntries.Count} 个 Java，最高 Java {bestMajor}，建议安装 Java {_suggestedJavaMajor}"
+                    : $"检测到 {JavaEntries.Count} 个 Java";
             WarnIfJavaArchitectureMismatch(SelectedJava);
         }
         finally
         {
             IsScanningJava = false;
         }
+
+        // 列表一变，一键安装按钮的去留也得跟着变，否则下完 Java 按钮还挂在那儿。
+        OnPropertyChanged(nameof(ShowJavaInstallButton));
+    }
+
+    /// <summary>建议安装的 Java 大版本：启动器按已装版本的需求算出来，界面只负责显示。</summary>
+    public int SuggestedJavaMajor => _suggestedJavaMajor;
+
+    /// <summary>
+    /// 本机最高 Java 大版本比建议的还低时才给一键安装入口。装够了就把按钮收起来，
+    /// 不让用户再下第二份 180MB——多份 JDK 只会让下一次"到底用的哪个 Java"更难查。
+    /// </summary>
+    public bool ShowJavaInstallButton
+    {
+        get
+        {
+            if (_javaInstallService is null)
+            {
+                return false;
+            }
+
+            var best = JavaHints.BestMajor(JavaEntries);
+            return best is null || best < _suggestedJavaMajor;
+        }
+    }
+
+    [ObservableProperty]
+    private bool _isInstallingJava;
+
+    [ObservableProperty]
+    private string _javaInstallProgressText = "";
+
+    [ObservableProperty]
+    private double _javaInstallFraction;
+
+    /// <summary>
+    /// 一键装 Java：以前设置页只说"去装 Java"，用户得自己开浏览器、找下载页、解压、再回来填路径，
+    /// 四步全靠自觉。这里点一下按钮全做完，装完直接选中并落盘，用户下一步只要去启动。
+    /// </summary>
+    [RelayCommand]
+    private async Task InstallJavaAsync(int majorVersion)
+    {
+        if (_javaInstallService is null || IsInstallingJava)
+        {
+            return;
+        }
+
+        IsInstallingJava = true;
+        JavaInstallFraction = 0;
+        JavaInstallProgressText = $"正在准备下载 Java {majorVersion}";
+        try
+        {
+            var java = await _javaInstallService.InstallAsync(
+                majorVersion,
+                new JavaInstallReporter(_dispatcher, ApplyJavaInstallProgress)).ConfigureAwait(true);
+            JavaPath = java;
+            RefreshJavaList();
+            StatusMessage = $"已安装并选用 Java {majorVersion}";
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            StatusMessage = "Java 安装失败：" + ErrorMessageFormatter.Describe(ex);
+        }
+        finally
+        {
+            IsInstallingJava = false;
+            JavaInstallProgressText = "";
+        }
+    }
+
+    private void ApplyJavaInstallProgress(JavaInstallProgress progress)
+    {
+        JavaInstallFraction = Math.Clamp(progress.Fraction, 0, 1);
+        JavaInstallProgressText = progress.StageText;
+    }
+
+    /// <summary>
+    /// 把后台线程的进度回调搬回界面线程。不用框架的 <see cref="Progress{T}"/>：
+    /// 它在没有同步上下文时把回调丢进线程池，测试里断言进度文本会时有时无。
+    /// </summary>
+    private sealed class JavaInstallReporter(IUiDispatcher dispatcher, Action<JavaInstallProgress> handler)
+        : IProgress<JavaInstallProgress>
+    {
+        public void Report(JavaInstallProgress value) => dispatcher.Post(() => handler(value));
     }
 
     [RelayCommand]

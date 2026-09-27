@@ -70,14 +70,19 @@ public sealed class SettingsPageViewModelTests
     private static SettingsPageViewModel CreateViewModel(
         FakeSettingsService settings,
         FakeThemeService? theme = null,
-        params JavaInfo[] javas)
+        JavaInfo[]? javas = null,
+        IJavaInstallService? javaInstallService = null,
+        int suggestedJavaMajor = 21,
+        IUiDispatcher? dispatcher = null)
     {
         return new SettingsPageViewModel(
             settings,
             new FakePlatformService(),
             theme ?? new FakeThemeService(),
-            new FakeJavaListService(javas),
-            new NoopDispatcher());
+            new FakeJavaListService(javas ?? []),
+            dispatcher ?? new NoopDispatcher(),
+            javaInstallService,
+            suggestedJavaMajor);
     }
 
     [Fact]
@@ -230,7 +235,7 @@ public sealed class SettingsPageViewModelTests
             Settings = new AppSettings { JavaPath = "/opt/java/bin/java" },
         };
         var viewModel = CreateViewModel(settings, javas:
-            new JavaInfo("/opt/java/bin/java", "21.0.2", foreign, 21, true));
+            [new JavaInfo("/opt/java/bin/java", "21.0.2", foreign, 21, true)]);
 
         viewModel.RefreshJavaListCommand.Execute(null);
 
@@ -248,7 +253,7 @@ public sealed class SettingsPageViewModelTests
             Settings = new AppSettings { JavaPath = "/opt/java/bin/java" },
         };
         var viewModel = CreateViewModel(settings, javas:
-            new JavaInfo("/opt/java/bin/java", "21.0.2", native, 21, true));
+            [new JavaInfo("/opt/java/bin/java", "21.0.2", native, 21, true)]);
 
         viewModel.RefreshJavaListCommand.Execute(null);
 
@@ -289,5 +294,145 @@ public sealed class SettingsPageViewModelTests
         // 防抖回调立即执行：改动应当已经落盘，状态行还要告诉用户保存过了。
         Assert.Equal(8192, settings.Settings.MaxMemoryMb);
         Assert.Contains("已自动保存", viewModel.StatusMessage);
+    }
+
+    [Fact]
+    public async Task InstallJavaCommand_SelectsNewJava_AndRescansList()
+    {
+        // 装完 Java 必须自动选中并写盘：以前提示只让用户自己装，装完还得手动扫、手动选、手动保存。
+        var settings = new FakeSettingsService();
+        var installed = "/java/jdk-21/bin/java";
+        var dispatcher = new ImmediateDispatcher();
+        var viewModel = CreateViewModel(
+            settings,
+            dispatcher: dispatcher,
+            javaInstallService: new FakeJavaInstallService(installed),
+            suggestedJavaMajor: 21);
+
+        await viewModel.InstallJavaCommand.ExecuteAsync(21);
+
+        Assert.Equal(installed, viewModel.JavaPath);
+        Assert.Equal(installed, settings.Settings.JavaPath);
+        Assert.Contains("已安装并选用 Java 21", viewModel.StatusMessage);
+        Assert.False(viewModel.IsInstallingJava);
+        Assert.Equal("", viewModel.JavaInstallProgressText);
+    }
+
+    [Fact]
+    public async Task InstallJavaCommand_ExplainsFailure_InChinese()
+    {
+        var viewModel = CreateViewModel(
+            new FakeSettingsService(),
+            dispatcher: new ImmediateDispatcher(),
+            javaInstallService: new FakeJavaInstallService(exception: new IOException("disk full")),
+            suggestedJavaMajor: 21);
+
+        await viewModel.InstallJavaCommand.ExecuteAsync(21);
+
+        // 失败不能只甩一句磁盘已满，得带上"可尝试"的解决办法。
+        Assert.Contains("Java 安装失败", viewModel.StatusMessage);
+        Assert.Contains("可尝试", viewModel.StatusMessage);
+        Assert.False(viewModel.IsInstallingJava);
+    }
+
+    [Fact]
+    public async Task InstallJavaCommand_ReportsProgressStages()
+    {
+        var seen = new List<string>();
+        var viewModel = CreateViewModel(
+            new FakeSettingsService(),
+            dispatcher: new ImmediateDispatcher(),
+            javaInstallService: new FakeJavaInstallService(
+                "/java/jdk-21/bin/java",
+                progress: value => seen.Add(value.StageText)),
+            suggestedJavaMajor: 21);
+
+        await viewModel.InstallJavaCommand.ExecuteAsync(21);
+
+        Assert.Contains(seen, text => text.Contains("正在下载"));
+    }
+
+    [Fact]
+    public void InstallButton_IsHidden_WithoutInstallService()
+    {
+        // 没接服务（例如单元测试环境）不能露一个点了没反应的按钮。
+        var viewModel = CreateViewModel(new FakeSettingsService(), suggestedJavaMajor: 21);
+
+        Assert.False(viewModel.ShowJavaInstallButton);
+    }
+
+    [Fact]
+    public void InstallButton_Appears_WhenBestJavaIsBelowSuggestion()
+    {
+        var viewModel = CreateViewModel(
+            new FakeSettingsService(),
+            javas: [new JavaInfo("/jdk17/bin/java", "17.0.9", "aarch64", 17, true)],
+            javaInstallService: new FakeJavaInstallService("/java/jdk-21/bin/java"),
+            suggestedJavaMajor: 21);
+
+        Assert.True(viewModel.ShowJavaInstallButton);
+        // 列表有 17 但低于建议的 21，状态行要把这个差距说出来。
+        Assert.Contains("最高 Java 17", viewModel.StatusMessage);
+        Assert.Contains("建议安装 Java 21", viewModel.StatusMessage);
+    }
+
+    [Fact]
+    public void InstallButton_Hides_OnceBestJavaMeetsSuggestion()
+    {
+        var javas = new[]
+        {
+            new JavaInfo("/jdk17/bin/java", "17.0.9", "aarch64", 17, true),
+            new JavaInfo("/jdk21/bin/java", "21.0.1", "aarch64", 21, true),
+        };
+        var viewModel = CreateViewModel(
+            new FakeSettingsService(),
+            javas: javas,
+            javaInstallService: new FakeJavaInstallService("/java/jdk-21/bin/java"),
+            suggestedJavaMajor: 21);
+
+        Assert.False(viewModel.ShowJavaInstallButton);
+    }
+
+    private sealed class FakeJavaInstallService : IJavaInstallService
+    {
+        private readonly string _javaPath;
+        private readonly Exception? _exception;
+        private readonly Action<JavaInstallProgress>? _progress;
+
+        public FakeJavaInstallService(
+            string javaPath = "/java/jdk-21/bin/java",
+            Exception? exception = null,
+            Action<JavaInstallProgress>? progress = null)
+        {
+            _javaPath = javaPath;
+            _exception = exception;
+            _progress = progress;
+        }
+
+        public Task<JavaRelease> FetchLatestAsync(
+            int majorVersion,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(new JavaRelease(
+                $"jdk-{majorVersion}.0.1+1",
+                majorVersion,
+                "https://example.invalid/jdk.tar.gz",
+                1,
+                "aarch64",
+                "mac"));
+
+        public Task<string> InstallAsync(
+            int majorVersion,
+            IProgress<JavaInstallProgress>? progress = null,
+            CancellationToken cancellationToken = default)
+        {
+            _progress?.Invoke(new JavaInstallProgress(0.5, $"正在下载 Java {majorVersion}（50%）"));
+            if (_exception is not null)
+            {
+                throw _exception;
+            }
+
+            progress?.Report(new JavaInstallProgress(1, "安装完成"));
+            return Task.FromResult(_javaPath);
+        }
     }
 }

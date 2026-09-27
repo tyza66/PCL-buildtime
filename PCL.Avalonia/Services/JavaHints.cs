@@ -46,7 +46,7 @@ public readonly record struct JavaHints(JavaHintLevel Level, string Text, string
                 JavaHintLevel.Missing,
                 $"需 Java {required}",
                 $"该版本需要 Java {required}，但本机没有检测到 Java。"
-                + $"请先安装 Java {required}，再到设置页指定路径，否则无法启动");
+                + $"请先安装 Java {required}：设置页可一键安装或手动指定路径，否则无法启动");
         }
 
         if (bestMajor < required)
@@ -111,8 +111,8 @@ public readonly record struct JavaHints(JavaHintLevel Level, string Text, string
         }
 
         return $"即将使用的 Java 是 {java} 架构，本机是 {native} 架构，游戏可能启动失败或明显卡顿。"
-            + $"可尝试：在设置页的 Java 列表里改选 {native} 架构的 Java，或先安装 {native} 版 Java"
-            + "（macOS 可执行 brew install openjdk）再回到设置页重新扫描";
+            + $"可尝试：在设置页的 Java 列表里改选 {native} 架构的 Java，或用设置页的一键安装按钮"
+            + $"装一份 {native} 架构的（macOS 也可执行 brew install openjdk）再回到设置页重新扫描";
     }
 
     /// <summary>只在本机原生架构是 x64 / arm64 时较真，别的架构不替用户下结论。</summary>

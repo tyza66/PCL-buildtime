@@ -10,25 +10,29 @@ public sealed class JavaListService : IJavaListService
     private readonly Func<string, bool> _fileExists;
     private readonly Func<string, string?> _runJavaVersion;
     private readonly Func<string, string?> _readNativeArchitecture;
+    private readonly string[] _extraJavaRoots;
 
     public JavaListService()
-        : this(File.Exists, RunJavaVersion)
+        // 启动器自己装的 JDK 也参与扫描，否则用户一键装完，设置页列表里还是不显示。
+        : this(File.Exists, RunJavaVersion, null, [LauncherJavaPaths.Root(new PlatformService())])
     {
     }
 
     internal JavaListService(Func<string, bool> fileExists, Func<string, string?> runJavaVersion)
-        : this(fileExists, runJavaVersion, null)
+        : this(fileExists, runJavaVersion, null, [])
     {
     }
 
     internal JavaListService(
         Func<string, bool> fileExists,
         Func<string, string?> runJavaVersion,
-        Func<string, string?>? readNativeArchitecture)
+        Func<string, string?>? readNativeArchitecture,
+        params string[] extraJavaRoots)
     {
         _fileExists = fileExists;
         _runJavaVersion = runJavaVersion;
         _readNativeArchitecture = readNativeArchitecture ?? ReadNativeArchitecture;
+        _extraJavaRoots = extraJavaRoots ?? [];
         Refresh();
     }
 
@@ -135,6 +139,47 @@ public sealed class JavaListService : IJavaListService
             foreach (var executable in EnumerateJavaExecutables(javaHome))
             {
                 yield return executable;
+            }
+        }
+
+        foreach (var executable in ExpandExtraJavaRoots())
+        {
+            yield return executable;
+        }
+    }
+
+    /// <summary>
+    /// 展开启动器自己的 Java 安装目录：布局是 &lt;java&gt;/&lt;版本目录&gt;/bin/java，
+    /// 安装包解压后还会在版本目录里多套一层同名目录，两层都要走到。
+    /// </summary>
+    private IEnumerable<string> ExpandExtraJavaRoots()
+    {
+        foreach (var root in _extraJavaRoots)
+        {
+            if (string.IsNullOrWhiteSpace(root) || !Directory.Exists(root))
+            {
+                continue;
+            }
+
+            foreach (var executable in EnumerateJavaExecutables(root))
+            {
+                yield return executable;
+            }
+
+            foreach (var child in SafeEnumerateDirectories(root))
+            {
+                foreach (var executable in EnumerateJavaExecutables(child))
+                {
+                    yield return executable;
+                }
+
+                foreach (var grandChild in SafeEnumerateDirectories(child))
+                {
+                    foreach (var executable in EnumerateJavaExecutables(grandChild))
+                    {
+                        yield return executable;
+                    }
+                }
             }
         }
     }
