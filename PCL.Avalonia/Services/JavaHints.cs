@@ -1,3 +1,5 @@
+using System.Runtime.InteropServices;
+
 namespace PCL.Avalonia.Services;
 
 /// <summary>
@@ -79,5 +81,73 @@ public readonly record struct JavaHints(JavaHintLevel Level, string Text, string
 
         return $"{versionId} 需要 Java {required}，当前只会用到 Java {actual}。"
             + $"可尝试：安装 Java {required}，或到设置页把 Java 路径指定到 Java {required}";
+    }
+
+    /// <summary>
+    /// Java 架构和本机原生架构对不上时的一句警告，一致、认不出、或平台不该较真时返回 null。
+    /// Apple Silicon 上拿 x64 的 Java 起游戏，轻则在 Rosetta 下慢一半，重则新版 LWJGL 直接
+    /// UnsatisfiedLinkError，等游戏崩了再查没人会想到是 Java 架构，启动前就该讲清。
+    /// 只警告不拦：用户机器上可能就装了这一个 Java，拦下来等于彻底不让人玩。
+    /// </summary>
+    public static string? DescribeArchitectureMismatch(
+        string? javaArchitecture,
+        Architecture systemArchitecture)
+    {
+        var native = DescribeNativeArchitecture(systemArchitecture);
+        if (native is null)
+        {
+            return null;
+        }
+
+        var java = NormalizeArchitecture(javaArchitecture);
+        if (java is null)
+        {
+            return null;
+        }
+
+        if (java == native)
+        {
+            return null;
+        }
+
+        return $"即将使用的 Java 是 {java} 架构，本机是 {native} 架构，游戏可能启动失败或明显卡顿。"
+            + $"可尝试：在设置页的 Java 列表里改选 {native} 架构的 Java，或先安装 {native} 版 Java"
+            + "（macOS 可执行 brew install openjdk）再回到设置页重新扫描";
+    }
+
+    /// <summary>只在本机原生架构是 x64 / arm64 时较真，别的架构不替用户下结论。</summary>
+    private static string? DescribeNativeArchitecture(Architecture architecture)
+        => architecture switch
+        {
+            Architecture.X64 => "x64",
+            Architecture.Arm64 => "arm64",
+            _ => null,
+        };
+
+    /// <summary>把 <see cref="JavaInfo.Architecture"/> 的 "x64" / "arm64" / "unknown" 收敛成对比用词，认不出返回 null。</summary>
+    private static string? NormalizeArchitecture(string? architecture)
+    {
+        if (string.IsNullOrWhiteSpace(architecture))
+        {
+            return null;
+        }
+
+        var text = architecture.Trim().ToLowerInvariant();
+        if (text is "unknown" or "?" or "-")
+        {
+            return null;
+        }
+
+        if (text.Contains("x64") || text.Contains("x86_64") || text.Contains("amd64"))
+        {
+            return "x64";
+        }
+
+        if (text.Contains("arm64") || text.Contains("aarch64"))
+        {
+            return "arm64";
+        }
+
+        return null;
     }
 }

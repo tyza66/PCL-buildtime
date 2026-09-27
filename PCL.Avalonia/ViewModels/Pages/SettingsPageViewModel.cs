@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using System.Runtime.InteropServices;
 using PCL.Avalonia.Services;
 using PCL.Avalonia.Services.Minecraft;
 using System.Collections.ObjectModel;
@@ -146,6 +147,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
             StatusMessage = JavaEntries.Count == 0
                 ? "未检测到 Java，请手动指定路径"
                 : $"检测到 {JavaEntries.Count} 个 Java";
+            WarnIfJavaArchitectureMismatch(SelectedJava);
         }
         finally
         {
@@ -164,6 +166,22 @@ public sealed partial class SettingsPageViewModel : ObservableObject
 
         JavaPath = java.Path;
         StatusMessage = $"已选择 Java {java.Version} ({java.Architecture})";
+        WarnIfJavaArchitectureMismatch(java);
+    }
+
+    /// <summary>
+    /// 当前 Java 架构和本机不一致时把警告接在状态栏后面：架构不符在启动时只表现成
+    /// "卡"或"莫名崩溃"，不在这里说清用户永远想不到是 Java 装错了架构。
+    /// </summary>
+    private void WarnIfJavaArchitectureMismatch(JavaInfo? java)
+    {
+        var warning = JavaHints.DescribeArchitectureMismatch(
+            java?.Architecture,
+            RuntimeInformation.OSArchitecture);
+        if (warning is not null)
+        {
+            StatusMessage += "。" + warning;
+        }
     }
 
     [RelayCommand]

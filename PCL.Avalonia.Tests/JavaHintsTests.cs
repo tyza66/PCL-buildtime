@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using PCL.Avalonia.Services;
 
 namespace PCL.Avalonia.Tests;
@@ -82,5 +83,31 @@ public sealed class JavaHintsTests
         Assert.Null(JavaHints.DescribeMismatch("26.3", null, 8));
         Assert.Null(JavaHints.DescribeMismatch("26.3", 25, null));
         Assert.Null(JavaHints.DescribeMismatch("26.3", 25, 0));
+    }
+
+    [Theory]
+    [InlineData("x64", Architecture.Arm64)]
+    [InlineData("arm64", Architecture.X64)]
+    public void DescribeArchitectureMismatch_WarnsWhenJavaDoesNotMatchSystem(string javaArchitecture, Architecture systemArchitecture)
+    {
+        var warning = JavaHints.DescribeArchitectureMismatch(javaArchitecture, systemArchitecture);
+
+        Assert.NotNull(warning);
+        Assert.Contains(javaArchitecture, warning);
+        Assert.Contains("brew install openjdk", warning);
+        Assert.Contains("可尝试", warning);
+    }
+
+    [Theory]
+    [InlineData("x64", Architecture.X64)]
+    [InlineData("arm64", Architecture.Arm64)]
+    [InlineData("unknown", Architecture.X64)]
+    [InlineData("", Architecture.Arm64)]
+    [InlineData(null, Architecture.X64)]
+    [InlineData("x64", Architecture.Armv6)]
+    public void DescribeArchitectureMismatch_StaysQuietUnlessItIsSure(string? javaArchitecture, Architecture systemArchitecture)
+    {
+        // 一致、Java 架构认不出、本机架构不在较真范围，都不许编一句警告吓唬人。
+        Assert.Null(JavaHints.DescribeArchitectureMismatch(javaArchitecture, systemArchitecture));
     }
 }

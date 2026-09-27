@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using PCL.Avalonia.Services;
 using PCL.Avalonia.ViewModels.Pages;
 
@@ -216,6 +217,42 @@ public sealed class SettingsPageViewModelTests
         viewModel.SelectedSection = viewModel.Sections.Single(section => section.Id == "Link");
 
         Assert.Equal("联机", viewModel.SelectedSection.Title);
+    }
+
+    [Fact]
+    public void RefreshJavaList_WarnsWhenSelectedJavaArchitectureMismatchesSystem()
+    {
+        // 反过来构造成与本机芯片不一致的架构：x64 机器上放 arm64 的 Java，arm64 机器上放 x64 的。
+        var foreign = RuntimeInformation.OSArchitecture == Architecture.Arm64 ? "x64" : "arm64";
+        // JavaPath 要指向这一条，扫描后它才会是 SelectedJava，警告才有落脚点。
+        var settings = new FakeSettingsService
+        {
+            Settings = new AppSettings { JavaPath = "/opt/java/bin/java" },
+        };
+        var viewModel = CreateViewModel(settings, javas:
+            new JavaInfo("/opt/java/bin/java", "21.0.2", foreign, 21, true));
+
+        viewModel.RefreshJavaListCommand.Execute(null);
+
+        Assert.Contains("架构", viewModel.StatusMessage);
+        Assert.Contains(foreign, viewModel.StatusMessage);
+        Assert.Contains("brew install openjdk", viewModel.StatusMessage);
+    }
+
+    [Fact]
+    public void RefreshJavaList_KeepsQuietWhenSelectedJavaArchitectureMatchesSystem()
+    {
+        var native = RuntimeInformation.OSArchitecture == Architecture.Arm64 ? "arm64" : "x64";
+        var settings = new FakeSettingsService
+        {
+            Settings = new AppSettings { JavaPath = "/opt/java/bin/java" },
+        };
+        var viewModel = CreateViewModel(settings, javas:
+            new JavaInfo("/opt/java/bin/java", "21.0.2", native, 21, true));
+
+        viewModel.RefreshJavaListCommand.Execute(null);
+
+        Assert.DoesNotContain("架构", viewModel.StatusMessage);
     }
 
     [Fact]

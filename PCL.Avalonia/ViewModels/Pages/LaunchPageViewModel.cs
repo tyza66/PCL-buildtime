@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using System.Runtime.InteropServices;
 using System.Collections.ObjectModel;
 using PCL.Avalonia.Services;
 using PCL.Avalonia.Services.Accounts;
@@ -587,6 +588,16 @@ public sealed partial class LaunchPageViewModel : ObservableObject, IPageActivat
                 LogLine("启动失败：" + javaMismatch);
                 StatusMessage = "启动失败：" + javaMismatch;
                 return;
+            }
+
+            // 架构不匹配只警告不拦：Rosetta 下也许还能玩，但"莫名卡"和原生库崩溃都从这来，
+            // 日志里先说清，别等游戏崩了让玩家自己悟。
+            var architectureWarning = JavaHints.DescribeArchitectureMismatch(
+                _javaListService.GetJava(java)?.Architecture,
+                RuntimeInformation.OSArchitecture);
+            if (architectureWarning is not null)
+            {
+                LogLine("注意：" + architectureWarning);
             }
 
             LogLine($"使用 Java：{java}");
