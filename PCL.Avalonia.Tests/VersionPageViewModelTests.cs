@@ -203,7 +203,8 @@ public sealed class VersionPageViewModelTests
         FakeGameLauncher? launcher = null,
         FakeScriptExporter? exporter = null,
         FakeJavaListService? javaList = null,
-        FakeSettingsService? settings = null)
+        FakeSettingsService? settings = null,
+        FakeConfirmationService? confirmationService = null)
     {
         var viewModel = new VersionPageViewModel(
             settings ?? new FakeSettingsService(),
@@ -218,7 +219,8 @@ public sealed class VersionPageViewModelTests
             launcher ?? new FakeGameLauncher(),
             exporter ?? new FakeScriptExporter(),
             new InstancePackExporter(),
-            new FakeModsService());
+            new FakeModsService(),
+            confirmationService ?? new FakeConfirmationService());
         return (catalog, session, viewModel);
     }
 
@@ -300,20 +302,48 @@ public sealed class VersionPageViewModelTests
     }
 
     [Fact]
-    public void Delete_RemovesVersionAndSelection()
+    public async Task Delete_RemovesVersionAndSelection()
     {
         var manager = new FakeVersionManager();
+        var confirmation = new FakeConfirmationService();
         var (_, session, viewModel) = CreateViewModel(
             new FakeCatalog { Installed = [Version("1.20.1")] },
             new SessionState(),
-            manager);
+            manager,
+            confirmationService: confirmation);
 
-        viewModel.Versions[0].DeleteCommand.Execute(null);
+        await viewModel.Versions[0].DeleteCommand.ExecuteAsync(null);
 
         Assert.Equal(["1.20.1"], manager.Deleted);
         Assert.Empty(viewModel.Versions);
         Assert.Null(viewModel.SelectedItem);
         Assert.Null(session.SelectedVersion);
+        // 删之前必须弹确认，且文案点名版本和不可恢复的后果。
+        var request = Assert.Single(confirmation.Requests);
+        Assert.Contains("删除版本", request);
+        Assert.Contains("1.20.1", request);
+        Assert.Contains("无法恢复", request);
+    }
+
+    [Fact]
+    public async Task Delete_KeepsVersionWhenConfirmationCancelled()
+    {
+        var manager = new FakeVersionManager();
+        var confirmation = new FakeConfirmationService { Result = false };
+        var (_, session, viewModel) = CreateViewModel(
+            new FakeCatalog { Installed = [Version("1.20.1")] },
+            new SessionState(),
+            manager,
+            confirmationService: confirmation);
+
+        await viewModel.Versions[0].DeleteCommand.ExecuteAsync(null);
+
+        // 取消确认就什么都不该发生：磁盘、列表、选中项都得保持原样。
+        Assert.Empty(manager.Deleted);
+        Assert.Single(viewModel.Versions);
+        Assert.NotNull(viewModel.SelectedItem);
+        Assert.NotNull(session.SelectedVersion);
+        Assert.Contains("已取消删除 1.20.1", viewModel.StatusMessage);
     }
 
     [Fact]

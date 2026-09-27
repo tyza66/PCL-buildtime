@@ -1,0 +1,60 @@
+<Window
+    x:Class="PCL.Avalonia.Views.ConfirmWindow"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="确认"
+    Width="420"
+    SizeToContent="Height"
+    MinHeight="160"
+    CanResize="False"
+    ShowInTaskbar="False"
+    WindowStartupLocation="CenterOwner"
+    Background="{DynamicResource WindowBackgroundBrush}">
+    <Window.Styles>
+        <Style Selector="Button.dialogaction">
+            <Setter Property="MinWidth" Value="88" />
+            <Setter Property="Height" Value="34" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="FontSize" Value="13" />
+        </Style>
+    </Window.Styles>
+    <Grid Margin="26" RowDefinitions="Auto,Auto,Auto">
+        <TextBlock
+            x:Name="titleText"
+            Grid.Row="0"
+            FontSize="15"
+            FontWeight="SemiBold"
+            TextWrapping="Wrap"
+            Foreground="{DynamicResource TextPrimaryBrush}" />
+        <TextBlock
+            x:Name="messageText"
+            Grid.Row="1"
+            Margin="0,10,0,22"
+            FontSize="13"
+            LineHeight="21"
+            TextWrapping="Wrap"
+            Foreground="{DynamicResource TextSecondaryBrush}" />
+        <StackPanel
+            Grid.Row="2"
+            Orientation="Horizontal"
+            Spacing="10"
+            HorizontalAlignment="Right">
+            <Button
+                x:Name="cancelButton"
+                Classes="dialogaction"
+                Content="取消"
+                Background="{DynamicResource ButtonBackgroundBrush}"
+                Foreground="{DynamicResource TextPrimaryBrush}"
+                Click="OnCancelClick" />
+            <Button
+                x:Name="confirmButton"
+                Classes="dialogaction"
+                Content="确定"
+                Background="{DynamicResource DangerBrush}"
+                Foreground="{DynamicResource TextOnAccentBrush}"
+                Click="OnConfirmClick" />
+        </StackPanel>
+    </Grid>
+</Window>

@@ -30,6 +30,7 @@ public sealed partial class VersionPageViewModel : ObservableObject
     private readonly ILaunchScriptExporter _scriptExporter;
     private readonly IInstancePackExporter _packExporter;
     private readonly IModsService _modsService;
+    private readonly IConfirmationService _confirmationService;
     private readonly List<VersionItemViewModel> _allVersions = [];
     private string _currentFolder = "";
     private bool _isLoadingDetails;
@@ -47,7 +48,8 @@ public sealed partial class VersionPageViewModel : ObservableObject
         IGameLauncher launcher,
         ILaunchScriptExporter scriptExporter,
         IInstancePackExporter packExporter,
-        IModsService modsService)
+        IModsService modsService,
+        IConfirmationService confirmationService)
     {
         _settingsService = settingsService;
         _catalog = catalog;
@@ -62,6 +64,7 @@ public sealed partial class VersionPageViewModel : ObservableObject
         _scriptExporter = scriptExporter;
         _packExporter = packExporter;
         _modsService = modsService;
+        _confirmationService = confirmationService;
         _session.VersionInstalled += OnVersionInstalled;
         Groups.Add(new InstanceGroupViewModel(InstanceGroup.Star, "收藏"));
         Groups.Add(new InstanceGroupViewModel(InstanceGroup.Api, "API"));
@@ -265,7 +268,7 @@ public sealed partial class VersionPageViewModel : ObservableObject
                     _versionManager.LoadSettings(CurrentFolder, version.Id),
                     ToggleFavorite,
                     ToggleHidden,
-                    Delete,
+                    DeleteAsync,
                     OpenVersionItemFolder,
                     SelectVersionItem);
                 item.ApplyJavaHint(JavaHints.ForRequirement(ResolveInstanceJavaMajor(version.Id), javaBest));
@@ -623,8 +626,17 @@ public sealed partial class VersionPageViewModel : ObservableObject
         }
     }
 
-    private void Delete(VersionItemViewModel item)
+    private async Task DeleteAsync(VersionItemViewModel item)
     {
+        var confirmed = await _confirmationService.ConfirmAsync(
+            VersionDeleteConfirmation.Title,
+            VersionDeleteConfirmation.Describe(item.Id));
+        if (!confirmed)
+        {
+            StatusMessage = $"已取消删除 {item.Id}";
+            return;
+        }
+
         try
         {
             _versionManager.Delete(CurrentFolder, item.Id);
@@ -1040,7 +1052,7 @@ public sealed partial class VersionItemViewModel : ObservableObject
 {
     private readonly Action<VersionItemViewModel> _toggleFavorite;
     private readonly Action<VersionItemViewModel> _toggleHidden;
-    private readonly Action<VersionItemViewModel> _delete;
+    private readonly Func<VersionItemViewModel, Task> _delete;
     private readonly Action<VersionItemViewModel> _openFolder;
     private readonly Action<VersionItemViewModel> _select;
 
@@ -1049,7 +1061,7 @@ public sealed partial class VersionItemViewModel : ObservableObject
         VersionSettings settings,
         Action<VersionItemViewModel> toggleFavorite,
         Action<VersionItemViewModel> toggleHidden,
-        Action<VersionItemViewModel> delete,
+        Func<VersionItemViewModel, Task> delete,
         Action<VersionItemViewModel> openFolder,
         Action<VersionItemViewModel> select)
     {
@@ -1128,7 +1140,7 @@ public sealed partial class VersionItemViewModel : ObservableObject
     private void Hidden() => _toggleHidden(this);
 
     [RelayCommand]
-    private void Delete() => _delete(this);
+    private async Task Delete() => await _delete(this);
 
     [RelayCommand]
     private void OpenFolder() => _openFolder(this);

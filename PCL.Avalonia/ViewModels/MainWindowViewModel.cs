@@ -51,7 +51,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
        IOtherToolsService otherToolsService,
         ILinkService linkService,
         IJavaListService javaListService,
-        IStartupDiagnosticsService startupDiagnostics)
+        IStartupDiagnosticsService startupDiagnostics,
+        IConfirmationService confirmationService)
     {
         _settingsService = settingsService;
         _themeService = themeService;
@@ -74,7 +75,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 versionCatalogService,
                 platformService,
                 folderOpener,
-                javaListService)),
+                javaListService,
+                confirmationService)),
             new NavItemViewModel("账号", new AccountsPageViewModel(accountService, microsoftAuthentication, session)),
             new NavItemViewModel("下载", new DownloadPageViewModel(
                 settingsService,
@@ -109,7 +111,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 gameLauncher,
                 scriptExporter,
                 instancePackExporter,
-                modsService)),
+                modsService,
+                confirmationService)),
             new NavItemViewModel("Mod管理", new ModsPageViewModel(settingsService, modsService, platformService, session, versionManager)),
             new NavItemViewModel("联机", new LinkPageViewModel(linkService, settingsService, dispatcher), false, "联机暂不可用：依赖的公共节点服务已下线"),
             new NavItemViewModel("设置", new SettingsPageViewModel(settingsService, platformService, _themeService, javaListService, dispatcher)),

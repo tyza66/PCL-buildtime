@@ -323,7 +323,8 @@ public sealed class LaunchPageViewModelTests
             versionCatalog ?? new FakeVersionCatalog(),
             new FakePlatform(),
             folderOpener ?? new FakeFolderOpener(),
-            javaList ?? new FakeJavaListService(new JavaInfo("/games/java", "17.0.9", "x64", 17, true)));
+            javaList ?? new FakeJavaListService(new JavaInfo("/games/java", "17.0.9", "x64", 17, true)),
+            new FakeConfirmationService());
 
     /// <summary>启动页构造时会异步扫一遍已安装版本，测试里等到列表刷出来再断言。</summary>
     private static async Task WaitForInstalledVersions(LaunchPageViewModel viewModel, int expected)
@@ -625,7 +626,8 @@ public sealed class LaunchPageViewModelTests
             new FakeVersionCatalog(),
             new FakePlatform(),
             new FakeFolderOpener(),
-            new FakeJavaListService());
+            new FakeJavaListService(),
+            new FakeConfirmationService());
 
     [Fact]
     public void GameFolderRow_ShowsShortPathAndListsEveryFolderInTip()

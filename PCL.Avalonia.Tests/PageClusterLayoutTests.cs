@@ -478,7 +478,7 @@ public sealed class PageClusterLayoutTests
             DataContext = CreateLaunchPageViewModel(
                 "/jdk25/bin/java",
                 catalog: null,
-                new JavaInfo("/jdk25/bin/java", "25.0.1", "aarch64", 25, true))
+                java: new JavaInfo("/jdk25/bin/java", "25.0.1", "aarch64", 25, true))
         };
         var window = Show(view);
 
@@ -546,6 +546,56 @@ public sealed class PageClusterLayoutTests
         viewModel.InstalledVersions[0].IsFavorite = true;
         Dispatcher.UIThread.RunJobs();
         Assert.Equal("取消收藏", favoriteMenu.Header?.ToString());
+    }
+
+    [AvaloniaFact]
+    public async Task DeleteVersionMenuDeletesAfterConfirmation()
+    {
+        var confirmation = new FakeConfirmationService();
+        var viewModel = CreateLaunchPageViewModel(
+            javaPath: null,
+            catalog: new StubVersionCatalogService(FakeVersion("1.20.1")),
+            confirmationService: confirmation);
+        var window = Show(new LaunchPageView { DataContext = viewModel });
+        await WaitForInstalledVersion(viewModel);
+
+        await viewModel.InstalledVersions[0].DeleteCommand.ExecuteAsync(null);
+
+        Assert.Empty(viewModel.InstalledVersions);
+        Assert.Contains("已删除 1.20.1", viewModel.VersionStatus);
+        // 弹过一次确认，标题、版本号和不可恢复的后果都得说清。
+        var request = Assert.Single(confirmation.Requests);
+        Assert.Contains("删除版本", request);
+        Assert.Contains("1.20.1", request);
+        Assert.Contains("无法恢复", request);
+    }
+
+    [AvaloniaFact]
+    public async Task DeleteVersionMenuKeepsVersionWhenConfirmationCancelled()
+    {
+        var confirmation = new FakeConfirmationService { Result = false };
+        var viewModel = CreateLaunchPageViewModel(
+            javaPath: null,
+            catalog: new StubVersionCatalogService(FakeVersion("1.20.1")),
+            confirmationService: confirmation);
+        var window = Show(new LaunchPageView { DataContext = viewModel });
+        await WaitForInstalledVersion(viewModel);
+
+        await viewModel.InstalledVersions[0].DeleteCommand.ExecuteAsync(null);
+
+        // 右键菜单点完就关，取消确认后列表和选中都必须原样，不能再补一刀。
+        Assert.Single(viewModel.InstalledVersions);
+        Assert.NotNull(viewModel.SelectedInstalledVersion);
+        Assert.Contains("已取消删除 1.20.1", viewModel.VersionStatus);
+    }
+
+    private static async Task WaitForInstalledVersion(LaunchPageViewModel viewModel)
+    {
+        for (var i = 0; i < 200 && viewModel.InstalledVersions.Count == 0; i++)
+        {
+            Dispatcher.UIThread.RunJobs();
+            await Task.Delay(10);
+        }
     }
 
     private static double Top(Visual visual, Visual reference)
@@ -636,7 +686,8 @@ public sealed class PageClusterLayoutTests
         new StubGameLauncher(),
         new StubScriptExporter(),
         new InstancePackExporter(),
-        new StubModsService());
+        new StubModsService(),
+        new FakeConfirmationService());
 
     private static MinecraftVersion FakeVersion(string id) => new()
     {
@@ -649,6 +700,7 @@ public sealed class PageClusterLayoutTests
     private static LaunchPageViewModel CreateLaunchPageViewModel(
         string? javaPath,
         IVersionCatalogService? catalog = null,
+        FakeConfirmationService? confirmationService = null,
         params JavaInfo[] java) => new(
         new StubSettingsService(javaPath),
         // 没装 Java 时解析结果也要是空，设置页的路径和扫描列表两条路都堵上。
@@ -662,7 +714,8 @@ public sealed class PageClusterLayoutTests
         catalog ?? new StubVersionCatalogService(),
         new StubPlatformService(),
         new StubFolderOpener(),
-        new StubJavaListService(java));
+        new StubJavaListService(java),
+        confirmationService ?? new FakeConfirmationService());
 
     private sealed class StubSettingsService : ISettingsService
     {

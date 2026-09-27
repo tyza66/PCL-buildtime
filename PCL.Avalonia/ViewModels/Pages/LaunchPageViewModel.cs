@@ -22,6 +22,7 @@ public sealed partial class LaunchPageViewModel : ObservableObject, IPageActivat
     private readonly IPlatformService _platform;
     private readonly IFolderOpener _folderOpener;
     private readonly IJavaListService _javaListService;
+    private readonly IConfirmationService _confirmationService;
     // 同一次启动里同一类错误只提示一次，否则 JVM 复读机能把建议刷满屏。
     private readonly HashSet<string> _firedLogDiagnostics = new(StringComparer.Ordinal);
     private IGameLaunch? _activeLaunch;
@@ -38,7 +39,8 @@ public sealed partial class LaunchPageViewModel : ObservableObject, IPageActivat
         IVersionCatalogService versionCatalog,
         IPlatformService platformService,
         IFolderOpener folderOpener,
-        IJavaListService javaListService)
+        IJavaListService javaListService,
+        IConfirmationService confirmationService)
     {
         _settingsService = settingsService;
         _javaService = javaService;
@@ -52,6 +54,7 @@ public sealed partial class LaunchPageViewModel : ObservableObject, IPageActivat
         _platform = platformService;
         _folderOpener = folderOpener;
         _javaListService = javaListService;
+        _confirmationService = confirmationService;
         _session.VersionInstalled += OnVersionInstalled;
         _session.PropertyChanged += OnSessionPropertyChanged;
         SelectedVersion = _session.SelectedVersion;
@@ -191,7 +194,7 @@ public sealed partial class LaunchPageViewModel : ObservableObject, IPageActivat
                             ToggleLaunchItemFavorite,
                             SelectLaunchItem,
                             OpenLaunchItemFolder,
-                            DeleteLaunchItem);
+                            DeleteLaunchItemAsync);
                         item.ApplyJavaHint(JavaHints.ForRequirement(
                             ResolveRequiredJavaMajor(folder, version), javaBest));
                         versions.Add(item);
@@ -298,11 +301,20 @@ public sealed partial class LaunchPageViewModel : ObservableObject, IPageActivat
     }
 
     /// <summary>
-    /// 右键菜单「删除版本」：删掉后如果删的就是当前启动目标，自动落到列表第一项，
+    /// 右键菜单「删除版本」：先弹确认框，删掉后如果删的就是当前启动目标，自动落到列表第一项，
     /// 免得启动按钮还指着已经没了的版本。
     /// </summary>
-    private void DeleteLaunchItem(LaunchVersionItemViewModel item)
+    private async Task DeleteLaunchItemAsync(LaunchVersionItemViewModel item)
     {
+        var confirmed = await _confirmationService.ConfirmAsync(
+            VersionDeleteConfirmation.Title,
+            VersionDeleteConfirmation.Describe(item.Id));
+        if (!confirmed)
+        {
+            VersionStatus = $"已取消删除 {item.Id}";
+            return;
+        }
+
         try
         {
             _versionManager.Delete(item.SourceFolder, item.Id);
@@ -707,7 +719,7 @@ public sealed partial class LaunchVersionItemViewModel : ObservableObject
         Action<LaunchVersionItemViewModel>? toggleFavorite = null,
         Action<LaunchVersionItemViewModel>? select = null,
         Action<LaunchVersionItemViewModel>? openFolder = null,
-        Action<LaunchVersionItemViewModel>? delete = null)
+        Func<LaunchVersionItemViewModel, Task>? delete = null)
     {
         Version = version;
         SourceFolder = sourceFolder;
@@ -772,7 +784,7 @@ public sealed partial class LaunchVersionItemViewModel : ObservableObject
     private readonly Action<LaunchVersionItemViewModel>? _toggleFavorite;
     private readonly Action<LaunchVersionItemViewModel>? _select;
     private readonly Action<LaunchVersionItemViewModel>? _openFolder;
-    private readonly Action<LaunchVersionItemViewModel>? _delete;
+    private readonly Func<LaunchVersionItemViewModel, Task>? _delete;
 
     [RelayCommand]
     private void Favorite() => _toggleFavorite?.Invoke(this);
@@ -784,7 +796,7 @@ public sealed partial class LaunchVersionItemViewModel : ObservableObject
     private void OpenFolder() => _openFolder?.Invoke(this);
 
     [RelayCommand]
-    private void Delete() => _delete?.Invoke(this);
+    private async Task Delete() => await (_delete?.Invoke(this) ?? Task.CompletedTask);
 
     private static string ResolveTypeText(MinecraftVersion version)
     {

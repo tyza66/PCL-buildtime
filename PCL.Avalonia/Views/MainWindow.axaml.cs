@@ -86,6 +86,7 @@ public partial class MainWindow : Window
             new OtherToolsService(),
             linkService,
             javaListService,
-            startupDiagnostics);
+            startupDiagnostics,
+            new AvaloniaConfirmationService());
     }
 }

@@ -513,7 +513,8 @@ public sealed class MainWindowViewModelTests
             new FakeOtherToolsService(),
             new FakeLinkService(),
             new FakeJavaListService(),
-            new StartupDiagnosticsService());
+            new StartupDiagnosticsService(),
+            new FakeConfirmationService());
         return (settings, theme, viewModel);
     }
 
@@ -640,7 +641,8 @@ public sealed class MainWindowViewModelTests
             new FakeOtherToolsService(),
             new FakeLinkService(),
             new FakeJavaListService(),
-            new StartupDiagnosticsService());
+            new StartupDiagnosticsService(),
+            new FakeConfirmationService());
 
         viewModel.ToggleThemeCommand.Execute(null);
 
