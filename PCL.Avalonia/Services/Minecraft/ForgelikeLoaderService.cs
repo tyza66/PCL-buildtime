@@ -234,7 +234,11 @@ public sealed class ForgelikeLoaderService : IForgelikeLoaderService
         var profile = JsonSerializer.Deserialize<MinecraftVersionJson>(mergedJson, JsonOptions)
             ?? throw new InvalidOperationException("安装器版本数据解析结果为空");
         var libraries = profile.Libraries ?? [];
-        progress?.Report(new ForgelikeInstallProgress(ForgelikeInstallStage.Libraries, null, 0, libraries.Count));
+        if (libraries.Count > 0)
+        {
+            progress?.Report(new ForgelikeInstallProgress(ForgelikeInstallStage.Libraries, null, 0, libraries.Count));
+        }
+
         for (var index = 0; index < libraries.Count; index++)
         {
             cancellationToken.ThrowIfCancellationRequested();

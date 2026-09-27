@@ -46,6 +46,8 @@ public sealed class DownloadPageViewModelTests
 
         public TaskCompletionSource? Gate { get; set; }
 
+        public List<InstallProgress> Reports { get; } = [];
+
         public async Task<VersionInstallResult> InstallAsync(
             string versionId,
             VersionManifestEntry? entry,
@@ -55,6 +57,11 @@ public sealed class DownloadPageViewModelTests
             CancellationToken cancellationToken = default)
         {
             Calls.Add((versionId, source, minecraftFolder));
+            foreach (var report in Reports)
+            {
+                progress?.Report(report);
+            }
+
             if (Gate is not null)
             {
                 await Gate.Task.WaitAsync(cancellationToken);
@@ -308,6 +315,37 @@ public sealed class DownloadPageViewModelTests
         Assert.Equal("安装已取消", viewModel.StatusMessage);
         Assert.False(viewModel.IsInstalling);
         Assert.False(item.IsInstalled);
+    }
+
+    [Fact]
+    public async Task InstallAsync_ZeroTotalProgress_NeverFlashesZeroSlashZero()
+    {
+        var installer = new FakeInstaller
+        {
+            Result = new VersionInstallResult("1.20.1", []),
+        };
+        installer.Reports.Add(new InstallProgress(InstallStage.Assets, null, 0, 0, 0, null));
+        installer.Reports.Add(new InstallProgress(InstallStage.Libraries, "core-1.0.jar", 0, 0, 0, null));
+        var viewModel = CreateViewModel(new FakeSettingsService(), new FakeManifestService(), installer, new FakeCatalog());
+        var item = new DownloadVersionItemViewModel(new VersionManifestEntry { Id = "1.20.1" }, isInstalled: false);
+        viewModel.Versions.Add(item);
+        viewModel.SelectedVersion = item;
+
+        await viewModel.InstallCommand.ExecuteAsync(null);
+        var text = await WaitForProgressTextAsync(() => viewModel.ProgressText);
+
+        Assert.DoesNotContain("0/0", text);
+        Assert.Contains("正在下载", text);
+    }
+
+    private static async Task<string> WaitForProgressTextAsync(Func<string> read)
+    {
+        for (var attempt = 0; attempt < 100 && !read().Contains("正在下载"); attempt++)
+        {
+            await Task.Delay(20);
+        }
+
+        return read();
     }
 
     [Fact]

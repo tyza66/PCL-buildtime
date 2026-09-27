@@ -36,6 +36,8 @@ public sealed class ForgelikeLoaderPageViewModelTests
 
         public ForgelikeLoaderVersion? LastInstalledVersion { get; private set; }
 
+        public List<ForgelikeInstallProgress> ReportedProgress { get; } = [];
+
         public Task<IReadOnlyList<ForgelikeLoaderVersion>> GetForgeVersionsAsync(
             string gameVersion,
             CancellationToken cancellationToken = default)
@@ -56,6 +58,11 @@ public sealed class ForgelikeLoaderPageViewModelTests
             CancellationToken cancellationToken = default)
         {
             LastInstalledVersion = version;
+            foreach (var report in ReportedProgress)
+            {
+                progress?.Report(report);
+            }
+
             return Task.FromResult(Result);
         }
     }
@@ -160,6 +167,40 @@ public sealed class ForgelikeLoaderPageViewModelTests
         Assert.Equal("/games/mc", settings.Settings.MinecraftFolder);
         Assert.Equal("已安装 neoforge-21.1.120", viewModel.StatusMessage);
         Assert.Equal("neoforge-21.1.120", installedVersionId);
+    }
+
+    [Fact]
+    public async Task InstallAsync_ZeroTotalLibraries_NeverFlashesZeroSlashZero()
+    {
+        var (_, service, _, viewModel) = CreateViewModel(neoForgeMode: true);
+        service.ReportedProgress.Add(new ForgelikeInstallProgress(ForgelikeInstallStage.Libraries, null, 0, 0));
+        service.NeoForgeVersions =
+        [
+            new ForgelikeLoaderVersion(
+                ForgelikeKind.NeoForge,
+                "21.1.120",
+                "1.21.1",
+                false,
+                new Version(21, 1, 120)),
+        ];
+        await viewModel.RefreshCommand.ExecuteAsync(null);
+        viewModel.SelectedLoader = viewModel.Versions[0];
+
+        await viewModel.InstallCommand.ExecuteAsync(null);
+        var text = await WaitForProgressTextAsync(() => viewModel.ProgressText);
+
+        Assert.DoesNotContain("0/0", text);
+        Assert.Equal("正在下载支持库...", text);
+    }
+
+    private static async Task<string> WaitForProgressTextAsync(Func<string> read)
+    {
+        for (var attempt = 0; attempt < 100 && !read().Contains("正在下载"); attempt++)
+        {
+            await Task.Delay(20);
+        }
+
+        return read();
     }
 
     [Fact]

@@ -333,9 +333,9 @@ public sealed partial class DownloadPageViewModel : ObservableObject, IPageActiv
         {
             InstallStage.VersionJson => $"正在下载版本 JSON：{value.ItemName}",
             InstallStage.VersionJar => $"正在下载客户端：{value.ItemName}",
-            InstallStage.Libraries => $"正在下载支持库 {value.CompletedItems}/{value.TotalItems}：{value.ItemName}",
+            InstallStage.Libraries => CountedProgressText.Format("正在下载支持库", value.CompletedItems, value.TotalItems, value.ItemName),
             InstallStage.AssetsIndex => $"正在下载资源索引：{value.ItemName}",
-            InstallStage.Assets => $"正在下载资源 {value.CompletedItems}/{value.TotalItems}：{value.ItemName}",
+            InstallStage.Assets => CountedProgressText.Format("正在下载资源", value.CompletedItems, value.TotalItems, value.ItemName),
             InstallStage.Complete => $"已完成 {value.ItemName}",
             _ => "处理中",
         };

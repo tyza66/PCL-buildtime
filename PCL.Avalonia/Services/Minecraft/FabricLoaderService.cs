@@ -130,7 +130,11 @@ public sealed class FabricLoaderService : IFabricLoaderService
         File.WriteAllText(versionJsonPath, profileJson);
 
         var libraries = profile.Libraries ?? [];
-        progress?.Report(new FabricInstallProgress(FabricInstallStage.Libraries, null, 0, libraries.Count));
+        if (libraries.Count > 0)
+        {
+            progress?.Report(new FabricInstallProgress(FabricInstallStage.Libraries, null, 0, libraries.Count));
+        }
+
         for (var index = 0; index < libraries.Count; index++)
         {
             cancellationToken.ThrowIfCancellationRequested();

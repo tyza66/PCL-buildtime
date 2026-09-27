@@ -33,6 +33,8 @@ public sealed class FabricLoaderPageViewModelTests
 
         public string? LastLoaderVersion { get; private set; }
 
+        public List<FabricInstallProgress> ReportedProgress { get; } = [];
+
         public Task<IReadOnlyList<FabricLoaderVersion>> GetVersionsAsync(
             string gameVersion,
             CancellationToken cancellationToken = default)
@@ -51,6 +53,11 @@ public sealed class FabricLoaderPageViewModelTests
         {
             LastGameVersion = gameVersion;
             LastLoaderVersion = loaderVersion;
+            foreach (var report in ReportedProgress)
+            {
+                progress?.Report(report);
+            }
+
             return Task.FromResult(Result);
         }
     }
@@ -108,6 +115,33 @@ public sealed class FabricLoaderPageViewModelTests
         Assert.Equal("/games/mc", settings.Settings.MinecraftFolder);
         Assert.Equal("已安装 fabric-loader-0.16.9-1.20.1", viewModel.StatusMessage);
         Assert.Equal("fabric-loader-0.16.9-1.20.1", installedVersionId);
+    }
+
+    [Fact]
+    public async Task InstallAsync_ZeroTotalLibraries_NeverFlashesZeroSlashZero()
+    {
+        var (_, service, _, viewModel) = CreateViewModel();
+        service.Versions = [new FabricLoaderVersion("0.16.9", "1.20.1", true, 17)];
+        service.ReportedProgress.Add(new FabricInstallProgress(FabricInstallStage.Libraries, null, 0, 0));
+        viewModel.GameVersionText = "1.20.1";
+        await viewModel.RefreshCommand.ExecuteAsync(null);
+        viewModel.SelectedLoader = viewModel.Versions[0];
+
+        await viewModel.InstallCommand.ExecuteAsync(null);
+        var text = await WaitForProgressTextAsync(() => viewModel.ProgressText);
+
+        Assert.DoesNotContain("0/0", text);
+        Assert.Equal("正在下载支持库...", text);
+    }
+
+    private static async Task<string> WaitForProgressTextAsync(Func<string> read)
+    {
+        for (var attempt = 0; attempt < 100 && !read().Contains("正在下载"); attempt++)
+        {
+            await Task.Delay(20);
+        }
+
+        return read();
     }
 
     [Fact]

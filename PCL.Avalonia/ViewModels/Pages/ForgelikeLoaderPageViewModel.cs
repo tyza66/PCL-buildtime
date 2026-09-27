@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PCL.Avalonia.Services;
+using PCL.Avalonia.Services.Downloads;
 using PCL.Avalonia.Services.Minecraft;
 
 namespace PCL.Avalonia.ViewModels.Pages;
@@ -203,7 +204,7 @@ public sealed partial class ForgelikeLoaderPageViewModel : ObservableObject
         {
             ForgelikeInstallStage.BaseVersion => $"正在安装原版版本：{value.ItemName}",
             ForgelikeInstallStage.Installer => $"正在下载安装器：{value.ItemName}",
-            ForgelikeInstallStage.Libraries => $"正在下载支持库 {value.CompletedItems}/{value.TotalItems}：{value.ItemName}",
+            ForgelikeInstallStage.Libraries => CountedProgressText.Format("正在下载支持库", value.CompletedItems, value.TotalItems, value.ItemName),
             ForgelikeInstallStage.Injector => $"正在运行安装器：{value.ItemName}",
             ForgelikeInstallStage.Complete => $"已完成 {value.ItemName}",
             _ => "处理中",

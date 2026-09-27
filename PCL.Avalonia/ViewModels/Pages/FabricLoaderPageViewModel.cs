@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PCL.Avalonia.Services;
+using PCL.Avalonia.Services.Downloads;
 using PCL.Avalonia.Services.Minecraft;
 
 namespace PCL.Avalonia.ViewModels.Pages;
@@ -170,7 +171,7 @@ public sealed partial class FabricLoaderPageViewModel : ObservableObject
         {
             FabricInstallStage.BaseVersion => $"正在安装原版版本：{value.ItemName}",
             FabricInstallStage.ProfileJson => $"正在下载 Fabric 版本资料：{value.ItemName}",
-            FabricInstallStage.Libraries => $"正在下载支持库 {value.CompletedItems}/{value.TotalItems}：{value.ItemName}",
+            FabricInstallStage.Libraries => CountedProgressText.Format("正在下载支持库", value.CompletedItems, value.TotalItems, value.ItemName),
             FabricInstallStage.Complete => $"已完成 {value.ItemName}",
             _ => "处理中",
         };
