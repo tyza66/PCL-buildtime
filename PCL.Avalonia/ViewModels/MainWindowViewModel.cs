@@ -86,7 +86,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 versionJavaInfo,
                 javaListService)),
             new NavItemViewModel("Fabric", new FabricLoaderPageViewModel(settingsService, fabricLoaderService, platformService, javaListService, session)),
-            new NavItemViewModel("Forge", new ForgelikeLoaderPageViewModel(settingsService, forgelikeLoaderService, platformService, session)),
+            new NavItemViewModel("Forge", new ForgelikeLoaderPageViewModel(settingsService, forgelikeLoaderService, platformService, javaListService, session)),
             new NavItemViewModel("Mod下载", new ModsDownloadPageViewModel(settingsService, modrinthApi, modsDownloadService, platformService, session, versionManager, curseForgeApi, curseForgeDownloadService)),
             new NavItemViewModel("资源下载", new ResourceDownloadPageViewModel(
                 settingsService,

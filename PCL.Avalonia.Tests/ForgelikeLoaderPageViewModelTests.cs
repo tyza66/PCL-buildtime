@@ -67,8 +67,27 @@ public sealed class ForgelikeLoaderPageViewModelTests
         }
     }
 
+    private sealed class FakeJavaListService : IJavaListService
+    {
+        private readonly List<JavaInfo> _infos;
+
+        public FakeJavaListService(params JavaInfo[] infos)
+        {
+            _infos = infos.ToList();
+        }
+
+        public IReadOnlyList<JavaInfo> Scan() => _infos;
+
+        public JavaInfo? GetJava(string path)
+            => _infos.FirstOrDefault(j => j.Path.Equals(path, StringComparison.OrdinalIgnoreCase));
+
+        public void Refresh()
+        {
+        }
+    }
+
     private static (FakeSettingsService Settings, FakeForgelikeLoaderService Service, SessionState Session, ForgelikeLoaderPageViewModel ViewModel)
-        CreateViewModel(bool neoForgeMode = false)
+        CreateViewModel(bool neoForgeMode = false, params JavaInfo[] javas)
     {
         var settings = new FakeSettingsService
         {
@@ -76,7 +95,12 @@ public sealed class ForgelikeLoaderPageViewModelTests
         };
         var service = new FakeForgelikeLoaderService();
         var session = new SessionState();
-        var viewModel = new ForgelikeLoaderPageViewModel(settings, service, new FakePlatformService(), session);
+        var viewModel = new ForgelikeLoaderPageViewModel(
+            settings,
+            service,
+            new FakePlatformService(),
+            new FakeJavaListService(javas),
+            session);
         viewModel.IsNeoForgeMode = neoForgeMode;
         return (settings, service, session, viewModel);
     }
@@ -234,16 +258,19 @@ public sealed class ForgelikeLoaderPageViewModelTests
     [Fact]
     public void JavaHintText_FollowsGameVersion()
     {
+        // 本机一个 Java 都没装：每个版本要求的 Java 号都要说清楚，并提示先去装。
         var (_, _, _, viewModel) = CreateViewModel();
 
         viewModel.GameVersionText = "1.20.1";
-        Assert.Equal("1.20.1 需要 Java 17", viewModel.JavaHintText);
+        Assert.Contains("需要 Java 17", viewModel.JavaHintText);
+        Assert.Contains("没有检测到", viewModel.JavaHintText);
+        Assert.True(viewModel.JavaHintIsWarning);
 
         viewModel.GameVersionText = "1.21.4";
-        Assert.Equal("1.21.4 需要 Java 21", viewModel.JavaHintText);
+        Assert.Contains("需要 Java 21", viewModel.JavaHintText);
 
         viewModel.GameVersionText = "1.16.5";
-        Assert.Equal("1.16.5 需要 Java 8", viewModel.JavaHintText);
+        Assert.Contains("需要 Java 8", viewModel.JavaHintText);
     }
 
     [Fact]
@@ -255,5 +282,41 @@ public sealed class ForgelikeLoaderPageViewModelTests
 
         viewModel.GameVersionText = "23w13a";
         Assert.Equal("", viewModel.JavaHintText);
+    }
+
+    [Fact]
+    public void JavaHint_BestJavaBelowRequirement_WarnsWithDetectedVersion()
+    {
+        var (_, _, _, viewModel) = CreateViewModel(
+            javas: new JavaInfo("/jdk8/bin/java", "1.8.0_392", "x64", 8, true));
+        viewModel.GameVersionText = "1.20.1";
+
+        Assert.Contains("当前最高只检测到 Java 8", viewModel.JavaHintText);
+        Assert.True(viewModel.JavaHintIsWarning);
+    }
+
+    [Fact]
+    public void JavaHint_BestJavaMeetsRequirement_ReportsSatisfied()
+    {
+        var (_, _, _, viewModel) = CreateViewModel(
+            javas:
+            [
+                new JavaInfo("/jdk8/bin/java", "1.8.0_392", "x64", 8, true),
+                new JavaInfo("/jdk21/bin/java", "21.0.1", "aarch64", 21, true),
+            ]);
+        viewModel.GameVersionText = "1.20.1";
+
+        Assert.Contains("Java 21 满足要求", viewModel.JavaHintText);
+        Assert.False(viewModel.JavaHintIsWarning);
+    }
+
+    [Fact]
+    public void JavaHint_NeoForgeMode_NamesNeoForgeInWarning()
+    {
+        var (_, _, _, viewModel) = CreateViewModel(neoForgeMode: true);
+        viewModel.GameVersionText = "1.20.1";
+
+        Assert.Contains("NeoForge 需要 Java 17", viewModel.JavaHintText);
+        Assert.True(viewModel.JavaHintIsWarning);
     }
 }

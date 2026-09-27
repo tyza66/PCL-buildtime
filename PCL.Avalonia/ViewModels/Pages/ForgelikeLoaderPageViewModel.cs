@@ -12,6 +12,7 @@ public sealed partial class ForgelikeLoaderPageViewModel : ObservableObject
     private readonly ISettingsService _settingsService;
     private readonly IForgelikeLoaderService _loaderService;
     private readonly IPlatformService _platform;
+    private readonly IJavaListService _javaList;
     private readonly SessionState _session;
     private CancellationTokenSource? _cancellationTokenSource;
 
@@ -19,12 +20,15 @@ public sealed partial class ForgelikeLoaderPageViewModel : ObservableObject
         ISettingsService settingsService,
         IForgelikeLoaderService loaderService,
         IPlatformService platform,
+        IJavaListService javaListService,
         SessionState session)
     {
         _settingsService = settingsService;
         _loaderService = loaderService;
         _platform = platform;
+        _javaList = javaListService;
         _session = session;
+        _bestJavaMajor = JavaHints.BestMajor(_javaList.Scan());
     }
 
     public ObservableCollection<ForgelikeLoaderVersionItemViewModel> Versions { get; } = [];
@@ -67,11 +71,54 @@ public sealed partial class ForgelikeLoaderPageViewModel : ObservableObject
     /// Forge / NeoForge 的版本接口没带 Java 要求这个信息，按 Mojang 官方的
     /// 「游戏版本 → Java 大版本」对应关系补一句提示；版本填得不对就返回空串隐藏提示。
     /// </summary>
-    public string JavaHintText => MinecraftJavaRequirement.GetRequiredMajor(GameVersionText) is { } required
-        ? $"{GameVersionText.Trim()} 需要 Java {required}"
-        : "";
+    public string JavaHintText
+    {
+        get
+        {
+            if (RequiredJavaMajor() is not { } required)
+            {
+                return "";
+            }
 
-    partial void OnGameVersionTextChanged(string value) => OnPropertyChanged(nameof(JavaHintText));
+            if (_bestJavaMajor is null)
+            {
+                return $"{ModeTitle} 需要 Java {required}，但本机没有检测到 Java。"
+                    + $"请先安装 Java {required}，再到设置页指定路径，否则装完也启动不了";
+            }
+
+            return _bestJavaMajor < required
+                ? $"{ModeTitle} 需要 Java {required}，当前最高只检测到 Java {_bestJavaMajor}。"
+                  + $"请先安装 Java {required} 再下载，否则装完也启动不了"
+                : $"{ModeTitle} 需要 Java {required}，当前 Java {_bestJavaMajor} 满足要求";
+        }
+    }
+
+    /// <summary>Java 缺失或版本不够时提示行转红，和 Fabric、整合包、下载页的警告样式一致。</summary>
+    public bool JavaHintIsWarning
+    {
+        get
+        {
+            if (RequiredJavaMajor() is not { } required)
+            {
+                return false;
+            }
+
+            return _bestJavaMajor is null || _bestJavaMajor < required;
+        }
+    }
+
+    private int? RequiredJavaMajor() => MinecraftJavaRequirement.GetRequiredMajor(GameVersionText);
+
+    private void RefreshJavaHint()
+    {
+        _bestJavaMajor = JavaHints.BestMajor(_javaList.Scan());
+        OnPropertyChanged(nameof(JavaHintText));
+        OnPropertyChanged(nameof(JavaHintIsWarning));
+    }
+
+    private int? _bestJavaMajor;
+
+    partial void OnGameVersionTextChanged(string value) => RefreshJavaHint();
 
     public bool IsForgeMode => !IsNeoForgeMode;
 
@@ -85,6 +132,8 @@ public sealed partial class ForgelikeLoaderPageViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(IsForgeMode));
         OnPropertyChanged(nameof(ModeTitle));
+        OnPropertyChanged(nameof(JavaHintText));
+        OnPropertyChanged(nameof(JavaHintIsWarning));
         Versions.Clear();
         SelectedLoader = null;
         StatusMessage = "";
