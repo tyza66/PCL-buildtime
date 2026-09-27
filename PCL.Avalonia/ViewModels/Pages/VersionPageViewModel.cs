@@ -255,16 +255,21 @@ public sealed partial class VersionPageViewModel : ObservableObject
         {
             var versions = _catalog.Scan(CurrentFolder);
             _allVersions.Clear();
+            // 本机最高 Java 只扫一次，逐版本读要求拼徽标：Java 版本不够在列表页就能看见，
+            // 不用等点开详情面板或启动时才报。
+            var javaBest = JavaHints.BestMajor(_javaList.Scan());
             foreach (var version in versions)
             {
-                _allVersions.Add(new VersionItemViewModel(
+                var item = new VersionItemViewModel(
                     version,
                     _versionManager.LoadSettings(CurrentFolder, version.Id),
                     ToggleFavorite,
                     ToggleHidden,
                     Delete,
                     OpenVersionItemFolder,
-                    SelectVersionItem));
+                    SelectVersionItem);
+                item.ApplyJavaHint(JavaHints.ForRequirement(ResolveInstanceJavaMajor(version.Id), javaBest));
+                _allVersions.Add(item);
             }
 
             ApplyGroups();
@@ -1094,6 +1099,27 @@ public sealed partial class VersionItemViewModel : ObservableObject
 
     [ObservableProperty]
     private InstanceDisplayType _displayType;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(JavaBadgeIsError))]
+    private JavaHintLevel _javaHintLevel;
+
+    [ObservableProperty]
+    private string _javaBadgeText = "";
+
+    [ObservableProperty]
+    private string _javaBadgeTip = "";
+
+    /// <summary>Java 缺失或版本不够时徽标转红；满足和未知都保持次要色，不让用户误判成出错。</summary>
+    public bool JavaBadgeIsError => JavaHintLevel is JavaHintLevel.TooLow or JavaHintLevel.Missing;
+
+    /// <summary>徽标数据由版本页统一算好后灌进来，条目本身不做任何文件读取。</summary>
+    public void ApplyJavaHint(JavaHints hint)
+    {
+        JavaHintLevel = hint.Level;
+        JavaBadgeText = hint.Text;
+        JavaBadgeTip = hint.Detail;
+    }
 
     [RelayCommand]
     private void Favorite() => _toggleFavorite(this);

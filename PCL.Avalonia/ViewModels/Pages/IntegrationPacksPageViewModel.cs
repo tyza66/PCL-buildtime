@@ -13,18 +13,22 @@ public sealed partial class IntegrationPacksPageViewModel : ObservableObject
     private readonly ICurseForgeModpackService _modpackService;
     private readonly IModpackInstallerService _modpackInstaller;
     private readonly IPlatformService _platform;
+    private readonly IJavaListService _javaList;
     private CancellationTokenSource? _cancellationTokenSource;
 
     public IntegrationPacksPageViewModel(
         ISettingsService settingsService,
         ICurseForgeModpackService modpackService,
         IModpackInstallerService modpackInstaller,
-        IPlatformService platform)
+        IPlatformService platform,
+        IJavaListService javaListService)
     {
         _settingsService = settingsService;
         _modpackService = modpackService;
         _modpackInstaller = modpackInstaller;
         _platform = platform;
+        _javaList = javaListService;
+        _bestJavaMajor = JavaHints.BestMajor(_javaList.Scan());
     }
 
     public ObservableCollection<IntegrationPackItemViewModel> Projects { get; } = [];
@@ -38,14 +42,56 @@ public sealed partial class IntegrationPacksPageViewModel : ObservableObject
     [ObservableProperty]
     private string _gameVersion = "1.20.1";
 
-    /// <summary>
-    /// 按所选游戏版本给出 Java 需求提示；识别不了的版本返回空串，界面上的提示行自动隐藏。
-    /// </summary>
-    public string JavaHintText => MinecraftJavaRequirement.GetRequiredMajor(GameVersion) is { } required
-        ? $"{GameVersion} 需要 Java {required}"
-        : "";
+    private int? _bestJavaMajor;
 
-    partial void OnGameVersionChanged(string value) => OnPropertyChanged(nameof(JavaHintText));
+    /// <summary>
+    /// 按所选游戏版本给出 Java 需求提示，顺带说清本机现在的 Java 装不装得了：
+    /// 识别不了的版本返回空串（界面上的提示行自动隐藏），Java 缺失或版本不够时
+    /// 直接把安装步骤写进提示，别等整合包下完才发现启动不了。
+    /// </summary>
+    public string JavaHintText
+    {
+        get
+        {
+            if (MinecraftJavaRequirement.GetRequiredMajor(GameVersion) is not { } required)
+            {
+                return "";
+            }
+
+            if (_bestJavaMajor is null)
+            {
+                return $"{GameVersion} 需要 Java {required}，但本机没有检测到 Java。"
+                    + $"请先安装 Java {required}，再到设置页指定路径，否则装完也启动不了";
+            }
+
+            return _bestJavaMajor < required
+                ? $"{GameVersion} 需要 Java {required}，当前最高只检测到 Java {_bestJavaMajor}。"
+                  + $"请先安装 Java {required} 再下载，否则装完也启动不了"
+                : $"{GameVersion} 需要 Java {required}，当前 Java {_bestJavaMajor} 满足要求";
+        }
+    }
+
+    /// <summary>Java 缺失或版本不够时提示行转红，和下载页的警告样式保持一致。</summary>
+    public bool JavaHintIsWarning
+    {
+        get
+        {
+            if (MinecraftJavaRequirement.GetRequiredMajor(GameVersion) is not { } required)
+            {
+                return false;
+            }
+
+            return _bestJavaMajor is null || _bestJavaMajor < required;
+        }
+    }
+
+    partial void OnGameVersionChanged(string value)
+    {
+        // 换版本时顺手再扫一次：用户可能刚在设置页装好 Java，提示要跟着变。
+        _bestJavaMajor = JavaHints.BestMajor(_javaList.Scan());
+        OnPropertyChanged(nameof(JavaHintText));
+        OnPropertyChanged(nameof(JavaHintIsWarning));
+    }
 
     [ObservableProperty]
     private bool _isBusy;

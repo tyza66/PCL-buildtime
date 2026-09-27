@@ -170,6 +170,9 @@ public sealed partial class LaunchPageViewModel : ObservableObject, IPageActivat
             {
                 var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 var versions = new List<LaunchVersionItemViewModel>();
+                // Java 扫描放在这个后台线程里只做一次，卡片徽标直接读结果；
+                // Java 版本不对在点启动之前就该看见，不要等启动才报。
+                var javaBest = JavaHints.BestMajor(_javaListService.Scan());
                 foreach (var folder in folders)
                 {
                     foreach (var version in _catalog.Scan(folder))
@@ -179,14 +182,17 @@ public sealed partial class LaunchPageViewModel : ObservableObject, IPageActivat
                             continue;
                         }
 
-                        versions.Add(new LaunchVersionItemViewModel(
+                        var item = new LaunchVersionItemViewModel(
                             version,
                             _versionManager.LoadSettings(folder, version.Id),
                             folder,
                             ToggleLaunchItemFavorite,
                             SelectLaunchItem,
                             OpenLaunchItemFolder,
-                            DeleteLaunchItem));
+                            DeleteLaunchItem);
+                        item.ApplyJavaHint(JavaHints.ForRequirement(
+                            ResolveRequiredJavaMajor(folder, version), javaBest));
+                        versions.Add(item);
                     }
                 }
 
@@ -723,6 +729,27 @@ public sealed partial class LaunchVersionItemViewModel : ObservableObject
 
     /// <summary>有自定义描述就顶掉类型徽标，一眼能认出是哪个整合包实例。</summary>
     public string Subtitle => Description.Length > 0 ? Description : TypeText;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(JavaBadgeIsError))]
+    private JavaHintLevel _javaHintLevel;
+
+    [ObservableProperty]
+    private string _javaBadgeText = "";
+
+    [ObservableProperty]
+    private string _javaBadgeTip = "";
+
+    /// <summary>Java 缺失或版本不够时徽标转红；满足和未知都保持次要色，不让用户误判成出错。</summary>
+    public bool JavaBadgeIsError => JavaHintLevel is JavaHintLevel.TooLow or JavaHintLevel.Missing;
+
+    /// <summary>徽标数据由启动页刷新时统一算好后灌进来，条目本身不做任何文件读取。</summary>
+    public void ApplyJavaHint(JavaHints hint)
+    {
+        JavaHintLevel = hint.Level;
+        JavaBadgeText = hint.Text;
+        JavaBadgeTip = hint.Detail;
+    }
 
     private readonly Action<LaunchVersionItemViewModel>? _toggleFavorite;
     private readonly Action<LaunchVersionItemViewModel>? _select;

@@ -801,4 +801,63 @@ public sealed class LaunchPageViewModelTests
         Assert.Equal(second, viewModel.SelectedInstalledVersion);
         Assert.Equal("1.20.2", viewModel.SelectedVersion?.Id);
     }
+
+    [Fact]
+    public async Task Refresh_MarksJavaBadgeError_WhenInstalledJavaTooOld()
+    {
+        var catalog = new FakeVersionCatalog(SelectedVersion("1.20.1")) { MajorVersion = 17 };
+        var javaList = new FakeJavaListService(new JavaInfo("/games/java8", "1.8.0_402", "x64", 8, true));
+        var viewModel = CreateViewModel(
+            new FakeLauncher(),
+            new SessionState(),
+            new SyncDispatcher(),
+            versionCatalog: catalog,
+            javaList: javaList);
+
+        await WaitForInstalledVersions(viewModel, 1);
+
+        var item = viewModel.InstalledVersions.Single();
+        // 版本要 Java 17、本机只有 8：卡片徽标要显形并转红，悬停里有完整建议。
+        Assert.Equal("需 Java 17", item.JavaBadgeText);
+        Assert.True(item.JavaBadgeIsError);
+        Assert.Contains("Java 8", item.JavaBadgeTip);
+        Assert.Contains("安装 Java 17", item.JavaBadgeTip);
+    }
+
+    [Fact]
+    public async Task Refresh_ShowsPlainJavaBadge_WhenRequirementSatisfied()
+    {
+        var catalog = new FakeVersionCatalog(SelectedVersion("1.21.4")) { MajorVersion = 21 };
+        var javaList = new FakeJavaListService(new JavaInfo("/games/java21", "21.0.5", "aarch64", 21, true));
+        var viewModel = CreateViewModel(
+            new FakeLauncher(),
+            new SessionState(),
+            new SyncDispatcher(),
+            versionCatalog: catalog,
+            javaList: javaList);
+
+        await WaitForInstalledVersions(viewModel, 1);
+
+        var item = viewModel.InstalledVersions.Single();
+        Assert.Equal("Java 21", item.JavaBadgeText);
+        Assert.False(item.JavaBadgeIsError);
+        Assert.Contains("满足要求", item.JavaBadgeTip);
+    }
+
+    [Fact]
+    public async Task Refresh_HidesJavaBadge_WhenVersionDoesNotSayJava()
+    {
+        var catalog = new FakeVersionCatalog(SelectedVersion("1.20.1")) { MajorVersion = null };
+        var viewModel = CreateViewModel(
+            new FakeLauncher(),
+            new SessionState(),
+            new SyncDispatcher(),
+            versionCatalog: catalog);
+
+        await WaitForInstalledVersions(viewModel, 1);
+
+        var item = viewModel.InstalledVersions.Single();
+        Assert.Equal("", item.JavaBadgeText);
+        Assert.False(item.JavaBadgeIsError);
+    }
 }

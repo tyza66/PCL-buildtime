@@ -12,6 +12,20 @@
         <Style Selector="TextBlock.javaalert">
             <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
         </Style>
+        <!-- 版本卡片上的 Java 徽标：底色用悬停色不抢标题，红/灰由 error 类切换，主题切换能跟着变 -->
+        <Style Selector="Border.javabadge">
+            <Setter Property="Background" Value="{DynamicResource HoverBrush}" />
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="Padding" Value="5,1" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="TextBlock.javabadge">
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+        </Style>
+        <Style Selector="TextBlock.javabadgeerror">
+            <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
+        </Style>
     </UserControl.Styles>
     <DockPanel Margin="32">
         <Grid
@@ -136,12 +150,27 @@
                                             </MenuFlyout>
                                         </Grid.ContextFlyout>
                                         <StackPanel Margin="12,9" VerticalAlignment="Center" Spacing="2">
-                                            <TextBlock
-                                                Text="{Binding Id}"
-                                                FontSize="14"
-                                                FontWeight="SemiBold"
-                                                TextTrimming="CharacterEllipsis"
-                                                Foreground="{DynamicResource TextPrimaryBrush}" />
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <TextBlock
+                                                    Grid.Column="0"
+                                                    Text="{Binding Id}"
+                                                    FontSize="14"
+                                                    FontWeight="SemiBold"
+                                                    TextTrimming="CharacterEllipsis"
+                                                    VerticalAlignment="Center"
+                                                    Foreground="{DynamicResource TextPrimaryBrush}" />
+                                                <Border
+                                                    Grid.Column="1"
+                                                    Margin="8,0,0,0"
+                                                    Classes="javabadge"
+                                                    IsVisible="{Binding JavaBadgeText, Converter={StaticResource StringNotEmpty}}"
+                                                    ToolTip.Tip="{Binding JavaBadgeTip}">
+                                                    <TextBlock
+                                                        Classes="javabadge"
+                                                        Classes.javabadgeerror="{Binding JavaBadgeIsError}"
+                                                        Text="{Binding JavaBadgeText}" />
+                                                </Border>
+                                            </Grid>
                                             <TextBlock
                                                 Text="{Binding Subtitle}"
                                                 FontSize="11"

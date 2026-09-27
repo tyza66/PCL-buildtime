@@ -94,7 +94,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 platformService,
                 modrinthApi,
                 curseForgeApi)),
-            new NavItemViewModel("整合包", new IntegrationPacksPageViewModel(settingsService, curseForgeModpackService, modpackInstaller, platformService)),
+            new NavItemViewModel("整合包", new IntegrationPacksPageViewModel(settingsService, curseForgeModpackService, modpackInstaller, platformService, javaListService)),
             new NavItemViewModel("版本", new VersionPageViewModel(
                 settingsService,
                 versionCatalogService,

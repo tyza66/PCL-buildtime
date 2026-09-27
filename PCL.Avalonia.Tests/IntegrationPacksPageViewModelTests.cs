@@ -88,6 +88,21 @@ public sealed class IntegrationPacksPageViewModelTests
         }
     }
 
+    private sealed class FakeJavaListService : IJavaListService
+    {
+        private readonly JavaInfo[] _items;
+
+        public FakeJavaListService(params JavaInfo[] items) => _items = items;
+
+        public IReadOnlyList<JavaInfo> Scan() => _items;
+
+        public JavaInfo? GetJava(string path) => _items.FirstOrDefault(item => item.Path == path);
+
+        public void Refresh()
+        {
+        }
+    }
+
     private static CurseForgeProject Project() => new()
     {
         Id = 999,
@@ -183,17 +198,58 @@ public sealed class IntegrationPacksPageViewModelTests
 
     private static IntegrationPacksPageViewModel CreateViewModel(
         FakeModpackService service,
-        FakeModpackInstaller installer)
-        => new(new FakeSettingsService(), service, installer, new FakePlatformService());
+        FakeModpackInstaller installer,
+        FakeJavaListService? javaList = null)
+        => new(
+            new FakeSettingsService(),
+            service,
+            installer,
+            new FakePlatformService(),
+            javaList ?? new FakeJavaListService());
 
     [Fact]
-    public void JavaHintText_TracksGameVersion()
+    public void JavaHintText_TracksGameVersion_AndSaysWhatToDoWhenJavaMissing()
     {
         var viewModel = CreateViewModel(new FakeModpackService());
 
-        Assert.Equal("1.20.1 需要 Java 17", viewModel.JavaHintText);
+        // 一台 Java 都没有：提示不能只说"要 Java 17"，得告诉用户去装、装完去哪儿指定。
+        Assert.Contains("1.20.1 需要 Java 17", viewModel.JavaHintText);
+        Assert.Contains("没有检测到 Java", viewModel.JavaHintText);
+        Assert.Contains("安装 Java 17", viewModel.JavaHintText);
+        Assert.True(viewModel.JavaHintIsWarning);
 
         viewModel.GameVersion = "1.12.2";
-        Assert.Equal("1.12.2 需要 Java 8", viewModel.JavaHintText);
+        Assert.Contains("1.12.2 需要 Java 8", viewModel.JavaHintText);
+
+        // 快照版本推断不出要求，提示行整体退场，不拿猜测烦用户。
+        viewModel.GameVersion = "24w14a";
+        Assert.Equal("", viewModel.JavaHintText);
+        Assert.False(viewModel.JavaHintIsWarning);
+    }
+
+    [Fact]
+    public void JavaHintText_WarnsWhenInstalledJavaTooOld()
+    {
+        var viewModel = CreateViewModel(
+            new FakeModpackService(),
+            new FakeModpackInstaller(),
+            new FakeJavaListService(new JavaInfo("/java/8", "1.8.0_402", "x64", 8, true)));
+
+        Assert.Contains("1.20.1 需要 Java 17", viewModel.JavaHintText);
+        Assert.Contains("最高只检测到 Java 8", viewModel.JavaHintText);
+        Assert.Contains("装完也启动不了", viewModel.JavaHintText);
+        Assert.True(viewModel.JavaHintIsWarning);
+    }
+
+    [Fact]
+    public void JavaHintText_SaysSatisfiedWhenJavaNewEnough()
+    {
+        var viewModel = CreateViewModel(
+            new FakeModpackService(),
+            new FakeModpackInstaller(),
+            new FakeJavaListService(new JavaInfo("/java/21", "21.0.5", "aarch64", 21, true)));
+
+        Assert.Equal("1.20.1 需要 Java 17，当前 Java 21 满足要求", viewModel.JavaHintText);
+        Assert.False(viewModel.JavaHintIsWarning);
     }
 }

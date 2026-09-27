@@ -584,4 +584,74 @@ public sealed class VersionPageViewModelTests
         Assert.Equal("Off", viewModel.IsolationMode.Id);
         Assert.Contains("未启用版本隔离", viewModel.IsolationStatusText);
     }
+
+    [Fact]
+    public void Refresh_MarksJavaBadgeError_WhenInstalledJavaTooOld()
+    {
+        var catalog = new FakeCatalog
+        {
+            Installed = [Version("1.20.1")],
+            Json = new MinecraftVersionJson
+            {
+                Id = "1.20.1",
+                JavaVersion = new JavaVersionJson { Component = "java-runtime-delta", MajorVersion = 17 },
+            },
+        };
+        var session = new SessionState();
+
+        var (_, _, viewModel) = CreateViewModel(
+            catalog,
+            session,
+            javaList: new FakeJavaListService(new JavaInfo("/java/8", "1.8.0_402", "x64", 8, true)));
+
+        var item = Assert.Single(viewModel.Versions);
+        // 版本要 Java 17、本机只有 8：徽标必须显形并转红，悬停里给出下一步怎么做。
+        Assert.Equal("需 Java 17", item.JavaBadgeText);
+        Assert.True(item.JavaBadgeIsError);
+        Assert.Contains("Java 8", item.JavaBadgeTip);
+        Assert.Contains("安装 Java 17", item.JavaBadgeTip);
+    }
+
+    [Fact]
+    public void Refresh_ShowsPlainJavaBadge_WhenRequirementSatisfied()
+    {
+        var catalog = new FakeCatalog
+        {
+            Installed = [Version("1.20.1")],
+            Json = new MinecraftVersionJson
+            {
+                Id = "1.20.1",
+                JavaVersion = new JavaVersionJson { Component = "java-runtime-delta", MajorVersion = 17 },
+            },
+        };
+        var session = new SessionState();
+
+        var (_, _, viewModel) = CreateViewModel(
+            catalog,
+            session,
+            javaList: new FakeJavaListService(new JavaInfo("/java/21", "21.0.5", "aarch64", 21, true)));
+
+        var item = Assert.Single(viewModel.Versions);
+        Assert.Equal("Java 17", item.JavaBadgeText);
+        Assert.False(item.JavaBadgeIsError);
+        Assert.Contains("满足要求", item.JavaBadgeTip);
+    }
+
+    [Fact]
+    public void Refresh_HidesJavaBadge_WhenVersionDoesNotSayJava()
+    {
+        var catalog = new FakeCatalog
+        {
+            Installed = [Version("1.19.4")],
+            Json = null,
+        };
+        var session = new SessionState();
+
+        var (_, _, viewModel) = CreateViewModel(catalog, session);
+
+        var item = Assert.Single(viewModel.Versions);
+        // 版本 JSON 没提供要求时不编版本号，徽标整体隐藏。
+        Assert.Equal("", item.JavaBadgeText);
+        Assert.False(item.JavaBadgeIsError);
+    }
 }
