@@ -5,6 +5,11 @@
     xmlns:vm="clr-namespace:PCL.Avalonia.ViewModels.Pages;assembly=PCL2.Avalonia"
     xmlns:ctl="clr-namespace:PCL.Avalonia.Controls;assembly=PCL2.Avalonia"
     x:DataType="vm:FabricLoaderPageViewModel">
+    <UserControl.Styles>
+        <Style Selector="TextBlock.javahintwarn">
+            <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
+        </Style>
+    </UserControl.Styles>
     <DockPanel Margin="32">
         <Grid
             DockPanel.Dock="Top"
@@ -22,6 +27,13 @@
                     FontSize="13"
                     TextWrapping="Wrap"
                     Foreground="{DynamicResource TextSecondaryBrush}" />
+                <TextBlock
+                    Text="{Binding JavaHintText}"
+                    IsVisible="{Binding JavaHintText, Converter={StaticResource StringNotEmpty}}"
+                    FontSize="12"
+                    TextWrapping="Wrap"
+                    Classes.javahintwarn="{Binding JavaHintIsWarning}"
+                    ToolTip.Tip="{Binding JavaHintText}" />
             </StackPanel>
             <TextBox
                 Grid.Column="1"

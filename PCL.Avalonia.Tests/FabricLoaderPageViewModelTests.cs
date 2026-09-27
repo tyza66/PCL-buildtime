@@ -23,6 +23,25 @@ public sealed class FabricLoaderPageViewModelTests
         public string GetDefaultMinecraftFolder() => "/default/.minecraft";
     }
 
+    private sealed class FakeJavaListService : IJavaListService
+    {
+        private readonly List<JavaInfo> _infos;
+
+        public FakeJavaListService(params JavaInfo[] infos)
+        {
+            _infos = infos.ToList();
+        }
+
+        public IReadOnlyList<JavaInfo> Scan() => _infos;
+
+        public JavaInfo? GetJava(string path)
+            => _infos.FirstOrDefault(j => j.Path.Equals(path, StringComparison.OrdinalIgnoreCase));
+
+        public void Refresh()
+        {
+        }
+    }
+
     private sealed class FakeFabricLoaderService : IFabricLoaderService
     {
         public IReadOnlyList<FabricLoaderVersion> Versions { get; set; } = [];
@@ -63,7 +82,7 @@ public sealed class FabricLoaderPageViewModelTests
     }
 
     private static (FakeSettingsService Settings, FakeFabricLoaderService Service, SessionState Session, FabricLoaderPageViewModel ViewModel)
-        CreateViewModel()
+        CreateViewModel(params JavaInfo[] javas)
     {
         var settings = new FakeSettingsService
         {
@@ -75,6 +94,7 @@ public sealed class FabricLoaderPageViewModelTests
             settings,
             service,
             new FakePlatformService(),
+            new FakeJavaListService(javas),
             session);
         return (settings, service, session, viewModel);
     }
@@ -162,5 +182,70 @@ public sealed class FabricLoaderPageViewModelTests
 
         Assert.StartsWith("安装未完成", viewModel.StatusMessage);
         Assert.Contains("asm 下载失败", viewModel.StatusMessage);
+    }
+
+    [Fact]
+    public void JavaHint_NoJavaDetected_TellsUserToInstallFirst()
+    {
+        var (_, _, _, viewModel) = CreateViewModel();
+        viewModel.GameVersionText = "1.20.1";
+
+        Assert.Contains("没有检测到", viewModel.JavaHintText);
+        Assert.Contains("Java 17", viewModel.JavaHintText);
+        Assert.True(viewModel.JavaHintIsWarning);
+    }
+
+    [Fact]
+    public void JavaHint_BestJavaBelowRequirement_WarnsWithDetectedVersion()
+    {
+        var (_, _, _, viewModel) = CreateViewModel(
+            new JavaInfo("/jdk8/bin/java", "1.8.0_392", "x64", 8, true));
+        viewModel.GameVersionText = "1.20.1";
+
+        Assert.Contains("最高只检测到 Java 8", viewModel.JavaHintText);
+        Assert.True(viewModel.JavaHintIsWarning);
+    }
+
+    [Fact]
+    public void JavaHint_BestJavaMeetsRequirement_ReportsSatisfied()
+    {
+        var (_, _, _, viewModel) = CreateViewModel(
+            new JavaInfo("/jdk8/bin/java", "1.8.0_392", "x64", 8, true),
+            new JavaInfo("/jdk17/bin/java", "17.0.9", "x64", 17, true));
+        // 没选中加载器，走版本映射：1.20.1 要 Java 17，本机最高 17，满足。
+        viewModel.GameVersionText = "1.20.1";
+
+        Assert.Contains("Java 17 满足要求", viewModel.JavaHintText);
+        Assert.False(viewModel.JavaHintIsWarning);
+    }
+
+    [Fact]
+    public async Task JavaHint_SelectedLoaderMinJava_WinsOverVersionMap()
+    {
+        var (_, service, _, viewModel) = CreateViewModel(
+            new JavaInfo("/jdk17/bin/java", "17.0.9", "x64", 17, true));
+        // 版本映射说 1.20.1 要 Java 17，但加载器接口声明要 21：以接口为准，17 就不够。
+        service.Versions = [new FabricLoaderVersion("0.16.9", "1.20.1", true, 21)];
+        viewModel.GameVersionText = "1.20.1";
+        await viewModel.RefreshCommand.ExecuteAsync(null);
+        viewModel.SelectedLoader = viewModel.Versions[0];
+
+        Assert.Contains("Java 21", viewModel.JavaHintText);
+        Assert.Contains("最高只检测到 Java 17", viewModel.JavaHintText);
+        Assert.True(viewModel.JavaHintIsWarning);
+    }
+
+    [Fact]
+    public async Task JavaHint_LoaderWithoutMinJava_FallsBackToVersionMap()
+    {
+        var (_, service, _, viewModel) = CreateViewModel(
+            new JavaInfo("/jdk17/bin/java", "17.0.9", "x64", 17, true));
+        service.Versions = [new FabricLoaderVersion("0.16.9", "1.20.1", true, 0)];
+        viewModel.GameVersionText = "1.20.1";
+        await viewModel.RefreshCommand.ExecuteAsync(null);
+        viewModel.SelectedLoader = viewModel.Versions[0];
+
+        Assert.Contains("Java 17 满足要求", viewModel.JavaHintText);
+        Assert.False(viewModel.JavaHintIsWarning);
     }
 }

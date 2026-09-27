@@ -22,6 +22,8 @@ public sealed partial class LaunchPageViewModel : ObservableObject, IPageActivat
     private readonly IPlatformService _platform;
     private readonly IFolderOpener _folderOpener;
     private readonly IJavaListService _javaListService;
+    // 同一次启动里同一类错误只提示一次，否则 JVM 复读机能把建议刷满屏。
+    private readonly HashSet<string> _firedLogDiagnostics = new(StringComparer.Ordinal);
     private IGameLaunch? _activeLaunch;
 
     public LaunchPageViewModel(
@@ -517,6 +519,7 @@ public sealed partial class LaunchPageViewModel : ObservableObject, IPageActivat
         try
         {
             IsLaunching = true;
+            _firedLogDiagnostics.Clear();
             StatusMessage = $"正在启动 {version.Id}";
             var account = _session.SelectedAccount;
             if (account?.Type == "microsoft"
@@ -570,7 +573,7 @@ public sealed partial class LaunchPageViewModel : ObservableObject, IPageActivat
                 launchAccount,
                 versionSettings));
             LogLine("启动命令：" + plan.CommandLine);
-            var launch = _launcher.Launch(plan, new Progress<string>(LogLine));
+            var launch = _launcher.Launch(plan, new Progress<string>(OnGameOutput));
             _activeLaunch = launch;
             IsRunning = true;
             LogLine($"Java 进程已启动（PID {launch.ProcessId}）");
@@ -654,6 +657,21 @@ public sealed partial class LaunchPageViewModel : ObservableObject, IPageActivat
         {
             LogText = LogText.Length == 0 ? line : LogText + "\n" + line;
         });
+    }
+
+    /// <summary>
+    /// 游戏输出经手处：原样记日志，同时识别 JVM 级错误的典型签名。
+    /// 这类错误在进程死前几秒就打出来了，当场给一句"可尝试"比等退出码更有用。
+    /// </summary>
+    private void OnGameOutput(string line)
+    {
+        LogLine(line);
+        var diagnostic = GameLogDiagnostics.Match(line);
+        if (diagnostic is { } hit && _firedLogDiagnostics.Add(hit.Key))
+        {
+            LogLine("排查建议：" + hit.Advice);
+            StatusMessage = hit.Advice;
+        }
     }
 
     private string GetMinecraftFolder(AppSettings settings)

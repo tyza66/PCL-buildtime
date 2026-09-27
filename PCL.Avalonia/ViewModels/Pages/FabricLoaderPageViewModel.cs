@@ -12,6 +12,7 @@ public sealed partial class FabricLoaderPageViewModel : ObservableObject
     private readonly ISettingsService _settingsService;
     private readonly IFabricLoaderService _loaderService;
     private readonly IPlatformService _platform;
+    private readonly IJavaListService _javaList;
     private readonly SessionState _session;
     private CancellationTokenSource? _cancellationTokenSource;
 
@@ -19,12 +20,15 @@ public sealed partial class FabricLoaderPageViewModel : ObservableObject
         ISettingsService settingsService,
         IFabricLoaderService loaderService,
         IPlatformService platform,
+        IJavaListService javaListService,
         SessionState session)
     {
         _settingsService = settingsService;
         _loaderService = loaderService;
         _platform = platform;
+        _javaList = javaListService;
         _session = session;
+        _bestJavaMajor = JavaHints.BestMajor(_javaList.Scan());
     }
 
     public ObservableCollection<FabricLoaderVersionItemViewModel> Versions { get; } = [];
@@ -55,6 +59,74 @@ public sealed partial class FabricLoaderPageViewModel : ObservableObject
 
     [ObservableProperty]
     private string _statusMessage = "";
+
+    private int? _bestJavaMajor;
+
+    /// <summary>
+    /// Fabric 的列表项只说了"要 Java N"，这里再补一句本机装没装：
+    /// 选中加载器时用它接口给的 minJavaVersion（精确），没选中时回落到
+    /// Mojang 的「游戏版本 → Java」对应关系。没有或版本不够就把下一步写进提示。
+    /// </summary>
+    public string JavaHintText
+    {
+        get
+        {
+            if (RequiredJavaMajor() is not { } required)
+            {
+                return "";
+            }
+
+            if (_bestJavaMajor is null)
+            {
+                return $"该加载器需要 Java {required}，但本机没有检测到 Java。"
+                    + $"请先安装 Java {required}，再到设置页指定路径，否则装完也启动不了";
+            }
+
+            return _bestJavaMajor < required
+                ? $"该加载器需要 Java {required}，当前最高只检测到 Java {_bestJavaMajor}。"
+                  + $"请先安装 Java {required} 再下载，否则装完也启动不了"
+                : $"该加载器需要 Java {required}，当前 Java {_bestJavaMajor} 满足要求";
+        }
+    }
+
+    /// <summary>Java 缺失或版本不够时提示行转红，和整合包、下载页的警告样式一致。</summary>
+    public bool JavaHintIsWarning
+    {
+        get
+        {
+            if (RequiredJavaMajor() is not { } required)
+            {
+                return false;
+            }
+
+            return _bestJavaMajor is null || _bestJavaMajor < required;
+        }
+    }
+
+    private int? RequiredJavaMajor()
+    {
+        if (SelectedLoader?.Version.MinJavaVersion is int minJava && minJava > 0)
+        {
+            return minJava;
+        }
+
+        return MinecraftJavaRequirement.GetRequiredMajor(GameVersionText);
+    }
+
+    private void RefreshJavaHint()
+    {
+        _bestJavaMajor = JavaHints.BestMajor(_javaList.Scan());
+        OnPropertyChanged(nameof(JavaHintText));
+        OnPropertyChanged(nameof(JavaHintIsWarning));
+    }
+
+    partial void OnGameVersionTextChanged(string value) => RefreshJavaHint();
+
+    partial void OnSelectedLoaderChanged(FabricLoaderVersionItemViewModel? value)
+    {
+        OnPropertyChanged(nameof(JavaHintText));
+        OnPropertyChanged(nameof(JavaHintIsWarning));
+    }
 
     private bool CanInstall => SelectedLoader is not null && !IsInstalling;
 
