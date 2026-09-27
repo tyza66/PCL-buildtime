@@ -61,10 +61,7 @@ jobs:
             rid: win-arm64
             suffix: -setup.exe
           - os: macos-latest
-            rid: osx-x64
-            suffix: .dmg
-          - os: macos-latest
-            rid: osx-arm64
+            rid: osx-universal
             suffix: .dmg
           - os: ubuntu-latest
             rid: linux-x64
@@ -101,6 +98,7 @@ jobs:
 
       - name: Publish
         shell: bash
+        if: runner.os != 'macOS'
         run: |
           dotnet publish PCL.Avalonia/PCL.Avalonia.csproj \
             -c Release \
@@ -109,6 +107,20 @@ jobs:
             -o publish \
             -p:DebugType=None \
             -p:DebugSymbols=false
+
+      - name: Publish macOS (both architectures)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          for rid in osx-x64 osx-arm64; do
+            dotnet publish PCL.Avalonia/PCL.Avalonia.csproj \
+              -c Release \
+              -r "$rid" \
+              --self-contained true \
+              -o "publish-$rid" \
+              -p:DebugType=None \
+              -p:DebugSymbols=false
+          done
 
       - name: Install NSIS
         if: runner.os == 'Windows'
@@ -129,63 +141,17 @@ jobs:
           outfile="${name}${{ matrix.suffix }}"
           sed "s|@OUTFILE@|${outfile}|g" build-scripts/installer.nsi > build-scripts/installer-final.nsi
           makensis build-scripts/installer-final.nsi
-          sha256sum "${outfile}" > "${outfile}.sha256"
+          python build-scripts/checksums.py "${outfile}"
 
-      - name: Package macOS (DMG)
+      - name: Package macOS (universal DMG)
         if: runner.os == 'macOS'
         shell: bash
         run: |
-          name="PCL2-R-${version}-${{ matrix.rid }}"
-          dmg_name="${name}${{ matrix.suffix }}"
-          # dmg 文件名带版本和架构，里面的 .app 只叫 PCL2-R.app——
-          # 用户拖进 Applications 后菜单栏和程序名不该出现版本号和 rid。
-          app="PCL2-R.app"
-          mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
-          cp PCL.Avalonia/Assets/Info.plist "$app/Contents/Info.plist"
-          cp -R publish/. "$app/Contents/MacOS/"
-
-          # Generate .icns from the PCL icon
-          iconset="$name.iconset"
-          src_base="PCL.Avalonia/Assets/pcl2-avalonia.png"
-          src_hi="PCL.Avalonia/Assets/pcl2-avalonia@2x.png"
-          mkdir -p "$iconset"
-          for size in 16 32 128 256 512; do
-            for scale in 1 2; do
-              px=$((size * scale))
-              if [ "$px" -le 256 ]; then src="$src_base"; else src="$src_hi"; fi
-              sips -z "$px" "$px" --out "$iconset/icon_${size}x${size}@${scale}x.png" "$src"
-            done
-          done
-          iconutil -c icns "$iconset" -o "$app/Contents/Resources/PCL2-R.icns"
-          rm -rf "$iconset"
-
-          # Ad-hoc sign the .app bundle
-          codesign --sign - --force --deep --timestamp=none "$app"
-          # Stage the DMG volume with the /Applications drag-to-install alias
-          stage="dmg-stage"
-          rm -rf "$stage"
-          mkdir -p "$stage"
-          cp -R "$app" "$stage/"
-          ln -s /Applications "$stage/Applications"
-          hdiutil create -volname "PCL2-R" -srcfolder "$stage" -ov -format UDZO "$dmg_name"
-          rm -rf "$stage"
-          shasum -a 256 "$dmg_name" > "${dmg_name}.sha256"
-          # Verify the DMG contents: /Applications alias and the icon resource
-          mount_dir="$PWD/dmg-mount"
-          rm -rf "$mount_dir"
-          mkdir -p "$mount_dir"
-          hdiutil attach "$dmg_name" -mountpoint "$mount_dir" -nobrowse > /dev/null
-          ls -l "$mount_dir"
-          if [ ! -L "$mount_dir/Applications" ]; then
-            echo "::error::DMG is missing the /Applications alias"
-            exit 1
-          fi
-          if [ ! -f "$mount_dir/$app/Contents/Resources/PCL2-R.icns" ]; then
-            echo "::error::App bundle is missing PCL2-R.icns"
-            exit 1
-          fi
-          hdiutil detach "$mount_dir" > /dev/null
-          rm -rf "$mount_dir"
+          # universal dmg：bundle 内含 osx-x64 与 osx-arm64 两份完整自包含发布，
+          # 根目录放 fat Mach-O C 分发器按 uname -m 选择对应 payload 的真 apphost，
+          # 附带 /Applications 拖放别名、ad-hoc 签名和 md5/sha1/sha256。
+          chmod +x build-scripts/macos-universal-dmg.sh
+          build-scripts/macos-universal-dmg.sh "${version}" publish-osx-x64 publish-osx-arm64
 
       - name: Package Linux (AppImage)
         if: runner.os == 'Linux'
@@ -228,18 +194,20 @@ jobs:
           cp PCL.Avalonia/Assets/pcl2-avalonia.png "AppDir/pcl2-avalonia.png"
           cp PCL.Avalonia/Assets/pcl2-avalonia.png "AppDir/usr/share/icons/hicolor/256x256/apps/pcl2-avalonia.png"
           /tmp/appimagetool --appimage-extract-and-run AppDir "${package}"
-          sha256sum "${package}" > "${package}.sha256"
+          python3 build-scripts/checksums.py "${package}"
 
       - name: Verify package
         shell: bash
         run: |
+          if [ "$RUNNER_OS" = "Windows" ]; then py=python; else py=python3; fi
           base="PCL2-R-${version}-${{ matrix.rid }}"
-          for f in "$base${{ matrix.suffix }}" "$base${{ matrix.suffix }}.sha256"; do
+          for f in "$base${{ matrix.suffix }}" "$base${{ matrix.suffix }}.md5" "$base${{ matrix.suffix }}.sha1" "$base${{ matrix.suffix }}.sha256"; do
             if [ ! -s "$f" ]; then
               echo "::error::Expected package is missing: $f"
               exit 1
             fi
           done
+          "$py" build-scripts/checksums.py --check "$base${{ matrix.suffix }}"
           ls -l "$base"*
 
       - name: Upload artifact
@@ -248,6 +216,8 @@ jobs:
           name: PCL2-R-${{ env.version }}-${{ matrix.rid }}
           path: |
             PCL2-R-${{ env.version }}-${{ matrix.rid }}${{ matrix.suffix }}
+            PCL2-R-${{ env.version }}-${{ matrix.rid }}${{ matrix.suffix }}.md5
+            PCL2-R-${{ env.version }}-${{ matrix.rid }}${{ matrix.suffix }}.sha1
             PCL2-R-${{ env.version }}-${{ matrix.rid }}${{ matrix.suffix }}.sha256
           if-no-files-found: error
           retention-days: 14

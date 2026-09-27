@@ -79,8 +79,10 @@ jobs:
         run: |
           $zipName = "PCL2-$env:describe-win-${{ matrix.arch }}.zip"
           Compress-Archive -Path "dist\*" -DestinationPath $zipName -Force
-          $hash = (Get-FileHash $zipName -Algorithm SHA256).Hash
-          "$hash  $zipName" | Set-Content "$zipName.sha256" -Encoding ascii
+          foreach ($alg in @("MD5", "SHA1", "SHA256")) {
+            $hash = (Get-FileHash $zipName -Algorithm $alg).Hash
+            "$hash  $zipName" | Set-Content "$zipName.$($alg.ToLower())" -Encoding ascii
+          }
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
@@ -88,6 +90,8 @@ jobs:
           name: PCL2-${{ env.describe }}-win-${{ matrix.arch }}
           path: |
             PCL2-${{ env.describe }}-win-${{ matrix.arch }}.zip
+            PCL2-${{ env.describe }}-win-${{ matrix.arch }}.zip.md5
+            PCL2-${{ env.describe }}-win-${{ matrix.arch }}.zip.sha1
             PCL2-${{ env.describe }}-win-${{ matrix.arch }}.zip.sha256
           if-no-files-found: error
           retention-days: 14
